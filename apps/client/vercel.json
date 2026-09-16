@@ -1,7 +1,7 @@
-﻿{
+{
   "rewrites": [
     {
-      "source": "/((?!_expo|assets|favicon.ico|metadata.json).*)",
+      "source": "/:path*",
       "destination": "/index.html"
     }
   ]
