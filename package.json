@@ -10,6 +10,7 @@
     "dev:api": "npm run start:dev --workspace=@erp/api",
     "dev:client": "npm run start --workspace=@erp/client",
     "build": "npm run build --workspace=@erp/contracts && npm run build --workspaces --if-present",
+    "build:client": "npm run build --workspace=@erp/client",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "prisma:generate": "npm run prisma:generate --workspace=@erp/api",
