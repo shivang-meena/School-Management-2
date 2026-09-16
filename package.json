@@ -9,11 +9,12 @@
   "scripts": {
     "dev:api": "npm run start:dev --workspace=@erp/api",
     "dev:client": "npm run start --workspace=@erp/client",
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build --workspace=@erp/contracts && npm run build --workspaces --if-present",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "prisma:generate": "npm run prisma:generate --workspace=@erp/api",
     "prisma:migrate": "npm run prisma:migrate --workspace=@erp/api",
+    "prisma:deploy": "npm run prisma:deploy --workspace=@erp/api",
     "prisma:seed": "npm run prisma:seed --workspace=@erp/api",
     "prisma:studio": "npm run prisma:studio --workspace=@erp/api",
     "lint": "npm run lint --workspaces --if-present"
