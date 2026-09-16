@@ -6,7 +6,15 @@ const DEFAULT_API_URL = Platform.select({
   default: 'http://localhost:3000/api',
 });
 
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL;
+const getBaseUrl = () => {
+  let url = (process.env.EXPO_PUBLIC_API_URL || DEFAULT_API_URL).trim().replace(/\/+$/, '');
+  if (!url.endsWith('/api')) {
+    url = `${url}/api`;
+  }
+  return url;
+};
+
+export const API_BASE_URL = getBaseUrl();
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
