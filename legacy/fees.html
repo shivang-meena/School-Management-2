@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fee Management — Greenwood ERP</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="appShell"></div>
+
+  <script src="script.js"></script>
+  <script>
+    const session = Auth.requireAdmin();
+
+    document.getElementById("appShell").innerHTML = `
+      ${Layout.renderShell(session, Layout.adminSidebar("fees.html"), "fees.html")}
+        <h1 class="page-title">Fee Management</h1>
+        <p class="page-subtitle">Set fee structures, record payments, and generate receipts.</p>
+
+        <div id="alertContainer"></div>
+
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('feeList', this)">Student Fees</button>
+          <button class="tab-btn" onclick="switchTab('feeStructure', this)">Fee Structure</button>
+          <button class="tab-btn" onclick="switchTab('addPayment', this)">Add Payment</button>
+        </div>
+
+        <!-- Tab: Student Fee List -->
+        <div class="tab-panel active" id="tab-feeList">
+          <div class="filter-bar">
+            <input type="text" class="form-control search-input" id="feeSearch" placeholder="Search by name or ID..." oninput="renderFeeList()" />
+            <select class="form-select" id="feeStatusFilter" onchange="renderFeeList()">
+              <option value="">All Status</option>
+              <option>Paid</option>
+              <option>Partial</option>
+              <option>Unpaid</option>
+            </select>
+          </div>
+          <div class="card">
+            <div class="card-body" style="padding:0;">
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead>
+                    <tr><th>Student</th><th>ID</th><th>Class</th><th>Total Fee</th><th>Paid</th><th>Pending</th><th>Status</th><th>Actions</th></tr>
+                  </thead>
+                  <tbody id="feeTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Fee Structure -->
+        <div class="tab-panel" id="tab-feeStructure">
+          <div class="card" style="max-width:500px;">
+            <div class="card-header"><h3>Set Class-wise Fee Structure</h3></div>
+            <div class="card-body">
+              <form onsubmit="return handleSetFee(event)">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Class <span class="req">*</span></label>
+                    <select id="feeStructClass" class="form-select" required></select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Total Fee (₹) <span class="req">*</span></label>
+                    <input type="number" id="feeStructAmount" class="form-control" required />
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Update Fee Structure</button>
+              </form>
+            </div>
+          </div>
+          <div class="card mt-4">
+            <div class="card-header"><h3>Current Fee Structure</h3></div>
+            <div class="card-body" style="padding:0;">
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead><tr><th>Class</th><th>Total Fee</th></tr></thead>
+                  <tbody id="feeStructTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Add Payment -->
+        <div class="tab-panel" id="tab-addPayment">
+          <div class="card" style="max-width:600px;">
+            <div class="card-header"><h3>Add Manual Payment Entry</h3></div>
+            <div class="card-body">
+              <form onsubmit="return handleAddPayment(event)">
+                <div class="form-group">
+                  <label class="form-label">Select Student <span class="req">*</span></label>
+                  <select id="payStudent" class="form-select" required onchange="updatePayInfo()"></select>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Amount (₹) <span class="req">*</span></label>
+                    <input type="number" id="payAmount" class="form-control" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Date <span class="req">*</span></label>
+                    <input type="date" id="payDate" class="form-control" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Payment Method <span class="req">*</span></label>
+                    <select id="payMethod" class="form-select" required>
+                      <option value="">Select</option>
+                      <option>Cash</option>
+                      <option>Bank</option>
+                      <option>Online</option>
+                    </select>
+                  </div>
+                </div>
+                <div id="payInfo" style="margin-bottom:var(--sp-4);"></div>
+                <button type="submit" class="btn btn-primary">Record Payment</button>
+                <button type="button" class="btn btn-success" onclick="openOnlinePayment()">Online Payment</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Receipt Modal -->
+        <div class="modal-overlay" id="receiptModal">
+          <div class="modal">
+            <div class="modal-header">
+              <h3>Fee Receipt</h3>
+              <button class="modal-close no-print" onclick="UI.closeModal('receiptModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="receiptBody"></div>
+            <div class="modal-footer no-print">
+              <button class="btn btn-secondary" onclick="window.print()">Print Receipt</button>
+              <button class="btn btn-primary" onclick="UI.closeModal('receiptModal')">Close</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Online Payment Modal (fake) -->
+        <div class="modal-overlay" id="onlinePayModal">
+          <div class="modal modal-sm">
+            <div class="modal-header">
+              <h3>Online Payment Gateway</h3>
+              <button class="modal-close" onclick="UI.closeModal('onlinePayModal')">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+              <div style="font-size:2.5rem;margin-bottom:var(--sp-3);">💳</div>
+              <p style="font-weight:600;margin-bottom:var(--sp-3);">Dummy Payment Gateway</p>
+              <div class="form-group">
+                <label class="form-label">Amount (₹)</label>
+                <input type="number" id="onlinePayAmount" class="form-control" />
+              </div>
+              <button class="btn btn-success btn-block" onclick="processOnlinePayment()">Pay Now</button>
+              <p class="text-muted text-sm mt-3">This is a simulated payment. No real transaction occurs.</p>
+            </div>
+          </div>
+        </div>
+      </main></div>
+    `;
+
+    /* ===== Initialize ===== */
+    (function init() {
+      const data = DataManager.getData();
+      const classSel = document.getElementById("feeStructClass");
+      const studentSel = document.getElementById("payStudent");
+      data.classes.forEach(c => classSel.innerHTML += `<option>${c.name}</option>`);
+      data.students.forEach(s => studentSel.innerHTML += `<option value="${s.studentId}">${s.name} (${s.studentId}) — ${s.class}</option>`);
+      document.getElementById("payDate").value = new Date().toISOString().split("T")[0];
+      renderFeeList();
+      renderFeeStructure();
+    })();
+
+    function switchTab(tab, btn) {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      document.getElementById("tab-" + tab).classList.add("active");
+    }
+
+    function renderFeeList() {
+      const data = DataManager.getData();
+      const search = (document.getElementById("feeSearch")?.value || "").toLowerCase();
+      const statusFilter = document.getElementById("feeStatusFilter")?.value || "";
+      let students = data.students;
+      if (search) students = students.filter(s => s.name.toLowerCase().includes(search) || s.studentId.toLowerCase().includes(search));
+      if (statusFilter) {
+        students = students.filter(s => {
+          const fs = Calc.feeStatus(s);
+          return fs.label === statusFilter;
+        });
+      }
+      if (students.length === 0) {
+        document.getElementById("feeTableBody").innerHTML = '<tr><td colspan="8" class="no-data">No records found.</td></tr>';
+        return;
+      }
+      document.getElementById("feeTableBody").innerHTML = students.map(s => {
+        const pending = Calc.studentPendingFee(s);
+        const fs = Calc.feeStatus(s);
+        return `
+          <tr>
+            <td>${UI.escapeHtml(s.name)}</td>
+            <td>${s.studentId}</td>
+            <td>${UI.escapeHtml(s.class)}</td>
+            <td>${UI.formatCurrency(s.fees.totalFee)}</td>
+            <td>${UI.formatCurrency(s.fees.paidAmount)}</td>
+            <td>${UI.formatCurrency(pending)}</td>
+            <td><span class="badge ${fs.class}">${fs.label}</span></td>
+            <td>
+              <button class="btn btn-sm btn-outline" onclick="viewReceipts('${s.studentId}')">Receipts</button>
+              <button class="btn btn-sm btn-success" onclick="quickPay('${s.studentId}')">Pay</button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function renderFeeStructure() {
+      const data = DataManager.getData();
+      document.getElementById("feeStructTableBody").innerHTML = data.feeStructure.map(f => `
+        <tr><td>${UI.escapeHtml(f.class)}</td><td>${UI.formatCurrency(f.totalFee)}</td></tr>
+      `).join("");
+    }
+
+    function handleSetFee(e) {
+      e.preventDefault();
+      const data = DataManager.getData();
+      const className = document.getElementById("feeStructClass").value;
+      const amount = parseInt(document.getElementById("feeStructAmount").value);
+      let fs = data.feeStructure.find(f => f.class === className);
+      if (fs) {
+        fs.totalFee = amount;
+      } else {
+        data.feeStructure.push({ class: className, totalFee: amount });
+      }
+      /* Update existing students of this class */
+      data.students.forEach(s => {
+        if (s.class === className) s.fees.totalFee = amount;
+      });
+      DataManager.saveData(data);
+      UI.toast("Fee structure updated for " + className, "success");
+      e.target.reset();
+      renderFeeStructure();
+      renderFeeList();
+      return false;
+    }
+
+    function updatePayInfo() {
+      const data = DataManager.getData();
+      const studentId = document.getElementById("payStudent").value;
+      const s = data.students.find(st => st.studentId === studentId);
+      if (!s) return;
+      const pending = Calc.studentPendingFee(s);
+      document.getElementById("payInfo").innerHTML = `
+        <div class="alert alert-info">
+          Total Fee: ${UI.formatCurrency(s.fees.totalFee)} | Paid: ${UI.formatCurrency(s.fees.paidAmount)} | Pending: ${UI.formatCurrency(pending)}
+        </div>
+      `;
+    }
+
+    function handleAddPayment(e) {
+      e.preventDefault();
+      const data = DataManager.getData();
+      const studentId = document.getElementById("payStudent").value;
+      const amount = parseInt(document.getElementById("payAmount").value);
+      const date = document.getElementById("payDate").value;
+      const method = document.getElementById("payMethod").value;
+      const s = data.students.find(st => st.studentId === studentId);
+      if (!s) { UI.toast("Select a student", "error"); return false; }
+      const receiptNo = Calc.nextReceiptNo();
+      s.fees.paidAmount += amount;
+      const pending = Calc.studentPendingFee(s);
+      const status = pending <= 0 ? "Paid" : "Partial";
+      s.fees.payments.push({ receiptNo, date, amount, method, status });
+      DataManager.saveData(data);
+      UI.toast("Payment recorded: " + UI.formatCurrency(amount), "success");
+      e.target.reset();
+      document.getElementById("payDate").value = new Date().toISOString().split("T")[0];
+      renderFeeList();
+      showReceipt(s, receiptNo, amount, date, method, status);
+      return false;
+    }
+
+    function quickPay(studentId) {
+      document.getElementById("payStudent").value = studentId;
+      updatePayInfo();
+      switchTab("addPayment", document.querySelectorAll(".tab-btn")[2]);
+    }
+
+    function openOnlinePayment() {
+      const studentId = document.getElementById("payStudent").value;
+      if (!studentId) { UI.toast("Select a student first", "error"); return; }
+      const data = DataManager.getData();
+      const s = data.students.find(st => st.studentId === studentId);
+      const pending = Calc.studentPendingFee(s);
+      document.getElementById("onlinePayAmount").value = pending;
+      UI.openModal("onlinePayModal");
+    }
+
+    function processOnlinePayment() {
+      const amount = parseInt(document.getElementById("onlinePayAmount").value);
+      if (!amount || amount <= 0) { UI.toast("Enter a valid amount", "error"); return; }
+      const data = DataManager.getData();
+      const studentId = document.getElementById("payStudent").value;
+      const s = data.students.find(st => st.studentId === studentId);
+      const receiptNo = Calc.nextReceiptNo();
+      const date = new Date().toISOString().split("T")[0];
+      s.fees.paidAmount += amount;
+      const pending = Calc.studentPendingFee(s);
+      const status = pending <= 0 ? "Paid" : "Partial";
+      s.fees.payments.push({ receiptNo, date, amount, method: "Online", status });
+      DataManager.saveData(data);
+      UI.closeModal("onlinePayModal");
+      UI.toast("Online payment successful: " + UI.formatCurrency(amount), "success");
+      renderFeeList();
+      showReceipt(s, receiptNo, amount, date, "Online", status);
+    }
+
+    function viewReceipts(studentId) {
+      const data = DataManager.getData();
+      const s = data.students.find(st => st.studentId === studentId);
+      if (!s || s.fees.payments.length === 0) {
+        UI.toast("No receipts available", "info");
+        return;
+      }
+      let html = `
+        <div style="text-align:center;margin-bottom:var(--sp-4);">
+          <h2>Greenwood International School</h2>
+          <p class="text-muted">123 Education Lane, New Delhi — 110001</p>
+          <h3>Fee Payment Receipts</h3>
+          <p><strong>Student:</strong> ${UI.escapeHtml(s.name)} (${s.studentId}) | <strong>Class:</strong> ${UI.escapeHtml(s.class)}</p>
+        </div>
+      `;
+      s.fees.payments.forEach(p => {
+        html += `
+          <div style="border:1px solid var(--border-color);border-radius:var(--radius-md);padding:var(--sp-4);margin-bottom:var(--sp-3);">
+            <div style="display:flex;justify-content:space-between;">
+              <span><strong>Receipt No:</strong> ${p.receiptNo}</span>
+              <span><strong>Date:</strong> ${UI.formatDate(p.date)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:var(--sp-2);">
+              <span><strong>Method:</strong> ${p.method}</span>
+              <span><strong>Amount:</strong> ${UI.formatCurrency(p.amount)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:var(--sp-2);">
+              <span><strong>Status:</strong> <span class="badge badge-${p.status === 'Paid' ? 'paid' : 'partial'}">${p.status}</span></span>
+            </div>
+          </div>
+        `;
+      });
+      document.getElementById("receiptBody").innerHTML = html;
+      UI.openModal("receiptModal");
+    }
+
+    function showReceipt(s, receiptNo, amount, date, method, status) {
+      document.getElementById("receiptBody").innerHTML = `
+        <div style="text-align:center;margin-bottom:var(--sp-4);">
+          <h2>Greenwood International School</h2>
+          <p class="text-muted">123 Education Lane, New Delhi — 110001</p>
+          <h3>Fee Payment Receipt</h3>
+        </div>
+        <div style="border:1px solid var(--border-color);border-radius:var(--radius-md);padding:var(--sp-5);">
+          <div style="display:flex;justify-content:space-between;margin-bottom:var(--sp-3);">
+            <span><strong>Receipt No:</strong> ${receiptNo}</span>
+            <span><strong>Date:</strong> ${UI.formatDate(date)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:var(--sp-3);">
+            <span><strong>Student:</strong> ${UI.escapeHtml(s.name)}</span>
+            <span><strong>Student ID:</strong> ${s.studentId}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:var(--sp-3);">
+            <span><strong>Class:</strong> ${UI.escapeHtml(s.class)}</span>
+            <span><strong>Method:</strong> ${method}</span>
+          </div>
+          <hr style="margin:var(--sp-4) 0;">
+          <div style="display:flex;justify-content:space-between;font-size:1.2rem;">
+            <span><strong>Amount Paid:</strong></span>
+            <span style="font-weight:700;color:var(--success-600);">${UI.formatCurrency(amount)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:var(--sp-3);">
+            <span><strong>Payment Status:</strong> <span class="badge badge-${status === 'Paid' ? 'paid' : 'partial'}">${status}</span></span>
+          </div>
+        </div>
+        <p class="text-muted text-center mt-4">This is a computer-generated receipt from Greenwood ERP prototype.</p>
+      `;
+      UI.openModal("receiptModal");
+    }
+  </script>
+</body>
+</html>

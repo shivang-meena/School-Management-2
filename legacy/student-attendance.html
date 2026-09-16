@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Attendance — Greenwood ERP</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="appShell"></div>
+
+  <script src="script.js"></script>
+  <script>
+    /* ===== Auth guard: admin or staff ===== */
+    const session = Auth.requireLogin();
+    if (session && session.role !== "admin" && session.role !== "staff") {
+      alert("Access denied.");
+      Auth.logout();
+    }
+
+    const isStaff = session && session.role === "staff";
+
+    /* Build sidebar based on role */
+    const sidebar = isStaff ? Layout.staffSidebar("student-attendance.html") : Layout.adminSidebar("student-attendance.html");
+
+    document.getElementById("appShell").innerHTML = `
+      ${Layout.renderShell(session, sidebar, "student-attendance.html")}
+        <h1 class="page-title">Student Attendance</h1>
+        <p class="page-subtitle">${isStaff ? "Mark attendance for your assigned class." : "Manage attendance for all classes."}</p>
+
+        <div id="alertContainer"></div>
+
+        <!-- Class & Section & Date Selector -->
+        <div class="card mb-5">
+          <div class="card-body">
+            <div class="form-row" style="align-items:flex-end;">
+              <div class="form-group">
+                <label class="form-label">Class</label>
+                <select id="attClass" class="form-select" ${isStaff ? 'disabled' : ''} onchange="updateAttSections(); renderAttTable()"></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Section</label>
+                <select id="attSection" class="form-select" ${isStaff ? 'disabled' : ''} onchange="renderAttTable()"></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Date</label>
+                <input type="date" id="attDate" class="form-control" onchange="renderAttTable()" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Attendance Table -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Mark Attendance</h3>
+            <button class="btn btn-primary btn-sm" onclick="saveAttendance()">Save Attendance</button>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Student Name</th><th>Roll No</th><th>Present</th><th>Absent</th><th>Late</th></tr>
+                </thead>
+                <tbody id="attTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </main></div>
+    `;
+
+    /* ===== Initialize selectors ===== */
+    (function init() {
+      const data = DataManager.getData();
+      const classSel = document.getElementById("attClass");
+      const secSel = document.getElementById("attSection");
+      if (isStaff) {
+        /* Staff can only see their assigned class */
+        classSel.innerHTML = `<option>${session.assignedClass}</option>`;
+        secSel.innerHTML = `<option>${session.assignedSection}</option>`;
+      } else {
+        data.classes.forEach(c => classSel.innerHTML += `<option>${c.name}</option>`);
+        updateAttSections();
+      }
+      document.getElementById("attDate").value = new Date().toISOString().split("T")[0];
+    })();
+
+    function updateAttSections() {
+      if (isStaff) return;
+      const data = DataManager.getData();
+      const className = document.getElementById("attClass").value;
+      const cls = data.classes.find(c => c.name === className);
+      const secSel = document.getElementById("attSection");
+      secSel.innerHTML = "";
+      if (cls) cls.sections.forEach(s => secSel.innerHTML += `<option>${s}</option>`);
+      renderAttTable();
+    }
+
+    /* Current attendance state for this render */
+    let currentAtt = {};
+
+    function renderAttTable() {
+      const data = DataManager.getData();
+      const className = document.getElementById("attClass").value;
+      const section = document.getElementById("attSection").value;
+      const date = document.getElementById("attDate").value;
+      const students = data.students.filter(s => s.class === className && s.section === section);
+      if (students.length === 0) {
+        document.getElementById("attTableBody").innerHTML = '<tr><td colspan="5" class="no-data">No students found in this class/section.</td></tr>';
+        return;
+      }
+      /* Load existing attendance for this date */
+      currentAtt = {};
+      students.forEach(s => {
+        const existing = s.attendance.find(a => a.date === date);
+        currentAtt[s.studentId] = existing ? existing.status : "present";
+      });
+      document.getElementById("attTableBody").innerHTML = students.map(s => `
+        <tr>
+          <td>${UI.escapeHtml(s.name)}</td>
+          <td>${s.rollNo}</td>
+          <td><span class="att-radio ${currentAtt[s.studentId]==='present'?'active present':''}" onclick="setAtt('${s.studentId}','present',this)">Present</span></td>
+          <td><span class="att-radio ${currentAtt[s.studentId]==='absent'?'active absent':''}" onclick="setAtt('${s.studentId}','absent',this)">Absent</span></td>
+          <td><span class="att-radio ${currentAtt[s.studentId]==='late'?'active late':''}" onclick="setAtt('${s.studentId}','late',this)">Late</span></td>
+        </tr>
+      `).join("");
+    }
+
+    function setAtt(studentId, status, el) {
+      currentAtt[studentId] = status;
+      /* Update radio button styles in the same row */
+      const row = el.closest("tr");
+      row.querySelectorAll(".att-radio").forEach(r => {
+        r.classList.remove("active", "present", "absent", "late");
+      });
+      el.classList.add("active", status);
+    }
+
+    function saveAttendance() {
+      const data = DataManager.getData();
+      const date = document.getElementById("attDate").value;
+      if (!date) { UI.toast("Please select a date", "error"); return; }
+      const className = document.getElementById("attClass").value;
+      const section = document.getElementById("attSection").value;
+      let savedCount = 0;
+      Object.keys(currentAtt).forEach(studentId => {
+        const student = data.students.find(s => s.studentId === studentId);
+        if (student) {
+          /* Remove existing entry for this date, then add new */
+          student.attendance = student.attendance.filter(a => a.date !== date);
+          student.attendance.push({ date: date, status: currentAtt[studentId] });
+          savedCount++;
+        }
+      });
+      DataManager.saveData(data);
+      UI.toast("Attendance saved for " + savedCount + " students", "success");
+    }
+
+    updateAttSections();
+    if (!isStaff) renderAttTable();
+    else renderAttTable();
+  </script>
+</body>
+</html>

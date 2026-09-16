@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notice Board Management — Greenwood ERP</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="appShell"></div>
+
+  <script src="script.js"></script>
+  <script>
+    const session = Auth.requireAdmin();
+
+    document.getElementById("appShell").innerHTML = `
+      ${Layout.renderShell(session, Layout.adminSidebar("notices.html"), "notices.html")}
+        <h1 class="page-title">Notice Board Management</h1>
+        <p class="page-subtitle">Create, edit, and publish notices for students and staff.</p>
+
+        <div id="alertContainer"></div>
+
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('noticeList', this)">All Notices</button>
+          <button class="tab-btn" onclick="switchTab('createNotice', this)">Create Notice</button>
+        </div>
+
+        <!-- Tab: Notice List -->
+        <div class="tab-panel active" id="tab-noticeList">
+          <div class="filter-bar">
+            <input type="text" class="form-control search-input" id="noticeSearch" placeholder="Search notices..." oninput="renderNotices()" />
+          </div>
+          <div class="card">
+            <div class="card-body" style="padding:0;">
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead>
+                    <tr><th>ID</th><th>Title</th><th>Date</th><th>Audience</th><th>Status</th><th>Actions</th></tr>
+                  </thead>
+                  <tbody id="noticeTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Create Notice -->
+        <div class="tab-panel" id="tab-createNotice">
+          <div class="card" style="max-width:700px;">
+            <div class="card-header"><h3>Create New Notice</h3></div>
+            <div class="card-body">
+              <form onsubmit="return handleCreateNotice(event)">
+                <div class="form-group">
+                  <label class="form-label">Notice Title <span class="req">*</span></label>
+                  <input type="text" id="noticeTitle" class="form-control" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Message <span class="req">*</span></label>
+                  <textarea id="noticeMessage" class="form-textarea" rows="4" required></textarea>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Date <span class="req">*</span></label>
+                    <input type="date" id="noticeDate" class="form-control" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Target Audience <span class="req">*</span></label>
+                    <select id="noticeAudience" class="form-select" required onchange="toggleSpecificClass()">
+                      <option value="">Select audience</option>
+                      <option>All Users</option>
+                      <option>All Students</option>
+                      <option>Specific Class</option>
+                      <option>Staff</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group hidden" id="specificClassGroup">
+                  <label class="form-label">Select Class</label>
+                  <select id="noticeSpecificClass" class="form-select"></select>
+                </div>
+                <button type="submit" class="btn btn-primary">Publish Notice</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </main></div>
+    `;
+
+    /* Populate class dropdown for specific class targeting */
+    (function init() {
+      const data = DataManager.getData();
+      const sel = document.getElementById("noticeSpecificClass");
+      data.classes.forEach(c => sel.innerHTML += `<option>${c.name}</option>`);
+      document.getElementById("noticeDate").value = new Date().toISOString().split("T")[0];
+    })();
+
+    function switchTab(tab, btn) {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      document.getElementById("tab-" + tab).classList.add("active");
+    }
+
+    function toggleSpecificClass() {
+      const val = document.getElementById("noticeAudience").value;
+      document.getElementById("specificClassGroup").classList.toggle("hidden", val !== "Specific Class");
+    }
+
+    function renderNotices() {
+      const data = DataManager.getData();
+      const search = (document.getElementById("noticeSearch")?.value || "").toLowerCase();
+      let notices = data.notices;
+      if (search) notices = notices.filter(n => n.title.toLowerCase().includes(search) || n.message.toLowerCase().includes(search));
+      if (notices.length === 0) {
+        document.getElementById("noticeTableBody").innerHTML = '<tr><td colspan="6" class="no-data">No notices found.</td></tr>';
+        return;
+      }
+      document.getElementById("noticeTableBody").innerHTML = notices.map(n => `
+        <tr>
+          <td>${n.id}</td>
+          <td>${UI.escapeHtml(n.title)}</td>
+          <td>${UI.formatDate(n.date)}</td>
+          <td>${UI.escapeHtml(n.audience)}${n.specificClass ? " (" + UI.escapeHtml(n.specificClass) + ")" : ""}</td>
+          <td>${n.published ? '<span class="badge badge-approved">Published</span>' : '<span class="badge badge-pending">Draft</span>'}</td>
+          <td>
+            <button class="btn btn-sm btn-danger" onclick="deleteNotice('${n.id}')">Delete</button>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    function handleCreateNotice(e) {
+      e.preventDefault();
+      const data = DataManager.getData();
+      const noticeId = "N" + String(data.notices.length + 1).padStart(3, "0");
+      const audience = document.getElementById("noticeAudience").value;
+      const notice = {
+        id: noticeId,
+        title: document.getElementById("noticeTitle").value.trim(),
+        message: document.getElementById("noticeMessage").value.trim(),
+        date: document.getElementById("noticeDate").value,
+        audience: audience,
+        specificClass: audience === "Specific Class" ? document.getElementById("noticeSpecificClass").value : "",
+        published: true,
+      };
+      data.notices.unshift(notice);
+      DataManager.saveData(data);
+      UI.toast("Notice published successfully", "success");
+      e.target.reset();
+      document.getElementById("noticeDate").value = new Date().toISOString().split("T")[0];
+      renderNotices();
+      switchTab("noticeList", document.querySelectorAll(".tab-btn")[0]);
+      return false;
+    }
+
+    function deleteNotice(id) {
+      if (!confirm("Delete this notice?")) return;
+      const data = DataManager.getData();
+      data.notices = data.notices.filter(n => n.id !== id);
+      DataManager.saveData(data);
+      UI.toast("Notice deleted", "success");
+      renderNotices();
+    }
+
+    renderNotices();
+  </script>
+</body>
+</html>

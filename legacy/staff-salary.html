@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Staff Attendance & Salary — Greenwood ERP</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="appShell"></div>
+
+  <script src="script.js"></script>
+  <script>
+    const session = Auth.requireAdmin();
+
+    document.getElementById("appShell").innerHTML = `
+      ${Layout.renderShell(session, Layout.adminSidebar("staff-salary.html"), "staff-salary.html")}
+        <h1 class="page-title">Staff Attendance & Salary</h1>
+        <p class="page-subtitle">Mark staff attendance and calculate monthly salaries.</p>
+
+        <div id="alertContainer"></div>
+
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('attendance', this)">Staff Attendance</button>
+          <button class="tab-btn" onclick="switchTab('salary', this)">Salary Calculator</button>
+        </div>
+
+        <!-- Tab: Staff Attendance -->
+        <div class="tab-panel active" id="tab-attendance">
+          <div class="card mb-4">
+            <div class="card-body">
+              <div class="form-row" style="align-items:flex-end;">
+                <div class="form-group">
+                  <label class="form-label">Date</label>
+                  <input type="date" id="staffAttDate" class="form-control" onchange="renderStaffAttTable()" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3>Mark Staff Attendance</h3>
+              <button class="btn btn-primary btn-sm" onclick="saveStaffAttendance()">Save Attendance</button>
+            </div>
+            <div class="card-body" style="padding:0;">
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead>
+                    <tr><th>Staff Name</th><th>Designation</th><th>Present</th><th>Absent</th><th>Late</th><th>Leave</th></tr>
+                  </thead>
+                  <tbody id="staffAttTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Salary Calculator -->
+        <div class="tab-panel" id="tab-salary">
+          <div class="card mb-4">
+            <div class="card-header"><h3>Monthly Salary Calculator</h3></div>
+            <div class="card-body">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Select Staff <span class="req">*</span></label>
+                  <select id="salaryStaff" class="form-select" onchange="loadStaffSalary()"></select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Salary Month <span class="req">*</span></label>
+                  <input type="month" id="salaryMonth" class="form-control" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Base Monthly Salary</label>
+                  <input type="number" id="salBase" class="form-control" readonly />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Total Working Days <span class="req">*</span></label>
+                  <input type="number" id="salWorkingDays" class="form-control" value="26" oninput="calculateSalary()" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Present Days</label>
+                  <input type="number" id="salPresent" class="form-control" readonly />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Absent Days <span class="req">*</span></label>
+                  <input type="number" id="salAbsent" class="form-control" value="0" oninput="calculateSalary()" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Per-Day Salary</label>
+                  <input type="text" id="salPerDay" class="form-control" readonly />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Absent Deduction</label>
+                  <input type="text" id="salDeduction" class="form-control" readonly />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Admin Adjustment (+/-)</label>
+                  <input type="number" id="salAdjustment" class="form-control" value="0" oninput="calculateSalary()" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Final Salary</label>
+                  <input type="text" id="salFinal" class="form-control" readonly style="font-weight:700;font-size:1.1rem;color:var(--success-600);" />
+                </div>
+              </div>
+              <button class="btn btn-primary" onclick="calculateSalary()">Calculate Salary</button>
+              <button class="btn btn-success" onclick="saveSalary()">Save Salary Record</button>
+            </div>
+          </div>
+
+          <!-- Saved salary records -->
+          <div class="card">
+            <div class="card-header"><h3>Salary History</h3></div>
+            <div class="card-body" style="padding:0;">
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead><tr><th>Staff Name</th><th>Month</th><th>Base</th><th>Deductions</th><th>Adjustments</th><th>Final</th><th>Status</th><th>Payment Date</th></tr></thead>
+                  <tbody id="salaryHistoryBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main></div>
+    `;
+
+    /* ===== Initialize ===== */
+    (function init() {
+      const data = DataManager.getData();
+      const staffSel = document.getElementById("salaryStaff");
+      data.staff.forEach(s => staffSel.innerHTML += `<option value="${s.staffId}">${s.name} (${s.designation})</option>`);
+      document.getElementById("staffAttDate").value = new Date().toISOString().split("T")[0];
+      document.getElementById("salaryMonth").value = new Date().toISOString().slice(0, 7);
+      renderStaffAttTable();
+      renderSalaryHistory();
+    })();
+
+    function switchTab(tab, btn) {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      document.getElementById("tab-" + tab).classList.add("active");
+    }
+
+    /* ===== Staff attendance ===== */
+    let staffAtt = {};
+
+    function renderStaffAttTable() {
+      const data = DataManager.getData();
+      const date = document.getElementById("staffAttDate").value;
+      staffAtt = {};
+      data.staff.forEach(s => {
+        const existing = s.attendance.find(a => a.date === date);
+        staffAtt[s.staffId] = existing ? existing.status : "present";
+      });
+      document.getElementById("staffAttTableBody").innerHTML = data.staff.map(s => `
+        <tr>
+          <td>${UI.escapeHtml(s.name)}</td>
+          <td>${UI.escapeHtml(s.designation)}</td>
+          <td><span class="att-radio ${staffAtt[s.staffId]==='present'?'active present':''}" onclick="setStaffAtt('${s.staffId}','present',this)">Present</span></td>
+          <td><span class="att-radio ${staffAtt[s.staffId]==='absent'?'active absent':''}" onclick="setStaffAtt('${s.staffId}','absent',this)">Absent</span></td>
+          <td><span class="att-radio ${staffAtt[s.staffId]==='late'?'active late':''}" onclick="setStaffAtt('${s.staffId}','late',this)">Late</span></td>
+          <td><span class="att-radio ${staffAtt[s.staffId]==='leave'?'active leave':''}" onclick="setStaffAtt('${s.staffId}','leave',this)">Leave</span></td>
+        </tr>
+      `).join("");
+    }
+
+    function setStaffAtt(staffId, status, el) {
+      staffAtt[staffId] = status;
+      const row = el.closest("tr");
+      row.querySelectorAll(".att-radio").forEach(r => r.classList.remove("active", "present", "absent", "late", "leave"));
+      el.classList.add("active", status);
+    }
+
+    function saveStaffAttendance() {
+      const data = DataManager.getData();
+      const date = document.getElementById("staffAttDate").value;
+      if (!date) { UI.toast("Please select a date", "error"); return; }
+      let count = 0;
+      Object.keys(staffAtt).forEach(staffId => {
+        const st = data.staff.find(s => s.staffId === staffId);
+        if (st) {
+          st.attendance = st.attendance.filter(a => a.date !== date);
+          st.attendance.push({ date: date, status: staffAtt[staffId] });
+          count++;
+        }
+      });
+      DataManager.saveData(data);
+      UI.toast("Staff attendance saved for " + count + " members", "success");
+    }
+
+    /* ===== Salary calculator ===== */
+    function loadStaffSalary() {
+      const data = DataManager.getData();
+      const staffId = document.getElementById("salaryStaff").value;
+      const st = data.staff.find(s => s.staffId === staffId);
+      if (!st) return;
+      document.getElementById("salBase").value = st.baseSalary;
+      /* Count present days in selected month */
+      const month = document.getElementById("salaryMonth").value;
+      const presentDays = st.attendance.filter(a => a.date.startsWith(month) && (a.status === "present" || a.status === "late")).length;
+      const absentDays = st.attendance.filter(a => a.date.startsWith(month) && a.status === "absent").length;
+      document.getElementById("salPresent").value = presentDays;
+      document.getElementById("salAbsent").value = absentDays;
+      calculateSalary();
+    }
+
+    function calculateSalary() {
+      const base = parseFloat(document.getElementById("salBase").value) || 0;
+      const workingDays = parseFloat(document.getElementById("salWorkingDays").value) || 1;
+      const absent = parseFloat(document.getElementById("salAbsent").value) || 0;
+      const adjustment = parseFloat(document.getElementById("salAdjustment").value) || 0;
+      const result = Calc.calculateSalary(base, workingDays, workingDays - absent, absent, adjustment);
+      document.getElementById("salPerDay").value = UI.formatCurrency(result.perDaySalary);
+      document.getElementById("salDeduction").value = UI.formatCurrency(result.absentDeduction);
+      document.getElementById("salFinal").value = UI.formatCurrency(result.finalSalary);
+    }
+
+    function saveSalary() {
+      const data = DataManager.getData();
+      const staffId = document.getElementById("salaryStaff").value;
+      const st = data.staff.find(s => s.staffId === staffId);
+      if (!st) { UI.toast("Select a staff member", "error"); return; }
+      const month = document.getElementById("salaryMonth").value;
+      const base = parseFloat(document.getElementById("salBase").value) || 0;
+      const deduction = parseFloat(document.getElementById("salDeduction").value.replace(/[^\d]/g, "")) || 0;
+      const adjustment = parseFloat(document.getElementById("salAdjustment").value) || 0;
+      const final = parseFloat(document.getElementById("salFinal").value.replace(/[^\d]/g, "")) || 0;
+      st.salaryHistory.push({
+        month: month,
+        baseSalary: base,
+        deductions: deduction,
+        adjustments: adjustment,
+        finalSalary: final,
+        status: "Paid",
+        paymentDate: new Date().toISOString().split("T")[0],
+      });
+      DataManager.saveData(data);
+      UI.toast("Salary record saved", "success");
+      renderSalaryHistory();
+    }
+
+    function renderSalaryHistory() {
+      const data = DataManager.getData();
+      let allRecords = [];
+      data.staff.forEach(s => {
+        s.salaryHistory.forEach(sh => {
+          allRecords.push({ staffName: s.name, ...sh });
+        });
+      });
+      if (allRecords.length === 0) {
+        document.getElementById("salaryHistoryBody").innerHTML = '<tr><td colspan="8" class="no-data">No salary records yet.</td></tr>';
+        return;
+      }
+      document.getElementById("salaryHistoryBody").innerHTML = allRecords.map(r => `
+        <tr>
+          <td>${UI.escapeHtml(r.staffName)}</td>
+          <td>${UI.escapeHtml(r.month)}</td>
+          <td>${UI.formatCurrency(r.baseSalary)}</td>
+          <td>${UI.formatCurrency(r.deductions)}</td>
+          <td>${UI.formatCurrency(r.adjustments)}</td>
+          <td>${UI.formatCurrency(r.finalSalary)}</td>
+          <td><span class="badge badge-${r.status === 'Paid' ? 'paid' : 'unpaid'}">${r.status}</span></td>
+          <td>${r.paymentDate ? UI.formatDate(r.paymentDate) : '-'}</td>
+        </tr>
+      `).join("");
+    }
+  </script>
+</body>
+</html>

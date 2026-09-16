@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Login — Greenwood ERP</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ===== User Login Page (Student / Staff) ===== -->
+  <div class="login-wrapper">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="logo-icon">🎓</div>
+        <h2>User Login</h2>
+        <p class="login-sub">Greenwood International School ERP</p>
+      </div>
+
+      <!-- Role Selector Toggle -->
+      <div class="role-toggle" id="roleToggle">
+        <button type="button" class="active" data-role="student" onclick="selectRole('student')">Student</button>
+        <button type="button" data-role="staff" onclick="selectRole('staff')">Staff</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="userLoginForm" onsubmit="return handleUserLogin(event)">
+        <div class="form-group">
+          <label class="form-label" for="userId">User ID <span class="req">*</span></label>
+          <input type="text" id="userId" class="form-control" placeholder="Enter your ID" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="userPass">Password <span class="req">*</span></label>
+          <input type="password" id="userPass" class="form-control" placeholder="Enter password" required />
+        </div>
+        <input type="hidden" id="selectedRole" value="student" />
+        <button type="submit" class="btn btn-primary btn-block btn-lg">Login</button>
+      </form>
+
+      <!-- Demo credentials hint -->
+      <div class="demo-creds" id="demoCreds">
+        <strong>Demo Student:</strong> ID: <strong>STU001</strong> &middot; Password: <strong>student123</strong>
+      </div>
+
+      <p style="text-align:center;margin-top:var(--sp-4);">
+        <a href="index.html">&larr; Back to Home</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    /* ===== Select role (student or staff) ===== */
+    function selectRole(role) {
+      document.getElementById("selectedRole").value = role;
+      document.querySelectorAll("#roleToggle button").forEach(b => {
+        b.classList.toggle("active", b.dataset.role === role);
+      });
+
+      /* Update demo credentials hint */
+      const demo = document.getElementById("demoCreds");
+      if (role === "student") {
+        demo.innerHTML = "<strong>Demo Student:</strong> ID: <strong>STU001</strong> &middot; Password: <strong>student123</strong>";
+      } else {
+        demo.innerHTML = "<strong>Demo Staff:</strong> ID: <strong>ST001</strong> &middot; Password: <strong>staff123</strong>";
+      }
+    }
+
+    /* ===== Handle user login form submission ===== */
+    function handleUserLogin(e) {
+      e.preventDefault();
+      const userId = document.getElementById("userId").value.trim();
+      const password = document.getElementById("userPass").value.trim();
+      const role = document.getElementById("selectedRole").value;
+
+      if (!userId || !password) {
+        UI.toast("Please enter both User ID and Password", "error");
+        return false;
+      }
+
+      const data = DataManager.getData();
+
+      if (role === "student") {
+        /* Find student by ID and password */
+        const student = data.students.find(s => s.studentId === userId && s.password === password && s.status === "approved");
+        if (student) {
+          Auth.setSession({ userId: student.studentId, name: student.name, role: "student", class: student.class, section: student.section });
+          UI.toast("Login successful! Redirecting...", "success");
+          setTimeout(() => { window.location.href = "student-dashboard.html"; }, 800);
+        } else {
+          UI.toast("Invalid student credentials or account not approved", "error");
+        }
+      } else {
+        /* Find staff by ID and password */
+        const staff = data.staff.find(s => s.staffId === userId && s.password === password && s.status === "approved");
+        if (staff) {
+          Auth.setSession({ userId: staff.staffId, name: staff.name, role: "staff", assignedClass: staff.assignedClass, assignedSection: staff.assignedSection, assignedSubject: staff.assignedSubject });
+          UI.toast("Login successful! Redirecting...", "success");
+          setTimeout(() => { window.location.href = "staff-attendance.html"; }, 800);
+        } else {
+          UI.toast("Invalid staff credentials or account not approved", "error");
+        }
+      }
+      return false;
+    }
+
+    /* ===== Check URL param for pre-selected role ===== */
+    (function init() {
+      const params = new URLSearchParams(window.location.search);
+      const role = params.get("role");
+      if (role === "staff") selectRole("staff");
+    })();
+  </script>
+</body>
+</html>

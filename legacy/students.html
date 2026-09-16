@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Management — Greenwood ERP</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ===== App Shell ===== -->
+  <div id="appShell"></div>
+
+  <script src="script.js"></script>
+  <script>
+    /* ===== Auth guard: admin only ===== */
+    const session = Auth.requireAdmin();
+
+    /* ===== Render shell ===== */
+    document.getElementById("appShell").innerHTML = `
+      ${Layout.renderShell(session, Layout.adminSidebar("students.html"), "students.html")}
+        <h1 class="page-title">Student Management</h1>
+        <p class="page-subtitle">Manage student registrations, admissions, and profiles.</p>
+
+        <div id="alertContainer"></div>
+
+        <!-- Tabs: Registrations | Student List -->
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('registrations', this)">Pending Registrations</button>
+          <button class="tab-btn" onclick="switchTab('studentList', this)">Student List</button>
+          <button class="tab-btn" onclick="switchTab('addStudent', this)">Add Student</button>
+        </div>
+
+        <!-- Tab: Pending Registrations -->
+        <div class="tab-panel active" id="tab-registrations">
+          <div class="filter-bar">
+            <input type="text" class="form-control search-input" id="regSearch" placeholder="Search by name, ID, or class..." oninput="renderRegistrations()" />
+          </div>
+          <div class="card">
+            <div class="card-body" style="padding:0;">
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Reg ID</th>
+                      <th>Name</th>
+                      <th>DOB</th>
+                      <th>Gender</th>
+                      <th>Mobile</th>
+                      <th>Applying Class</th>
+                      <th>Parent</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="regTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Student List -->
+        <div class="tab-panel" id="tab-studentList">
+          <div class="filter-bar">
+            <input type="text" class="form-control search-input" id="studentSearch" placeholder="Search by name, ID, or class..." oninput="renderStudentList()" />
+            <select class="form-select" id="studentClassFilter" onchange="renderStudentList()">
+              <option value="">All Classes</option>
+            </select>
+          </div>
+          <div class="card">
+            <div class="card-body" style="padding:0;">
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Student ID</th>
+                      <th>Name</th>
+                      <th>Class</th>
+                      <th>Section</th>
+                      <th>Roll No</th>
+                      <th>Status</th>
+                      <th>Attendance</th>
+                      <th>Fee Status</th>
+                      <th>Result</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="studentTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Add Student (Direct Admission) -->
+        <div class="tab-panel" id="tab-addStudent">
+          <div class="card" style="max-width:700px;">
+            <div class="card-header"><h3>Direct Student Admission</h3></div>
+            <div class="card-body">
+              <form onsubmit="return handleAddStudent(event)">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Student Name <span class="req">*</span></label>
+                    <input type="text" id="newStudentName" class="form-control" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Date of Birth <span class="req">*</span></label>
+                    <input type="date" id="newStudentDob" class="form-control" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Gender <span class="req">*</span></label>
+                    <select id="newStudentGender" class="form-select" required>
+                      <option value="">Select</option>
+                      <option>Male</option><option>Female</option><option>Other</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Mobile <span class="req">*</span></label>
+                    <input type="tel" id="newStudentMobile" class="form-control" pattern="[0-9]{10}" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="newStudentEmail" class="form-control" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Address</label>
+                  <textarea id="newStudentAddress" class="form-textarea"></textarea>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Class <span class="req">*</span></label>
+                    <select id="newStudentClass" class="form-select" required></select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Section <span class="req">*</span></label>
+                    <select id="newStudentSection" class="form-select" required>
+                      <option>A</option><option>B</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Roll Number <span class="req">*</span></label>
+                    <input type="number" id="newStudentRoll" class="form-control" required />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Parent Name <span class="req">*</span></label>
+                    <input type="text" id="newStudentParent" class="form-control" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Parent Mobile <span class="req">*</span></label>
+                    <input type="tel" id="newStudentParentMobile" class="form-control" pattern="[0-9]{10}" required />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Student ID <span class="req">*</span></label>
+                    <input type="text" id="newStudentId" class="form-control" placeholder="e.g. STU009" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Password <span class="req">*</span></label>
+                    <input type="text" id="newStudentPass" class="form-control" placeholder="Set a password" required />
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Student</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Student Profile Modal -->
+        <div class="modal-overlay" id="profileModal">
+          <div class="modal modal-lg">
+            <div class="modal-header">
+              <h3>Student Profile</h3>
+              <button class="modal-close" onclick="UI.closeModal('profileModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="profileBody"></div>
+          </div>
+        </div>
+      </main></div>
+    `;
+
+    /* ===== Populate class filters ===== */
+    (function initFilters() {
+      const data = DataManager.getData();
+      const classFilter = document.getElementById("studentClassFilter");
+      const newClass = document.getElementById("newStudentClass");
+      data.classes.forEach(c => {
+        classFilter.innerHTML += `<option>${c.name}</option>`;
+        newClass.innerHTML += `<option>${c.name}</option>`;
+      });
+    })();
+
+    /* ===== Tab switching ===== */
+    function switchTab(tab, btn) {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      document.getElementById("tab-" + tab).classList.add("active");
+    }
+
+    /* ===== Render pending registrations ===== */
+    function renderRegistrations() {
+      const data = DataManager.getData();
+      const search = (document.getElementById("regSearch")?.value || "").toLowerCase();
+      let regs = data.pendingRegistrations;
+      if (search) {
+        regs = regs.filter(r =>
+          r.name.toLowerCase().includes(search) ||
+          r.id.toLowerCase().includes(search) ||
+          r.applyingClass.toLowerCase().includes(search)
+        );
+      }
+      const badgeMap = { "Pending": "badge-pending", "Verified": "badge-verified", "Approved": "badge-approved", "Rejected": "badge-rejected" };
+      if (regs.length === 0) {
+        document.getElementById("regTableBody").innerHTML = '<tr><td colspan="9" class="no-data">No registrations found.</td></tr>';
+        return;
+      }
+      document.getElementById("regTableBody").innerHTML = regs.map(r => `
+        <tr>
+          <td>${r.id}</td>
+          <td>${UI.escapeHtml(r.name)}</td>
+          <td>${UI.formatDate(r.dob)}</td>
+          <td>${UI.escapeHtml(r.gender)}</td>
+          <td>${UI.escapeHtml(r.mobile)}</td>
+          <td>${UI.escapeHtml(r.applyingClass)}</td>
+          <td>${UI.escapeHtml(r.parentName)}</td>
+          <td><span class="badge ${badgeMap[r.status] || "badge-pending"}">${r.status}</span></td>
+          <td>
+            ${r.status === "Pending" ? `<button class="btn btn-sm btn-info" onclick="updateRegStatus('${r.id}', 'Verified')">Verify</button>` : ""}
+            ${r.status === "Verified" ? `<button class="btn btn-sm btn-success" onclick="approveRegistration('${r.id}')">Approve</button>` : ""}
+            ${r.status !== "Rejected" && r.status !== "Approved" ? `<button class="btn btn-sm btn-danger" onclick="updateRegStatus('${r.id}', 'Rejected')">Reject</button>` : ""}
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    /* ===== Update registration status (verify/reject) ===== */
+    function updateRegStatus(regId, status) {
+      const data = DataManager.getData();
+      const reg = data.pendingRegistrations.find(r => r.id === regId);
+      if (reg) {
+        reg.status = status;
+        DataManager.saveData(data);
+        UI.toast("Registration " + status.toLowerCase(), "success");
+        renderRegistrations();
+      }
+    }
+
+    /* ===== Approve registration: prompt for Student ID, password, class, section, roll ===== */
+    function approveRegistration(regId) {
+      const data = DataManager.getData();
+      const reg = data.pendingRegistrations.find(r => r.id === regId);
+      if (!reg) return;
+
+      const studentId = prompt("Enter Student ID for " + reg.name + ":", "STU" + String(data.students.length + 1).padStart(3, "0"));
+      if (!studentId) return;
+      const password = prompt("Set a password for the student:", "student123");
+      if (!password) return;
+      const section = prompt("Enter section (A or B):", "A");
+      if (!section) return;
+      const rollNo = prompt("Enter roll number:", "1");
+      if (!rollNo) return;
+
+      /* Create approved student from registration */
+      const fee = data.feeStructure.find(f => f.class === reg.applyingClass);
+      const newStudent = {
+        studentId: studentId,
+        password: password,
+        name: reg.name,
+        dob: reg.dob,
+        gender: reg.gender,
+        mobile: reg.mobile,
+        email: reg.email,
+        address: reg.address,
+        previousSchool: reg.previousSchool,
+        applyingClass: reg.applyingClass,
+        parentName: reg.parentName,
+        parentMobile: reg.parentMobile,
+        class: reg.applyingClass,
+        section: section,
+        rollNo: parseInt(rollNo),
+        status: "approved",
+        attendance: [],
+        fees: { totalFee: fee ? fee.totalFee : 40000, paidAmount: 0, payments: [] },
+        results: [],
+      };
+
+      data.students.push(newStudent);
+      reg.status = "Approved";
+      DataManager.saveData(data);
+      UI.toast("Student approved and ID created: " + studentId, "success");
+      renderRegistrations();
+      renderStudentList();
+    }
+
+    /* ===== Render student list/table ===== */
+    function renderStudentList() {
+      const data = DataManager.getData();
+      const search = (document.getElementById("studentSearch")?.value || "").toLowerCase();
+      const classFilter = document.getElementById("studentClassFilter")?.value || "";
+      let students = data.students;
+      if (search) {
+        students = students.filter(s =>
+          s.name.toLowerCase().includes(search) ||
+          s.studentId.toLowerCase().includes(search) ||
+          s.class.toLowerCase().includes(search)
+        );
+      }
+      if (classFilter) {
+        students = students.filter(s => s.class === classFilter);
+      }
+      if (students.length === 0) {
+        document.getElementById("studentTableBody").innerHTML = '<tr><td colspan="10" class="no-data">No students found.</td></tr>';
+        return;
+      }
+      document.getElementById("studentTableBody").innerHTML = students.map(s => {
+        const attPct = Calc.studentAttendancePct(s);
+        const feeStatus = Calc.feeStatus(s);
+        const resultStatus = s.results.length > 0 ? '<span class="badge badge-pass">Published</span>' : '<span class="badge badge-info">Pending</span>';
+        return `
+          <tr>
+            <td>${s.studentId}</td>
+            <td>${UI.escapeHtml(s.name)}</td>
+            <td>${UI.escapeHtml(s.class)}</td>
+            <td>${UI.escapeHtml(s.section)}</td>
+            <td>${s.rollNo}</td>
+            <td><span class="badge badge-approved">Approved</span></td>
+            <td>${attPct}%</td>
+            <td><span class="badge ${feeStatus.class}">${feeStatus.label}</span></td>
+            <td>${resultStatus}</td>
+            <td><button class="btn btn-sm btn-outline" onclick="showProfile('${s.studentId}')">View</button></td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    /* ===== Show student profile in modal ===== */
+    function showProfile(studentId) {
+      const data = DataManager.getData();
+      const s = data.students.find(st => st.studentId === studentId);
+      if (!s) return;
+      const attPct = Calc.studentAttendancePct(s);
+      const pending = Calc.studentPendingFee(s);
+      const feeStatus = Calc.feeStatus(s);
+
+      /* Build profile detail */
+      let html = `
+        <div class="profile-grid mb-5">
+          <div class="profile-item"><div class="label">Student ID</div><div class="value">${s.studentId}</div></div>
+          <div class="profile-item"><div class="label">Name</div><div class="value">${UI.escapeHtml(s.name)}</div></div>
+          <div class="profile-item"><div class="label">Date of Birth</div><div class="value">${UI.formatDate(s.dob)}</div></div>
+          <div class="profile-item"><div class="label">Gender</div><div class="value">${UI.escapeHtml(s.gender)}</div></div>
+          <div class="profile-item"><div class="label">Mobile</div><div class="value">${UI.escapeHtml(s.mobile)}</div></div>
+          <div class="profile-item"><div class="label">Email</div><div class="value">${UI.escapeHtml(s.email || "-")}</div></div>
+          <div class="profile-item"><div class="label">Address</div><div class="value">${UI.escapeHtml(s.address || "-")}</div></div>
+          <div class="profile-item"><div class="label">Previous School</div><div class="value">${UI.escapeHtml(s.previousSchool || "-")}</div></div>
+          <div class="profile-item"><div class="label">Class</div><div class="value">${UI.escapeHtml(s.class)}</div></div>
+          <div class="profile-item"><div class="label">Section</div><div class="value">${UI.escapeHtml(s.section)}</div></div>
+          <div class="profile-item"><div class="label">Roll Number</div><div class="value">${s.rollNo}</div></div>
+          <div class="profile-item"><div class="label">Parent Name</div><div class="value">${UI.escapeHtml(s.parentName)}</div></div>
+          <div class="profile-item"><div class="label">Parent Mobile</div><div class="value">${UI.escapeHtml(s.parentMobile)}</div></div>
+        </div>
+
+        <h4 style="margin-bottom:var(--sp-3);">Attendance (${attPct}%)</h4>
+        <div class="progress-bar mb-3"><div class="fill ${attPct >= 75 ? 'green' : attPct >= 50 ? 'amber' : 'red'}" style="width:${attPct}%"></div></div>
+      `;
+
+      /* Attendance history */
+      if (s.attendance.length > 0) {
+        html += `<div class="table-wrapper mb-5"><table class="data-table"><thead><tr><th>Date</th><th>Status</th></tr></thead><tbody>`;
+        s.attendance.slice(-10).reverse().forEach(a => {
+          html += `<tr><td>${UI.formatDate(a.date)}</td><td><span class="badge badge-${a.status}">${a.status}</span></td></tr>`;
+        });
+        html += `</tbody></table></div>`;
+      } else {
+        html += `<p class="text-muted mb-5">No attendance records yet.</p>`;
+      }
+
+      /* Fee details */
+      html += `
+        <h4 style="margin-bottom:var(--sp-3);">Fee Details</h4>
+        <div class="profile-grid mb-4">
+          <div class="profile-item"><div class="label">Total Fee</div><div class="value">${UI.formatCurrency(s.fees.totalFee)}</div></div>
+          <div class="profile-item"><div class="label">Paid Amount</div><div class="value">${UI.formatCurrency(s.fees.paidAmount)}</div></div>
+          <div class="profile-item"><div class="label">Pending Amount</div><div class="value">${UI.formatCurrency(pending)}</div></div>
+          <div class="profile-item"><div class="label">Payment Status</div><div class="value"><span class="badge ${feeStatus.class}">${feeStatus.label}</span></div></div>
+        </div>
+      `;
+      if (s.fees.payments.length > 0) {
+        html += `<div class="table-wrapper mb-5"><table class="data-table"><thead><tr><th>Receipt No</th><th>Date</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead><tbody>`;
+        s.fees.payments.forEach(p => {
+          html += `<tr><td>${p.receiptNo}</td><td>${UI.formatDate(p.date)}</td><td>${UI.formatCurrency(p.amount)}</td><td>${p.method}</td><td><span class="badge badge-${p.status === 'Paid' ? 'paid' : 'partial'}">${p.status}</span></td></tr>`;
+        });
+        html += `</tbody></table></div>`;
+      }
+
+      /* Exam results */
+      html += `<h4 style="margin-bottom:var(--sp-3);">Exam Results</h4>`;
+      if (s.results.length > 0) {
+        html += `<div class="table-wrapper mb-5"><table class="data-table"><thead><tr><th>Exam</th><th>Subject</th><th>Total Marks</th><th>Obtained</th><th>Percentage</th><th>Grade</th><th>Status</th></tr></thead><tbody>`;
+        s.results.forEach(r => {
+          const pct = Math.round((r.obtained / r.totalMarks) * 100);
+          const grade = Calc.gradeFromPct(pct);
+          const pf = Calc.passFail(pct);
+          html += `<tr><td>${UI.escapeHtml(r.examName)}</td><td>${UI.escapeHtml(r.subject)}</td><td>${r.totalMarks}</td><td>${r.obtained}</td><td>${pct}%</td><td>${grade}</td><td><span class="badge badge-${pf === 'Pass' ? 'pass' : 'fail'}">${pf}</span></td></tr>`;
+        });
+        html += `</tbody></table></div>`;
+      } else {
+        html += `<p class="text-muted mb-5">No exam results published yet.</p>`;
+      }
+
+      /* Curriculum / syllabus links */
+      html += `<h4 style="margin-bottom:var(--sp-3);">Syllabus & Timetable</h4>`;
+      const curr = data.curriculum.find(c => c.class === s.class && c.section === s.section);
+      if (curr) {
+        html += `<div class="table-wrapper mb-4"><table class="data-table"><thead><tr><th>Subject</th><th>Teacher</th><th>Syllabus</th></tr></thead><tbody>`;
+        curr.subjects.forEach(sub => {
+          html += `<tr><td>${UI.escapeHtml(sub.name)}</td><td>${UI.escapeHtml(sub.teacher)}</td><td><a href="#" onclick="return false">📄 ${UI.escapeHtml(sub.syllabus)}</a></td></tr>`;
+        });
+        html += `</tbody></table></div>`;
+      } else {
+        html += `<p class="text-muted mb-4">No curriculum data for this class.</p>`;
+      }
+
+      const tt = data.timetable.filter(t => t.class === s.class && t.section === s.section);
+      if (tt.length > 0) {
+        html += `<div class="table-wrapper"><table class="data-table"><thead><tr><th>Date</th><th>Subject</th><th>Teacher</th><th>Start</th><th>End</th></tr></thead><tbody>`;
+        tt.forEach(t => {
+          html += `<tr><td>${UI.formatDate(t.date)}</td><td>${UI.escapeHtml(t.subject)}</td><td>${UI.escapeHtml(t.teacher)}</td><td>${t.startTime}</td><td>${t.endTime}</td></tr>`;
+        });
+        html += `</tbody></table></div>`;
+      } else {
+        html += `<p class="text-muted">No timetable entries yet.</p>`;
+      }
+
+      document.getElementById("profileBody").innerHTML = html;
+      UI.openModal("profileModal");
+    }
+
+    /* ===== Handle direct add student form ===== */
+    function handleAddStudent(e) {
+      e.preventDefault();
+      const data = DataManager.getData();
+      const studentId = document.getElementById("newStudentId").value.trim();
+      if (data.students.some(s => s.studentId === studentId)) {
+        UI.toast("Student ID already exists", "error");
+        return false;
+      }
+      const className = document.getElementById("newStudentClass").value;
+      const fee = data.feeStructure.find(f => f.class === className);
+      const newStudent = {
+        studentId: studentId,
+        password: document.getElementById("newStudentPass").value,
+        name: document.getElementById("newStudentName").value.trim(),
+        dob: document.getElementById("newStudentDob").value,
+        gender: document.getElementById("newStudentGender").value,
+        mobile: document.getElementById("newStudentMobile").value.trim(),
+        email: document.getElementById("newStudentEmail").value.trim(),
+        address: document.getElementById("newStudentAddress").value.trim(),
+        previousSchool: "",
+        applyingClass: className,
+        parentName: document.getElementById("newStudentParent").value.trim(),
+        parentMobile: document.getElementById("newStudentParentMobile").value.trim(),
+        class: className,
+        section: document.getElementById("newStudentSection").value,
+        rollNo: parseInt(document.getElementById("newStudentRoll").value),
+        status: "approved",
+        attendance: [],
+        fees: { totalFee: fee ? fee.totalFee : 40000, paidAmount: 0, payments: [] },
+        results: [],
+      };
+      data.students.push(newStudent);
+      DataManager.saveData(data);
+      UI.toast("Student added successfully: " + studentId, "success");
+      e.target.reset();
+      renderStudentList();
+      switchTab("studentList", document.querySelectorAll(".tab-btn")[1]);
+      return false;
+    }
+
+    /* ===== Initial render ===== */
+    renderRegistrations();
+    renderStudentList();
+  </script>
+</body>
+</html>

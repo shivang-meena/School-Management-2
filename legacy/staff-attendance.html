@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Staff Dashboard — Greenwood ERP</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="appShell"></div>
+
+  <script src="script.js"></script>
+  <script>
+    const session = Auth.requireStaff();
+    if (session) {
+      const data = DataManager.getData();
+      const staff = data.staff.find(s => s.staffId === session.userId);
+      if (!staff) { alert("Staff record not found."); Auth.logout(); }
+    }
+
+    document.getElementById("appShell").innerHTML = `
+      ${Layout.renderShell(session, Layout.staffSidebar("staff-attendance.html"), "staff-attendance.html")}
+        <h1 class="page-title">Staff Dashboard</h1>
+        <p class="page-subtitle">Welcome, ${UI.escapeHtml(session.name)}. You can mark attendance for your assigned class.</p>
+
+        <!-- Staff info card -->
+        <div class="card mb-5">
+          <div class="card-body">
+            <div class="profile-grid">
+              <div class="profile-item"><div class="label">Staff ID</div><div class="value">${session.userId}</div></div>
+              <div class="profile-item"><div class="label">Name</div><div class="value">${UI.escapeHtml(session.name)}</div></div>
+              <div class="profile-item"><div class="label">Assigned Class</div><div class="value">${UI.escapeHtml(session.assignedClass || "-")} / ${UI.escapeHtml(session.assignedSection || "-")}</div></div>
+              <div class="profile-item"><div class="label">Assigned Subject</div><div class="value">${UI.escapeHtml(session.assignedSubject || "-")}</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notice Board (shown first after info) -->
+        <div class="card mb-5">
+          <div class="card-header"><h3>📢 Notice Board</h3></div>
+          <div class="card-body" style="padding:0;">
+            <ul class="notice-list" id="staffNotices"></ul>
+          </div>
+        </div>
+
+        <!-- Attendance Marking -->
+        <div class="card mb-4">
+          <div class="card-body">
+            <div class="form-row" style="align-items:flex-end;">
+              <div class="form-group">
+                <label class="form-label">Class</label>
+                <input type="text" class="form-control" value="${session.assignedClass}" disabled />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Section</label>
+                <input type="text" class="form-control" value="${session.assignedSection}" disabled />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Date</label>
+                <input type="date" id="staffAttDate" class="form-control" onchange="renderAttTable()" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Mark Student Attendance</h3>
+            <button class="btn btn-primary btn-sm" onclick="saveAttendance()">Save Attendance</button>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead><tr><th>Student Name</th><th>Roll No</th><th>Present</th><th>Absent</th><th>Late</th></tr></thead>
+                <tbody id="attTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </main></div>
+    `;
+
+    /* ===== Render notices ===== */
+    (function renderNotices() {
+      const notices = getNoticesFor("staff");
+      document.getElementById("staffNotices").innerHTML = notices.length > 0
+        ? notices.map(n => `<li class="notice-item"><div class="notice-title">${UI.escapeHtml(n.title)}</div><div class="notice-date">${UI.formatDate(n.date)}</div><div class="notice-msg">${UI.escapeHtml(n.message)}</div></li>`).join("")
+        : '<li class="no-data">No notices for staff.</li>';
+    })();
+
+    document.getElementById("staffAttDate").value = new Date().toISOString().split("T")[0];
+
+    let currentAtt = {};
+
+    function renderAttTable() {
+      const data = DataManager.getData();
+      const date = document.getElementById("staffAttDate").value;
+      const students = data.students.filter(s => s.class === session.assignedClass && s.section === session.assignedSection);
+      if (students.length === 0) {
+        document.getElementById("attTableBody").innerHTML = '<tr><td colspan="5" class="no-data">No students in your assigned class.</td></tr>';
+        return;
+      }
+      currentAtt = {};
+      students.forEach(s => {
+        const existing = s.attendance.find(a => a.date === date);
+        currentAtt[s.studentId] = existing ? existing.status : "present";
+      });
+      document.getElementById("attTableBody").innerHTML = students.map(s => `
+        <tr>
+          <td>${UI.escapeHtml(s.name)}</td>
+          <td>${s.rollNo}</td>
+          <td><span class="att-radio ${currentAtt[s.studentId]==='present'?'active present':''}" onclick="setAtt('${s.studentId}','present',this)">Present</span></td>
+          <td><span class="att-radio ${currentAtt[s.studentId]==='absent'?'active absent':''}" onclick="setAtt('${s.studentId}','absent',this)">Absent</span></td>
+          <td><span class="att-radio ${currentAtt[s.studentId]==='late'?'active late':''}" onclick="setAtt('${s.studentId}','late',this)">Late</span></td>
+        </tr>
+      `).join("");
+    }
+
+    function setAtt(studentId, status, el) {
+      currentAtt[studentId] = status;
+      const row = el.closest("tr");
+      row.querySelectorAll(".att-radio").forEach(r => r.classList.remove("active", "present", "absent", "late"));
+      el.classList.add("active", status);
+    }
+
+    function saveAttendance() {
+      const data = DataManager.getData();
+      const date = document.getElementById("staffAttDate").value;
+      if (!date) { UI.toast("Please select a date", "error"); return; }
+      let count = 0;
+      Object.keys(currentAtt).forEach(studentId => {
+        const student = data.students.find(s => s.studentId === studentId);
+        if (student) {
+          student.attendance = student.attendance.filter(a => a.date !== date);
+          student.attendance.push({ date: date, status: currentAtt[studentId] });
+          count++;
+        }
+      });
+      DataManager.saveData(data);
+      UI.toast("Attendance saved for " + count + " students", "success");
+    }
+
+    renderAttTable();
+  </script>
+</body>
+</html>

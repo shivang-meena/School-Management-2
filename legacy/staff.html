@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Staff Management — Greenwood ERP</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="appShell"></div>
+
+  <script src="script.js"></script>
+  <script>
+    /* ===== Auth guard: admin only ===== */
+    const session = Auth.requireAdmin();
+
+    document.getElementById("appShell").innerHTML = `
+      ${Layout.renderShell(session, Layout.adminSidebar("staff.html"), "staff.html")}
+        <h1 class="page-title">Staff Management</h1>
+        <p class="page-subtitle">Manage teachers and all school employees.</p>
+
+        <div id="alertContainer"></div>
+
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('staffList', this)">Staff List</button>
+          <button class="tab-btn" onclick="switchTab('addStaff', this)">Add Staff</button>
+        </div>
+
+        <!-- Tab: Staff List -->
+        <div class="tab-panel active" id="tab-staffList">
+          <div class="filter-bar">
+            <input type="text" class="form-control search-input" id="staffSearch" placeholder="Search by name, ID, or designation..." oninput="renderStaffList()" />
+            <select class="form-select" id="staffDesignationFilter" onchange="renderStaffList()">
+              <option value="">All Designations</option>
+              <option>Senior Teacher</option>
+              <option>Teacher</option>
+              <option>Accountant</option>
+            </select>
+          </div>
+          <div class="card">
+            <div class="card-body" style="padding:0;">
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Staff ID</th>
+                      <th>Name</th>
+                      <th>Designation</th>
+                      <th>Assigned Class</th>
+                      <th>Subject</th>
+                      <th>Joining Date</th>
+                      <th>Base Salary</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="staffTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Add Staff -->
+        <div class="tab-panel" id="tab-addStaff">
+          <div class="card" style="max-width:700px;">
+            <div class="card-header"><h3>Add New Staff Member</h3></div>
+            <div class="card-body">
+              <form onsubmit="return handleAddStaff(event)">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Name <span class="req">*</span></label>
+                    <input type="text" id="newStaffName" class="form-control" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Designation <span class="req">*</span></label>
+                    <select id="newStaffDesignation" class="form-select" required>
+                      <option value="">Select</option>
+                      <option>Senior Teacher</option>
+                      <option>Teacher</option>
+                      <option>Accountant</option>
+                      <option>Librarian</option>
+                      <option>Admin Staff</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Joining Date <span class="req">*</span></label>
+                    <input type="date" id="newStaffJoining" class="form-control" required />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Base Monthly Salary <span class="req">*</span></label>
+                    <input type="number" id="newStaffSalary" class="form-control" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Mobile <span class="req">*</span></label>
+                    <input type="tel" id="newStaffMobile" class="form-control" pattern="[0-9]{10}" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="newStaffEmail" class="form-control" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Address</label>
+                  <textarea id="newStaffAddress" class="form-textarea"></textarea>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Assigned Class</label>
+                    <select id="newStaffClass" class="form-select"><option value="">None</option></select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Assigned Section</label>
+                    <select id="newStaffSection" class="form-select"><option value="">None</option><option>A</option><option>B</option></select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Assigned Subject</label>
+                    <select id="newStaffSubject" class="form-select"><option value="">None</option></select>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Staff ID <span class="req">*</span></label>
+                    <input type="text" id="newStaffId" class="form-control" placeholder="e.g. ST008" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Password <span class="req">*</span></label>
+                    <input type="text" id="newStaffPass" class="form-control" required />
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Staff</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Staff Profile Modal -->
+        <div class="modal-overlay" id="staffProfileModal">
+          <div class="modal modal-lg">
+            <div class="modal-header">
+              <h3>Staff Profile</h3>
+              <button class="modal-close" onclick="UI.closeModal('staffProfileModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="staffProfileBody"></div>
+          </div>
+        </div>
+      </main></div>
+    `;
+
+    /* ===== Populate dropdowns ===== */
+    (function initDropdowns() {
+      const data = DataManager.getData();
+      const classSel = document.getElementById("newStaffClass");
+      const subjectSel = document.getElementById("newStaffSubject");
+      data.classes.forEach(c => classSel.innerHTML += `<option>${c.name}</option>`);
+      data.subjects.forEach(s => subjectSel.innerHTML += `<option>${s}</option>`);
+    })();
+
+    /* ===== Tab switching ===== */
+    function switchTab(tab, btn) {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      document.getElementById("tab-" + tab).classList.add("active");
+    }
+
+    /* ===== Render staff list ===== */
+    function renderStaffList() {
+      const data = DataManager.getData();
+      const search = (document.getElementById("staffSearch")?.value || "").toLowerCase();
+      const desigFilter = document.getElementById("staffDesignationFilter")?.value || "";
+      let staff = data.staff;
+      if (search) {
+        staff = staff.filter(s =>
+          s.name.toLowerCase().includes(search) ||
+          s.staffId.toLowerCase().includes(search) ||
+          s.designation.toLowerCase().includes(search)
+        );
+      }
+      if (desigFilter) staff = staff.filter(s => s.designation === desigFilter);
+      if (staff.length === 0) {
+        document.getElementById("staffTableBody").innerHTML = '<tr><td colspan="9" class="no-data">No staff found.</td></tr>';
+        return;
+      }
+      document.getElementById("staffTableBody").innerHTML = staff.map(s => `
+        <tr>
+          <td>${s.staffId}</td>
+          <td>${UI.escapeHtml(s.name)}</td>
+          <td>${UI.escapeHtml(s.designation)}</td>
+          <td>${s.assignedClass ? UI.escapeHtml(s.assignedClass + " / " + s.assignedSection) : "-"}</td>
+          <td>${UI.escapeHtml(s.assignedSubject || "-")}</td>
+          <td>${UI.formatDate(s.joiningDate)}</td>
+          <td>${UI.formatCurrency(s.baseSalary)}</td>
+          <td><span class="badge badge-approved">Approved</span></td>
+          <td><button class="btn btn-sm btn-outline" onclick="showStaffProfile('${s.staffId}')">View</button></td>
+        </tr>
+      `).join("");
+    }
+
+    /* ===== Show staff profile in modal ===== */
+    function showStaffProfile(staffId) {
+      const data = DataManager.getData();
+      const s = data.staff.find(st => st.staffId === staffId);
+      if (!s) return;
+      const attPct = Calc.staffAttendancePct(s);
+
+      let html = `
+        <div class="profile-grid mb-5">
+          <div class="profile-item"><div class="label">Staff ID</div><div class="value">${s.staffId}</div></div>
+          <div class="profile-item"><div class="label">Name</div><div class="value">${UI.escapeHtml(s.name)}</div></div>
+          <div class="profile-item"><div class="label">Designation</div><div class="value">${UI.escapeHtml(s.designation)}</div></div>
+          <div class="profile-item"><div class="label">Joining Date</div><div class="value">${UI.formatDate(s.joiningDate)}</div></div>
+          <div class="profile-item"><div class="label">Base Salary</div><div class="value">${UI.formatCurrency(s.baseSalary)}</div></div>
+          <div class="profile-item"><div class="label">Mobile</div><div class="value">${UI.escapeHtml(s.mobile)}</div></div>
+          <div class="profile-item"><div class="label">Email</div><div class="value">${UI.escapeHtml(s.email || "-")}</div></div>
+          <div class="profile-item"><div class="label">Address</div><div class="value">${UI.escapeHtml(s.address || "-")}</div></div>
+          <div class="profile-item"><div class="label">Assigned Class</div><div class="value">${s.assignedClass ? UI.escapeHtml(s.assignedClass + " / " + s.assignedSection) : "-"}</div></div>
+          <div class="profile-item"><div class="label">Assigned Subject</div><div class="value">${UI.escapeHtml(s.assignedSubject || "-")}</div></div>
+        </div>
+
+        <h4 style="margin-bottom:var(--sp-3);">Attendance (${attPct}%)</h4>
+        <div class="progress-bar mb-3"><div class="fill ${attPct >= 75 ? 'green' : attPct >= 50 ? 'amber' : 'red'}" style="width:${attPct}%"></div></div>
+      `;
+
+      /* Attendance history */
+      if (s.attendance.length > 0) {
+        html += `<div class="table-wrapper mb-5"><table class="data-table"><thead><tr><th>Date</th><th>Status</th></tr></thead><tbody>`;
+        s.attendance.slice(-10).reverse().forEach(a => {
+          html += `<tr><td>${UI.formatDate(a.date)}</td><td><span class="badge badge-${a.status}">${a.status}</span></td></tr>`;
+        });
+        html += `</tbody></table></div>`;
+      } else {
+        html += `<p class="text-muted mb-5">No attendance records yet.</p>`;
+      }
+
+      /* Salary history */
+      html += `<h4 style="margin-bottom:var(--sp-3);">Salary History</h4>`;
+      if (s.salaryHistory.length > 0) {
+        html += `<div class="table-wrapper"><table class="data-table"><thead><tr><th>Month</th><th>Base Salary</th><th>Deductions</th><th>Adjustments</th><th>Final Salary</th><th>Status</th><th>Payment Date</th></tr></thead><tbody>`;
+        s.salaryHistory.forEach(sh => {
+          html += `<tr><td>${UI.escapeHtml(sh.month)}</td><td>${UI.formatCurrency(sh.baseSalary)}</td><td>${UI.formatCurrency(sh.deductions)}</td><td>${UI.formatCurrency(sh.adjustments)}</td><td>${UI.formatCurrency(sh.finalSalary)}</td><td><span class="badge badge-${sh.status === 'Paid' ? 'paid' : 'unpaid'}">${sh.status}</span></td><td>${sh.paymentDate ? UI.formatDate(sh.paymentDate) : '-'}</td></tr>`;
+        });
+        html += `</tbody></table></div>`;
+      } else {
+        html += `<p class="text-muted">No salary records yet.</p>`;
+      }
+
+      document.getElementById("staffProfileBody").innerHTML = html;
+      UI.openModal("staffProfileModal");
+    }
+
+    /* ===== Handle add staff form ===== */
+    function handleAddStaff(e) {
+      e.preventDefault();
+      const data = DataManager.getData();
+      const staffId = document.getElementById("newStaffId").value.trim();
+      if (data.staff.some(s => s.staffId === staffId)) {
+        UI.toast("Staff ID already exists", "error");
+        return false;
+      }
+      const newStaff = {
+        staffId: staffId,
+        password: document.getElementById("newStaffPass").value,
+        name: document.getElementById("newStaffName").value.trim(),
+        designation: document.getElementById("newStaffDesignation").value,
+        joiningDate: document.getElementById("newStaffJoining").value,
+        baseSalary: parseInt(document.getElementById("newStaffSalary").value),
+        mobile: document.getElementById("newStaffMobile").value.trim(),
+        email: document.getElementById("newStaffEmail").value.trim(),
+        address: document.getElementById("newStaffAddress").value.trim(),
+        assignedClass: document.getElementById("newStaffClass").value,
+        assignedSection: document.getElementById("newStaffSection").value,
+        assignedSubject: document.getElementById("newStaffSubject").value,
+        status: "approved",
+        attendance: [],
+        salaryHistory: [],
+      };
+      data.staff.push(newStaff);
+      DataManager.saveData(data);
+      UI.toast("Staff added successfully: " + staffId, "success");
+      e.target.reset();
+      renderStaffList();
+      switchTab("staffList", document.querySelectorAll(".tab-btn")[0]);
+      return false;
+    }
+
+    renderStaffList();
+  </script>
+</body>
+</html>

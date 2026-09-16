@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Dashboard — Greenwood ERP</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="appShell"></div>
+
+  <script src="script.js"></script>
+  <script>
+    const session = Auth.requireStudent();
+    if (session) {
+      const data = DataManager.getData();
+      const student = data.students.find(s => s.studentId === session.userId);
+      if (!student) { alert("Student record not found."); Auth.logout(); }
+    }
+
+    document.getElementById("appShell").innerHTML = `
+      ${Layout.renderShell(session, Layout.studentSidebar("student-dashboard.html"), "student-dashboard.html")}
+        <h1 class="page-title">My Dashboard</h1>
+        <p class="page-subtitle">Welcome, ${UI.escapeHtml(session.name)}. Here is your school information.</p>
+
+        <!-- Notice Board (shown first) -->
+        <div class="card mb-5">
+          <div class="card-header"><h3>📢 Notice Board</h3></div>
+          <div class="card-body" style="padding:0;">
+            <ul class="notice-list" id="stuNotices"></ul>
+          </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="stat-grid" id="stuStats"></div>
+
+        <!-- Tabs for different sections -->
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('profile', this)">My Profile</button>
+          <button class="tab-btn" onclick="switchTab('attendance', this)">Attendance</button>
+          <button class="tab-btn" onclick="switchTab('curriculum', this)">Curriculum & Timetable</button>
+          <button class="tab-btn" onclick="switchTab('fees', this)">Fees & Receipts</button>
+          <button class="tab-btn" onclick="switchTab('results', this)">Exam Results</button>
+        </div>
+
+        <div class="tab-panel active" id="tab-profile"><div class="card"><div class="card-body" id="profilePanel"></div></div></div>
+        <div class="tab-panel" id="tab-attendance"><div class="card"><div class="card-body" id="attendancePanel"></div></div></div>
+        <div class="tab-panel" id="tab-curriculum"><div class="card"><div class="card-body" id="curriculumPanel"></div></div></div>
+        <div class="tab-panel" id="tab-fees"><div class="card"><div class="card-body" id="feesPanel"></div></div></div>
+        <div class="tab-panel" id="tab-results"><div class="card"><div class="card-body" id="resultsPanel"></div></div></div>
+
+        <!-- Report Card Modal -->
+        <div class="modal-overlay" id="reportCardModal">
+          <div class="modal modal-lg">
+            <div class="modal-header">
+              <h3>Report Card</h3>
+              <button class="modal-close no-print" onclick="UI.closeModal('reportCardModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="reportCardBody"></div>
+            <div class="modal-footer no-print">
+              <button class="btn btn-secondary" onclick="window.print()">Print / Download</button>
+              <button class="btn btn-primary" onclick="UI.closeModal('reportCardModal')">Close</button>
+            </div>
+          </div>
+        </div>
+      </main></div>
+    `;
+
+    function switchTab(tab, btn) {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      document.getElementById("tab-" + tab).classList.add("active");
+    }
+
+    /* ===== Render everything ===== */
+    (function renderAll() {
+      const data = DataManager.getData();
+      const s = data.students.find(st => st.studentId === session.userId);
+      if (!s) return;
+      const attPct = Calc.studentAttendancePct(s);
+      const pending = Calc.studentPendingFee(s);
+      const feeStatus = Calc.feeStatus(s);
+
+      /* Notices */
+      const notices = getNoticesFor("student", s.class);
+      document.getElementById("stuNotices").innerHTML = notices.length > 0
+        ? notices.map(n => `<li class="notice-item"><div class="notice-title">${UI.escapeHtml(n.title)}</div><div class="notice-date">${UI.formatDate(n.date)}</div><div class="notice-msg">${UI.escapeHtml(n.message)}</div></li>`).join("")
+        : '<li class="no-data">No notices for you.</li>';
+
+      /* Stats */
+      const stats = [
+        { label: "Attendance", value: attPct + "%", icon: "✅", color: attPct >= 75 ? "green" : attPct >= 50 ? "amber" : "red" },
+        { label: "Total Fee", value: UI.formatCurrency(s.fees.totalFee), icon: "💰", color: "blue" },
+        { label: "Pending Fee", value: UI.formatCurrency(pending), icon: "⚠️", color: pending > 0 ? "orange" : "green" },
+        { label: "Exams", value: s.results.length, icon: "📝", color: "teal" },
+      ];
+      document.getElementById("stuStats").innerHTML = stats.map(st => `
+        <div class="stat-card"><div class="stat-icon ${st.color}">${st.icon}</div><div class="stat-info"><div class="stat-label">${st.label}</div><div class="stat-value">${st.value}</div></div></div>
+      `).join("");
+
+      /* Profile */
+      document.getElementById("profilePanel").innerHTML = `
+        <div class="profile-grid">
+          <div class="profile-item"><div class="label">Student ID</div><div class="value">${s.studentId}</div></div>
+          <div class="profile-item"><div class="label">Name</div><div class="value">${UI.escapeHtml(s.name)}</div></div>
+          <div class="profile-item"><div class="label">Date of Birth</div><div class="value">${UI.formatDate(s.dob)}</div></div>
+          <div class="profile-item"><div class="label">Gender</div><div class="value">${UI.escapeHtml(s.gender)}</div></div>
+          <div class="profile-item"><div class="label">Class</div><div class="value">${UI.escapeHtml(s.class)}</div></div>
+          <div class="profile-item"><div class="label">Section</div><div class="value">${UI.escapeHtml(s.section)}</div></div>
+          <div class="profile-item"><div class="label">Roll Number</div><div class="value">${s.rollNo}</div></div>
+          <div class="profile-item"><div class="label">Mobile</div><div class="value">${UI.escapeHtml(s.mobile)}</div></div>
+          <div class="profile-item"><div class="label">Email</div><div class="value">${UI.escapeHtml(s.email || "-")}</div></div>
+          <div class="profile-item"><div class="label">Address</div><div class="value">${UI.escapeHtml(s.address || "-")}</div></div>
+          <div class="profile-item"><div class="label">Parent Name</div><div class="value">${UI.escapeHtml(s.parentName)}</div></div>
+          <div class="profile-item"><div class="label">Parent Mobile</div><div class="value">${UI.escapeHtml(s.parentMobile)}</div></div>
+          <div class="profile-item"><div class="label">Previous School</div><div class="value">${UI.escapeHtml(s.previousSchool || "-")}</div></div>
+        </div>
+      `;
+
+      /* Attendance */
+      let attHtml = `<div class="progress-bar mb-4"><div class="fill ${attPct >= 75 ? 'green' : attPct >= 50 ? 'amber' : 'red'}" style="width:${attPct}%"></div></div>`;
+      if (s.attendance.length > 0) {
+        attHtml += `<div class="table-wrapper"><table class="data-table"><thead><tr><th>Date</th><th>Status</th></tr></thead><tbody>`;
+        s.attendance.slice(-15).reverse().forEach(a => {
+          attHtml += `<tr><td>${UI.formatDate(a.date)}</td><td><span class="badge badge-${a.status}">${a.status}</span></td></tr>`;
+        });
+        attHtml += `</tbody></table></div>`;
+      } else {
+        attHtml += `<p class="text-muted">No attendance records yet.</p>`;
+      }
+      document.getElementById("attendancePanel").innerHTML = attHtml;
+
+      /* Curriculum & Timetable */
+      const curr = data.curriculum.find(c => c.class === s.class && c.section === s.section);
+      let currHtml = "";
+      if (curr && curr.subjects.length > 0) {
+        currHtml += `<h4 style="margin-bottom:var(--sp-3);">Subjects & Teachers</h4><div class="table-wrapper mb-5"><table class="data-table"><thead><tr><th>Subject</th><th>Teacher</th><th>Syllabus</th></tr></thead><tbody>`;
+        curr.subjects.forEach(sub => {
+          currHtml += `<tr><td>${UI.escapeHtml(sub.name)}</td><td>${UI.escapeHtml(sub.teacher)}</td><td><a href="#" onclick="return false">📄 ${UI.escapeHtml(sub.syllabus)}</a></td></tr>`;
+        });
+        currHtml += `</tbody></table></div>`;
+      } else {
+        currHtml += `<p class="text-muted mb-4">No curriculum data for your class.</p>`;
+      }
+      const tt = data.timetable.filter(t => t.class === s.class && t.section === s.section);
+      if (tt.length > 0) {
+        currHtml += `<h4 style="margin-bottom:var(--sp-3);">Daily Lectures & Timetable</h4><div class="table-wrapper"><table class="data-table"><thead><tr><th>Date</th><th>Subject</th><th>Teacher</th><th>Start</th><th>End</th></tr></thead><tbody>`;
+        tt.forEach(t => {
+          currHtml += `<tr><td>${UI.formatDate(t.date)}</td><td>${UI.escapeHtml(t.subject)}</td><td>${UI.escapeHtml(t.teacher)}</td><td>${t.startTime}</td><td>${t.endTime}</td></tr>`;
+        });
+        currHtml += `</tbody></table></div>`;
+      } else {
+        currHtml += `<p class="text-muted">No timetable entries yet.</p>`;
+      }
+      document.getElementById("curriculumPanel").innerHTML = currHtml;
+
+      /* Fees */
+      let feeHtml = `
+        <div class="profile-grid mb-4">
+          <div class="profile-item"><div class="label">Total Fee</div><div class="value">${UI.formatCurrency(s.fees.totalFee)}</div></div>
+          <div class="profile-item"><div class="label">Paid Amount</div><div class="value">${UI.formatCurrency(s.fees.paidAmount)}</div></div>
+          <div class="profile-item"><div class="label">Pending Amount</div><div class="value">${UI.formatCurrency(pending)}</div></div>
+          <div class="profile-item"><div class="label">Status</div><div class="value"><span class="badge ${feeStatus.class}">${feeStatus.label}</span></div></div>
+        </div>
+      `;
+      if (s.fees.payments.length > 0) {
+        feeHtml += `<h4 style="margin-bottom:var(--sp-3);">Payment History & Receipts</h4><div class="table-wrapper"><table class="data-table"><thead><tr><th>Receipt No</th><th>Date</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead><tbody>`;
+        s.fees.payments.forEach(p => {
+          feeHtml += `<tr><td>${p.receiptNo}</td><td>${UI.formatDate(p.date)}</td><td>${UI.formatCurrency(p.amount)}</td><td>${p.method}</td><td><span class="badge badge-${p.status === 'Paid' ? 'paid' : 'partial'}">${p.status}</span></td></tr>`;
+        });
+        feeHtml += `</tbody></table></div>`;
+      } else {
+        feeHtml += `<p class="text-muted">No payments made yet.</p>`;
+      }
+      document.getElementById("feesPanel").innerHTML = feeHtml;
+
+      /* Results */
+      let resHtml = "";
+      if (s.results.length > 0) {
+        resHtml += `<div class="table-wrapper mb-4"><table class="data-table"><thead><tr><th>Exam</th><th>Subject</th><th>Total</th><th>Obtained</th><th>Percentage</th><th>Grade</th><th>Status</th></tr></thead><tbody>`;
+        s.results.forEach(r => {
+          const pct = Math.round((r.obtained / r.totalMarks) * 100);
+          const grade = Calc.gradeFromPct(pct);
+          const pf = Calc.passFail(pct);
+          resHtml += `<tr><td>${UI.escapeHtml(r.examName)}</td><td>${UI.escapeHtml(r.subject)}</td><td>${r.totalMarks}</td><td>${r.obtained}</td><td>${pct}%</td><td><strong>${grade}</strong></td><td><span class="badge badge-${pf === 'Pass' ? 'pass' : 'fail'}">${pf}</span></td></tr>`;
+        });
+        resHtml += `</tbody></table></div>`;
+        resHtml += `<button class="btn btn-primary" onclick="showReportCard()">View Printable Report Card</button>`;
+      } else {
+        resHtml += `<p class="text-muted">No exam results published yet.</p>`;
+      }
+      document.getElementById("resultsPanel").innerHTML = resHtml;
+
+      /* Store student reference for report card */
+      window._student = s;
+    })();
+
+    function showReportCard() {
+      const s = window._student;
+      if (!s) return;
+      let html = `
+        <div style="text-align:center;margin-bottom:var(--sp-5);">
+          <h2>Greenwood International School</h2>
+          <p class="text-muted">123 Education Lane, New Delhi — 110001</p>
+          <h3>Report Card</h3>
+        </div>
+        <div class="profile-grid mb-5">
+          <div class="profile-item"><div class="label">Student Name</div><div class="value">${UI.escapeHtml(s.name)}</div></div>
+          <div class="profile-item"><div class="label">Student ID</div><div class="value">${s.studentId}</div></div>
+          <div class="profile-item"><div class="label">Class</div><div class="value">${UI.escapeHtml(s.class)} / ${UI.escapeHtml(s.section)}</div></div>
+          <div class="profile-item"><div class="label">Roll No</div><div class="value">${s.rollNo}</div></div>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table" style="width:100%;">
+            <thead><tr><th>Exam</th><th>Subject</th><th>Total Marks</th><th>Obtained</th><th>Percentage</th><th>Grade</th><th>Result</th></tr></thead>
+            <tbody>
+      `;
+      s.results.forEach(r => {
+        const pct = Math.round((r.obtained / r.totalMarks) * 100);
+        const grade = Calc.gradeFromPct(pct);
+        const pf = Calc.passFail(pct);
+        html += `<tr><td>${UI.escapeHtml(r.examName)}</td><td>${UI.escapeHtml(r.subject)}</td><td>${r.totalMarks}</td><td>${r.obtained}</td><td>${pct}%</td><td>${grade}</td><td>${pf}</td></tr>`;
+      });
+      html += `</tbody></table></div>`;
+      html += `<p class="text-muted text-center mt-5">This is a computer-generated report card from Greenwood ERP prototype.</p>`;
+      document.getElementById("reportCardBody").innerHTML = html;
+      UI.openModal("reportCardModal");
+    }
+  </script>
+</body>
+</html>

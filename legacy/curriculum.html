@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Curriculum Management — Greenwood ERP</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="appShell"></div>
+
+  <script src="script.js"></script>
+  <script>
+    const session = Auth.requireAdmin();
+
+    document.getElementById("appShell").innerHTML = `
+      ${Layout.renderShell(session, Layout.adminSidebar("curriculum.html"), "curriculum.html")}
+        <h1 class="page-title">Curriculum Management</h1>
+        <p class="page-subtitle">Manage subjects, syllabus, teachers, and timetable by class and section.</p>
+
+        <div id="alertContainer"></div>
+
+        <!-- Class & Section Selector -->
+        <div class="card mb-5">
+          <div class="card-body">
+            <div class="form-row" style="align-items:flex-end;">
+              <div class="form-group">
+                <label class="form-label">Select Class</label>
+                <select id="currClass" class="form-select" onchange="updateSections(); renderCurriculum();"></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Select Section</label>
+                <select id="currSection" class="form-select" onchange="renderCurriculum()"></select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('subjects', this)">Subjects & Syllabus</button>
+          <button class="tab-btn" onclick="switchTab('timetable', this)">Timetable / Lectures</button>
+          <button class="tab-btn" onclick="switchTab('addSubject', this)">Add Subject</button>
+          <button class="tab-btn" onclick="switchTab('addLecture', this)">Add Lecture</button>
+        </div>
+
+        <!-- Tab: Subjects & Syllabus -->
+        <div class="tab-panel active" id="tab-subjects">
+          <div class="card">
+            <div class="card-header"><h3>Subjects & Assigned Teachers</h3></div>
+            <div class="card-body" style="padding:0;">
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead><tr><th>Subject</th><th>Assigned Teacher</th><th>Syllabus</th></tr></thead>
+                  <tbody id="subjectTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Timetable -->
+        <div class="tab-panel" id="tab-timetable">
+          <div class="card">
+            <div class="card-header"><h3>Daily Lectures & Timetable</h3></div>
+            <div class="card-body" style="padding:0;">
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead><tr><th>Date</th><th>Subject</th><th>Teacher</th><th>Start Time</th><th>End Time</th><th>Actions</th></tr></thead>
+                  <tbody id="timetableTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Add Subject -->
+        <div class="tab-panel" id="tab-addSubject">
+          <div class="card" style="max-width:600px;">
+            <div class="card-header"><h3>Add Subject to Curriculum</h3></div>
+            <div class="card-body">
+              <form onsubmit="return handleAddSubject(event)">
+                <div class="form-group">
+                  <label class="form-label">Subject Name <span class="req">*</span></label>
+                  <select id="addSubjectName" class="form-select" required></select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Assign Teacher <span class="req">*</span></label>
+                  <select id="addSubjectTeacher" class="form-select" required></select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Syllabus Link (placeholder)</label>
+                  <input type="text" id="addSubjectSyllabus" class="form-control" placeholder="e.g. syllabus-math-class8.pdf" />
+                </div>
+                <button type="submit" class="btn btn-primary">Add Subject</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Add Lecture / Timetable Entry -->
+        <div class="tab-panel" id="tab-addLecture">
+          <div class="card" style="max-width:600px;">
+            <div class="card-header"><h3>Add Timetable Entry</h3></div>
+            <div class="card-body">
+              <form onsubmit="return handleAddLecture(event)">
+                <div class="form-group">
+                  <label class="form-label">Subject <span class="req">*</span></label>
+                  <input type="text" id="addLectureSubject" class="form-control" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Teacher <span class="req">*</span></label>
+                  <input type="text" id="addLectureTeacher" class="form-control" required />
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Date <span class="req">*</span></label>
+                    <input type="date" id="addLectureDate" class="form-control" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Start Time <span class="req">*</span></label>
+                    <input type="time" id="addLectureStart" class="form-control" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">End Time <span class="req">*</span></label>
+                    <input type="time" id="addLectureEnd" class="form-control" required />
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Entry</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </main></div>
+    `;
+
+    /* ===== Initialize dropdowns ===== */
+    (function init() {
+      const data = DataManager.getData();
+      const classSel = document.getElementById("currClass");
+      const subjectSel = document.getElementById("addSubjectName");
+      const teacherSel = document.getElementById("addSubjectTeacher");
+      data.classes.forEach(c => classSel.innerHTML += `<option>${c.name}</option>`);
+      data.subjects.forEach(s => subjectSel.innerHTML += `<option>${s}</option>`);
+      data.staff.filter(s => s.assignedClass).forEach(s => teacherSel.innerHTML += `<option>${s.name}</option>`);
+      updateSections();
+      document.getElementById("addLectureDate").value = new Date().toISOString().split("T")[0];
+    })();
+
+    function updateSections() {
+      const data = DataManager.getData();
+      const className = document.getElementById("currClass").value;
+      const cls = data.classes.find(c => c.name === className);
+      const secSel = document.getElementById("currSection");
+      secSel.innerHTML = "";
+      if (cls) cls.sections.forEach(s => secSel.innerHTML += `<option>${s}</option>`);
+    }
+
+    function switchTab(tab, btn) {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      document.getElementById("tab-" + tab).classList.add("active");
+    }
+
+    function renderCurriculum() {
+      renderSubjects();
+      renderTimetable();
+    }
+
+    function renderSubjects() {
+      const data = DataManager.getData();
+      const className = document.getElementById("currClass").value;
+      const section = document.getElementById("currSection").value;
+      const curr = data.curriculum.find(c => c.class === className && c.section === section);
+      if (!curr || curr.subjects.length === 0) {
+        document.getElementById("subjectTableBody").innerHTML = '<tr><td colspan="3" class="no-data">No subjects added for this class/section yet.</td></tr>';
+        return;
+      }
+      document.getElementById("subjectTableBody").innerHTML = curr.subjects.map(s => `
+        <tr>
+          <td>${UI.escapeHtml(s.name)}</td>
+          <td>${UI.escapeHtml(s.teacher)}</td>
+          <td><a href="#" onclick="return false">📄 ${UI.escapeHtml(s.syllabus)}</a></td>
+        </tr>
+      `).join("");
+    }
+
+    function renderTimetable() {
+      const data = DataManager.getData();
+      const className = document.getElementById("currClass").value;
+      const section = document.getElementById("currSection").value;
+      const tt = data.timetable.filter(t => t.class === className && t.section === section);
+      if (tt.length === 0) {
+        document.getElementById("timetableTableBody").innerHTML = '<tr><td colspan="6" class="no-data">No timetable entries for this class/section yet.</td></tr>';
+        return;
+      }
+      document.getElementById("timetableTableBody").innerHTML = tt.map(t => `
+        <tr>
+          <td>${UI.formatDate(t.date)}</td>
+          <td>${UI.escapeHtml(t.subject)}</td>
+          <td>${UI.escapeHtml(t.teacher)}</td>
+          <td>${t.startTime}</td>
+          <td>${t.endTime}</td>
+          <td><button class="btn btn-sm btn-danger" onclick="deleteLecture(${data.timetable.indexOf(t)})">Delete</button></td>
+        </tr>
+      `).join("");
+    }
+
+    function handleAddSubject(e) {
+      e.preventDefault();
+      const data = DataManager.getData();
+      const className = document.getElementById("currClass").value;
+      const section = document.getElementById("currSection").value;
+      let curr = data.curriculum.find(c => c.class === className && c.section === section);
+      if (!curr) {
+        curr = { class: className, section: section, subjects: [] };
+        data.curriculum.push(curr);
+      }
+      const subjectName = document.getElementById("addSubjectName").value;
+      if (curr.subjects.some(s => s.name === subjectName)) {
+        UI.toast("Subject already exists for this class/section", "error");
+        return false;
+      }
+      curr.subjects.push({
+        name: subjectName,
+        teacher: document.getElementById("addSubjectTeacher").value,
+        syllabus: document.getElementById("addSubjectSyllabus").value.trim() || "syllabus.pdf",
+      });
+      DataManager.saveData(data);
+      UI.toast("Subject added to curriculum", "success");
+      e.target.reset();
+      renderCurriculum();
+      switchTab("subjects", document.querySelectorAll(".tab-btn")[0]);
+      return false;
+    }
+
+    function handleAddLecture(e) {
+      e.preventDefault();
+      const data = DataManager.getData();
+      const className = document.getElementById("currClass").value;
+      const section = document.getElementById("currSection").value;
+      data.timetable.push({
+        class: className,
+        section: section,
+        subject: document.getElementById("addLectureSubject").value,
+        teacher: document.getElementById("addLectureTeacher").value,
+        date: document.getElementById("addLectureDate").value,
+        startTime: document.getElementById("addLectureStart").value,
+        endTime: document.getElementById("addLectureEnd").value,
+      });
+      DataManager.saveData(data);
+      UI.toast("Timetable entry added", "success");
+      e.target.reset();
+      document.getElementById("addLectureDate").value = new Date().toISOString().split("T")[0];
+      renderTimetable();
+      switchTab("timetable", document.querySelectorAll(".tab-btn")[1]);
+      return false;
+    }
+
+    function deleteLecture(idx) {
+      if (!confirm("Delete this timetable entry?")) return;
+      const data = DataManager.getData();
+      data.timetable.splice(idx, 1);
+      DataManager.saveData(data);
+      UI.toast("Entry deleted", "success");
+      renderTimetable();
+    }
+
+    renderCurriculum();
+  </script>
+</body>
+</html>

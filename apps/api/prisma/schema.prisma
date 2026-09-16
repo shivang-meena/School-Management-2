@@ -1,0 +1,221 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  STAFF
+  STUDENT
+}
+
+enum AttendanceStatus {
+  present
+  absent
+  late
+  half_day
+}
+
+enum PaymentMethod {
+  Cash
+  Online
+  Bank
+  Cheque
+}
+
+enum TransactionType {
+  EXPENSE
+  INCOME
+}
+
+model User {
+  id           String    @id @default(uuid())
+  userId       String    @unique
+  name         String
+  email        String?   @unique
+  passwordHash String
+  role         Role      @default(STUDENT)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  student      Student?
+  staff        Staff?
+
+  @@map("users")
+}
+
+model Student {
+  id             String        @id @default(uuid())
+  studentId      String        @unique
+  name           String
+  dob            String
+  gender         String
+  mobile         String
+  email          String        @unique
+  address        String
+  previousSchool String?
+  class          String
+  section        String
+  rollNo         Int
+  status         String        @default("approved")
+  parentName     String
+  parentMobile   String
+  totalFee       Float         @default(48000)
+  paidAmount     Float         @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String?       @unique
+
+  feePayments    FeePayment[]
+  examResults    ExamResult[]
+
+  @@map("students")
+}
+
+model Staff {
+  id              String    @id @default(uuid())
+  staffId         String    @unique
+  name            String
+  designation     String
+  joiningDate     String
+  baseSalary      Float
+  mobile          String
+  email           String    @unique
+  address         String
+  assignedClass   String?
+  assignedSection String?
+  assignedSubject String?
+  status          String    @default("approved")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user            User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String?   @unique
+
+  @@map("staff")
+}
+
+model ClassRoom {
+  id       String   @id @default(uuid())
+  name     String   @unique
+  sections String[]
+  totalFee Float    @default(48000)
+
+  @@map("classrooms")
+}
+
+model Subject {
+  id   String @id @default(uuid())
+  name String @unique
+
+  @@map("subjects")
+}
+
+model AttendanceRecord {
+  id          String   @id @default(uuid())
+  date        String
+  targetType  String   // "STUDENT" | "STAFF"
+  referenceId String   // studentId or staffId
+  status      String   // "present", "absent", "late"
+  remarks     String?
+  createdAt   DateTime @default(now())
+
+  @@unique([date, targetType, referenceId])
+  @@map("attendance_records")
+}
+
+model FeePayment {
+  id        String        @id @default(uuid())
+  receiptNo String        @unique
+  studentId String
+  amount    Float
+  date      String
+  method    PaymentMethod @default(Online)
+  status    String        @default("Paid")
+  remarks   String?
+  createdAt DateTime      @default(now())
+
+  student   Student       @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+
+  @@map("fee_payments")
+}
+
+model Exam {
+  id         String       @id @default(uuid())
+  name       String
+  class      String
+  section    String
+  subject    String
+  date       String
+  totalMarks Float        @default(100)
+  published  Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+
+  results    ExamResult[]
+
+  @@map("exams")
+}
+
+model ExamResult {
+  id          String   @id @default(uuid())
+  examId      String
+  studentId   String
+  obtained    Float
+  createdAt   DateTime @default(now())
+
+  exam        Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student     Student  @relation(fields: [studentId], references: [studentId], onDelete: Cascade)
+
+  @@unique([examId, studentId])
+  @@map("exam_results")
+}
+
+model Notice {
+  id            String   @id @default(uuid())
+  title         String
+  message       String
+  date          String
+  audience      String   @default("All Users") // "All Users", "Staff", "All Students", "Specific Class"
+  specificClass String?
+  published     Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@map("notices")
+}
+
+model AccountTransaction {
+  id          String          @id @default(uuid())
+  type        TransactionType @default(EXPENSE)
+  title       String
+  amount      Float
+  date        String
+  description String?
+  createdAt   DateTime        @default(now())
+
+  @@map("account_transactions")
+}
+
+model PendingRegistration {
+  id             String   @id @default(uuid())
+  name           String
+  dob            String
+  gender         String
+  mobile         String
+  email          String
+  address        String
+  previousSchool String?
+  applyingClass  String
+  parentName     String
+  parentMobile   String
+  status         String   @default("Pending") // "Pending", "Verified", "Rejected", "Approved"
+  submittedDate  String
+  createdAt      DateTime @default(now())
+
+  @@map("pending_registrations")
+}

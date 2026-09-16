@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login — Greenwood ERP</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ===== Admin Login Page ===== -->
+  <div class="login-wrapper">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="logo-icon">🎓</div>
+        <h2>Admin Login</h2>
+        <p class="login-sub">Greenwood International School ERP</p>
+      </div>
+
+      <!-- Login Form -->
+      <form id="adminLoginForm" onsubmit="return handleAdminLogin(event)">
+        <div class="form-group">
+          <label class="form-label" for="adminId">Admin User ID <span class="req">*</span></label>
+          <input type="text" id="adminId" class="form-control" placeholder="Enter admin user ID" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="adminPass">Password <span class="req">*</span></label>
+          <input type="password" id="adminPass" class="form-control" placeholder="Enter password" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg">Login</button>
+      </form>
+
+      <!-- Demo credentials hint -->
+      <div class="demo-creds">
+        <strong>Demo Credentials:</strong><br />
+        User ID: <strong>admin</strong> &middot; Password: <strong>admin123</strong>
+      </div>
+
+      <p style="text-align:center;margin-top:var(--sp-4);">
+        <a href="index.html">&larr; Back to Home</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    /* ===== Handle admin login form submission ===== */
+    function handleAdminLogin(e) {
+      e.preventDefault();
+      const userId = document.getElementById("adminId").value.trim();
+      const password = document.getElementById("adminPass").value.trim();
+
+      if (!userId || !password) {
+        UI.toast("Please enter both User ID and Password", "error");
+        return false;
+      }
+
+      const data = DataManager.getData();
+      if (userId === data.admin.userId && password === data.admin.password) {
+        Auth.setSession({ userId: data.admin.userId, name: data.admin.name, role: "admin" });
+        UI.toast("Login successful! Redirecting...", "success");
+        setTimeout(() => { window.location.href = "admin-dashboard.html"; }, 800);
+      } else {
+        UI.toast("Invalid admin credentials", "error");
+      }
+      return false;
+    }
+  </script>
+</body>
+</html>

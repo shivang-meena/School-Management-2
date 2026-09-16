@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Exam & Result Management — Greenwood ERP</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="appShell"></div>
+
+  <script src="script.js"></script>
+  <script>
+    const session = Auth.requireAdmin();
+
+    document.getElementById("appShell").innerHTML = `
+      ${Layout.renderShell(session, Layout.adminSidebar("exams.html"), "exams.html")}
+        <h1 class="page-title">Exam & Result Management</h1>
+        <p class="page-subtitle">Create exams, enter marks, and publish results with auto-calculated grades.</p>
+
+        <div id="alertContainer"></div>
+
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('examList', this)">Exams</button>
+          <button class="tab-btn" onclick="switchTab('createExam', this)">Create Exam</button>
+        </div>
+
+        <!-- Tab: Exam List -->
+        <div class="tab-panel active" id="tab-examList">
+          <div class="filter-bar">
+            <input type="text" class="form-control search-input" id="examSearch" placeholder="Search by exam name, class, or subject..." oninput="renderExams()" />
+          </div>
+          <div class="card">
+            <div class="card-body" style="padding:0;">
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead><tr><th>Exam Name</th><th>Class</th><th>Section</th><th>Subject</th><th>Date</th><th>Total Marks</th><th>Published</th><th>Actions</th></tr></thead>
+                  <tbody id="examTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Create Exam -->
+        <div class="tab-panel" id="tab-createExam">
+          <div class="card" style="max-width:700px;">
+            <div class="card-header"><h3>Create New Exam</h3></div>
+            <div class="card-body">
+              <form onsubmit="return handleCreateExam(event)">
+                <div class="form-group">
+                  <label class="form-label">Exam Name <span class="req">*</span></label>
+                  <input type="text" id="examName" class="form-control" placeholder="e.g. Mid-Term Exam 2025" required />
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Class <span class="req">*</span></label>
+                    <select id="examClass" class="form-select" required onchange="updateExamSections()"></select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Section <span class="req">*</span></label>
+                    <select id="examSection" class="form-select" required></select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Subject <span class="req">*</span></label>
+                    <select id="examSubject" class="form-select" required></select>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Exam Date <span class="req">*</span></label>
+                    <input type="date" id="examDate" class="form-control" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Total Marks <span class="req">*</span></label>
+                    <input type="number" id="examTotalMarks" class="form-control" value="100" required />
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Create Exam</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Marks Entry Modal -->
+        <div class="modal-overlay" id="marksModal">
+          <div class="modal modal-lg">
+            <div class="modal-header">
+              <h3>Enter Marks</h3>
+              <button class="modal-close" onclick="UI.closeModal('marksModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="marksBody"></div>
+          </div>
+        </div>
+
+        <!-- Results Modal -->
+        <div class="modal-overlay" id="resultsModal">
+          <div class="modal modal-lg">
+            <div class="modal-header">
+              <h3>Exam Results</h3>
+              <button class="modal-close no-print" onclick="UI.closeModal('resultsModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="resultsBody"></div>
+            <div class="modal-footer no-print">
+              <button class="btn btn-secondary" onclick="window.print()">Print</button>
+              <button class="btn btn-primary" onclick="UI.closeModal('resultsModal')">Close</button>
+            </div>
+          </div>
+        </div>
+      </main></div>
+    `;
+
+    /* ===== Initialize dropdowns ===== */
+    (function init() {
+      const data = DataManager.getData();
+      const classSel = document.getElementById("examClass");
+      const subjectSel = document.getElementById("examSubject");
+      data.classes.forEach(c => classSel.innerHTML += `<option>${c.name}</option>`);
+      data.subjects.forEach(s => subjectSel.innerHTML += `<option>${s}</option>`);
+      updateExamSections();
+      document.getElementById("examDate").value = new Date().toISOString().split("T")[0];
+      renderExams();
+    })();
+
+    function switchTab(tab, btn) {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      document.getElementById("tab-" + tab).classList.add("active");
+    }
+
+    function updateExamSections() {
+      const data = DataManager.getData();
+      const className = document.getElementById("examClass").value;
+      const cls = data.classes.find(c => c.name === className);
+      const secSel = document.getElementById("examSection");
+      secSel.innerHTML = "";
+      if (cls) cls.sections.forEach(s => secSel.innerHTML += `<option>${s}</option>`);
+    }
+
+    /* ===== Render exam list ===== */
+    function renderExams() {
+      const data = DataManager.getData();
+      const search = (document.getElementById("examSearch")?.value || "").toLowerCase();
+      let exams = data.exams;
+      if (search) {
+        exams = exams.filter(e =>
+          e.name.toLowerCase().includes(search) ||
+          e.class.toLowerCase().includes(search) ||
+          e.subject.toLowerCase().includes(search)
+        );
+      }
+      if (exams.length === 0) {
+        document.getElementById("examTableBody").innerHTML = '<tr><td colspan="8" class="no-data">No exams created yet.</td></tr>';
+        return;
+      }
+      document.getElementById("examTableBody").innerHTML = exams.map(e => `
+        <tr>
+          <td>${UI.escapeHtml(e.name)}</td>
+          <td>${UI.escapeHtml(e.class)}</td>
+          <td>${UI.escapeHtml(e.section)}</td>
+          <td>${UI.escapeHtml(e.subject)}</td>
+          <td>${UI.formatDate(e.date)}</td>
+          <td>${e.totalMarks}</td>
+          <td>${e.published ? '<span class="badge badge-approved">Published</span>' : '<span class="badge badge-pending">Draft</span>'}</td>
+          <td>
+            <button class="btn btn-sm btn-outline" onclick="openMarks('${e.id}')">Marks</button>
+            <button class="btn btn-sm btn-info" onclick="viewResults('${e.id}')">Results</button>
+            ${!e.published ? `<button class="btn btn-sm btn-success" onclick="publishExam('${e.id}')">Publish</button>` : ""}
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    /* ===== Handle create exam ===== */
+    function handleCreateExam(e) {
+      e.preventDefault();
+      const data = DataManager.getData();
+      const examId = "EX" + String(data.exams.length + 1).padStart(3, "0");
+      const exam = {
+        id: examId,
+        name: document.getElementById("examName").value.trim(),
+        class: document.getElementById("examClass").value,
+        section: document.getElementById("examSection").value,
+        subject: document.getElementById("examSubject").value,
+        date: document.getElementById("examDate").value,
+        totalMarks: parseInt(document.getElementById("examTotalMarks").value),
+        published: false,
+        marks: [],
+      };
+      /* Pre-populate marks with students of that class/section */
+      const students = data.students.filter(s => s.class === exam.class && s.section === exam.section);
+      students.forEach(s => exam.marks.push({ studentId: s.studentId, obtained: 0 }));
+      data.exams.push(exam);
+      DataManager.saveData(data);
+      UI.toast("Exam created: " + exam.name, "success");
+      e.target.reset();
+      document.getElementById("examDate").value = new Date().toISOString().split("T")[0];
+      renderExams();
+      switchTab("examList", document.querySelectorAll(".tab-btn")[0]);
+      return false;
+    }
+
+    /* ===== Open marks entry modal ===== */
+    let currentExamId = null;
+    function openMarks(examId) {
+      const data = DataManager.getData();
+      const exam = data.exams.find(e => e.id === examId);
+      if (!exam) return;
+      currentExamId = examId;
+      const students = data.students.filter(s => s.class === exam.class && s.section === exam.section);
+      let html = `
+        <p style="margin-bottom:var(--sp-4);"><strong>${UI.escapeHtml(exam.name)}</strong> — ${UI.escapeHtml(exam.class)} / ${UI.escapeHtml(exam.section)} — ${UI.escapeHtml(exam.subject)} (Total: ${exam.totalMarks})</p>
+        <table class="data-table" style="width:100%;">
+          <thead><tr><th>Student Name</th><th>Roll No</th><th>Obtained Marks</th></tr></thead>
+          <tbody>
+      `;
+      exam.marks.forEach((m, i) => {
+        const s = students.find(st => st.studentId === m.studentId);
+        if (!s) return;
+        html += `
+          <tr>
+            <td>${UI.escapeHtml(s.name)}</td>
+            <td>${s.rollNo}</td>
+            <td><input type="number" class="form-control" style="width:100px;" id="mark_${i}" value="${m.obtained}" min="0" max="${exam.totalMarks}" /></td>
+          </tr>
+        `;
+      });
+      html += `</tbody></table>
+        <div style="margin-top:var(--sp-4);text-align:right;">
+          <button class="btn btn-primary" onclick="saveMarks()">Save Marks</button>
+          <button class="btn btn-success" onclick="saveAndPublish()">Save & Publish</button>
+        </div>
+      `;
+      document.getElementById("marksBody").innerHTML = html;
+      UI.openModal("marksModal");
+    }
+
+    function saveMarks(publish) {
+      const data = DataManager.getData();
+      const exam = data.exams.find(e => e.id === currentExamId);
+      if (!exam) return;
+      exam.marks.forEach((m, i) => {
+        const input = document.getElementById("mark_" + i);
+        if (input) {
+          let val = parseInt(input.value) || 0;
+          if (val > exam.totalMarks) val = exam.totalMarks;
+          if (val < 0) val = 0;
+          m.obtained = val;
+        }
+      });
+      if (publish) {
+        exam.published = true;
+        /* Update student results */
+        exam.marks.forEach(m => {
+          const student = data.students.find(s => s.studentId === m.studentId);
+          if (student) {
+            /* Remove existing result for this exam+subject */
+            student.results = student.results.filter(r => !(r.examName === exam.name && r.subject === exam.subject));
+            student.results.push({
+              examName: exam.name,
+              subject: exam.subject,
+              totalMarks: exam.totalMarks,
+              obtained: m.obtained,
+            });
+          }
+        });
+        UI.toast("Results published and student profiles updated", "success");
+        UI.closeModal("marksModal");
+      } else {
+        UI.toast("Marks saved", "success");
+      }
+      DataManager.saveData(data);
+      renderExams();
+    }
+
+    function saveAndPublish() { saveMarks(true); }
+
+    function publishExam(examId) {
+      const data = DataManager.getData();
+      const exam = data.exams.find(e => e.id === examId);
+      if (!exam) return;
+      exam.published = true;
+      exam.marks.forEach(m => {
+        const student = data.students.find(s => s.studentId === m.studentId);
+        if (student) {
+          student.results = student.results.filter(r => !(r.examName === exam.name && r.subject === exam.subject));
+          student.results.push({ examName: exam.name, subject: exam.subject, totalMarks: exam.totalMarks, obtained: m.obtained });
+        }
+      });
+      DataManager.saveData(data);
+      UI.toast("Results published", "success");
+      renderExams();
+    }
+
+    function viewResults(examId) {
+      const data = DataManager.getData();
+      const exam = data.exams.find(e => e.id === examId);
+      if (!exam) return;
+      const students = data.students.filter(s => s.class === exam.class && s.section === exam.section);
+      let html = `
+        <div style="text-align:center;margin-bottom:var(--sp-4);">
+          <h2>Greenwood International School</h2>
+          <h3>${UI.escapeHtml(exam.name)} — ${UI.escapeHtml(exam.subject)}</h3>
+          <p class="text-muted">${UI.escapeHtml(exam.class)} / ${UI.escapeHtml(exam.section)} | Date: ${UI.formatDate(exam.date)} | Total Marks: ${exam.totalMarks}</p>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table" style="width:100%;">
+            <thead><tr><th>Student Name</th><th>Roll No</th><th>Total Marks</th><th>Obtained</th><th>Percentage</th><th>Grade</th><th>Status</th></tr></thead>
+            <tbody>
+      `;
+      exam.marks.forEach(m => {
+        const s = students.find(st => st.studentId === m.studentId);
+        if (!s) return;
+        const pct = Math.round((m.obtained / exam.totalMarks) * 100);
+        const grade = Calc.gradeFromPct(pct);
+        const pf = Calc.passFail(pct);
+        html += `
+          <tr>
+            <td>${UI.escapeHtml(s.name)}</td>
+            <td>${s.rollNo}</td>
+            <td>${exam.totalMarks}</td>
+            <td>${m.obtained}</td>
+            <td>${pct}%</td>
+            <td><strong>${grade}</strong></td>
+            <td><span class="badge badge-${pf === 'Pass' ? 'pass' : 'fail'}">${pf}</span></td>
+          </tr>
+        `;
+      });
+      html += `</tbody></table></div>`;
+      document.getElementById("resultsBody").innerHTML = html;
+      UI.openModal("resultsModal");
+    }
+  </script>
+</body>
+</html>

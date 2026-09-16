@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Accounts Management — Greenwood ERP</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="appShell"></div>
+
+  <script src="script.js"></script>
+  <script>
+    const session = Auth.requireAdmin();
+
+    document.getElementById("appShell").innerHTML = `
+      ${Layout.renderShell(session, Layout.adminSidebar("accounts.html"), "accounts.html")}
+        <h1 class="page-title">Accounts Management</h1>
+        <p class="page-subtitle">Student fee transactions, staff salaries, and general accounts.</p>
+
+        <div id="alertContainer"></div>
+
+        <!-- Summary Cards -->
+        <div class="stat-grid" id="accStats"></div>
+
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('studentAcc', this)">Student Accounts</button>
+          <button class="tab-btn" onclick="switchTab('staffAcc', this)">Staff Accounts</button>
+          <button class="tab-btn" onclick="switchTab('generalAcc', this)">General Accounts</button>
+        </div>
+
+        <!-- Tab: Student Accounts -->
+        <div class="tab-panel active" id="tab-studentAcc">
+          <div class="filter-bar">
+            <input type="text" class="form-control search-input" id="stuAccSearch" placeholder="Search by name or ID..." oninput="renderStudentAccounts()" />
+          </div>
+          <div class="card">
+            <div class="card-body" style="padding:0;">
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead><tr><th>Receipt No</th><th>Student Name</th><th>Student ID</th><th>Date</th><th>Method</th><th>Amount</th><th>Status</th><th>Pending Fee</th></tr></thead>
+                  <tbody id="studentAccBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Staff Accounts -->
+        <div class="tab-panel" id="tab-staffAcc">
+          <div class="card">
+            <div class="card-body" style="padding:0;">
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead><tr><th>Staff Name</th><th>Staff ID</th><th>Month</th><th>Base Salary</th><th>Deductions</th><th>Adjustments</th><th>Final Salary</th><th>Status</th><th>Payment Date</th></tr></thead>
+                  <tbody id="staffAccBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: General Accounts -->
+        <div class="tab-panel" id="tab-generalAcc">
+          <div class="card mb-4">
+            <div class="card-header"><h3>Add Expense / Other Income</h3></div>
+            <div class="card-body">
+              <form onsubmit="return handleAddTransaction(event)">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Type <span class="req">*</span></label>
+                    <select id="txnType" class="form-select" required>
+                      <option value="">Select</option>
+                      <option value="expenses">Expense</option>
+                      <option value="otherIncome">Other Income</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Title <span class="req">*</span></label>
+                    <input type="text" id="txnTitle" class="form-control" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Date <span class="req">*</span></label>
+                    <input type="date" id="txnDate" class="form-control" required />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Amount (₹) <span class="req">*</span></label>
+                    <input type="number" id="txnAmount" class="form-control" required />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Description</label>
+                  <textarea id="txnDesc" class="form-textarea"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Transaction</button>
+              </form>
+            </div>
+          </div>
+
+          <!-- General Transactions Table -->
+          <div class="card">
+            <div class="card-header"><h3>All Transactions</h3></div>
+            <div class="card-body" style="padding:0;">
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th><th>Related Person</th></tr></thead>
+                  <tbody id="txnTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main></div>
+    `;
+
+    function switchTab(tab, btn) {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      document.getElementById("tab-" + tab).classList.add("active");
+    }
+
+    /* ===== Render summary cards ===== */
+    function renderAccStats() {
+      const data = DataManager.getData();
+      const feeIncome = data.students.reduce((sum, s) => sum + s.fees.paidAmount, 0);
+      const otherIncome = data.accounts.otherIncome.reduce((sum, i) => sum + i.amount, 0);
+      const expenses = data.accounts.expenses.reduce((sum, e) => sum + e.amount, 0);
+      const balance = feeIncome + otherIncome - expenses;
+      const stats = [
+        { label: "Student Fee Income", value: UI.formatCurrency(feeIncome), icon: "💰", color: "green" },
+        { label: "Other Income", value: UI.formatCurrency(otherIncome), icon: "📈", color: "blue" },
+        { label: "Expenses", value: UI.formatCurrency(expenses), icon: "📉", color: "red" },
+        { label: "Current Balance", value: UI.formatCurrency(balance), icon: "🏦", color: "amber" },
+      ];
+      document.getElementById("accStats").innerHTML = stats.map(s => `
+        <div class="stat-card">
+          <div class="stat-icon ${s.color}">${s.icon}</div>
+          <div class="stat-info">
+            <div class="stat-label">${s.label}</div>
+            <div class="stat-value">${s.value}</div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    /* ===== Render student accounts (all fee transactions) ===== */
+    function renderStudentAccounts() {
+      const data = DataManager.getData();
+      const search = (document.getElementById("stuAccSearch")?.value || "").toLowerCase();
+      let transactions = [];
+      data.students.forEach(s => {
+        const pending = Calc.studentPendingFee(s);
+        s.fees.payments.forEach(p => {
+          transactions.push({ ...p, studentName: s.name, studentId: s.studentId, pendingFee: pending });
+        });
+      });
+      if (search) transactions = transactions.filter(t => t.studentName.toLowerCase().includes(search) || t.studentId.toLowerCase().includes(search));
+      if (transactions.length === 0) {
+        document.getElementById("studentAccBody").innerHTML = '<tr><td colspan="8" class="no-data">No transactions found.</td></tr>';
+        return;
+      }
+      document.getElementById("studentAccBody").innerHTML = transactions.map(t => `
+        <tr>
+          <td>${t.receiptNo}</td>
+          <td>${UI.escapeHtml(t.studentName)}</td>
+          <td>${t.studentId}</td>
+          <td>${UI.formatDate(t.date)}</td>
+          <td>${t.method}</td>
+          <td>${UI.formatCurrency(t.amount)}</td>
+          <td><span class="badge badge-${t.status === 'Paid' ? 'paid' : 'partial'}">${t.status}</span></td>
+          <td>${UI.formatCurrency(t.pendingFee)}</td>
+        </tr>
+      `).join("");
+    }
+
+    /* ===== Render staff accounts (salary records) ===== */
+    function renderStaffAccounts() {
+      const data = DataManager.getData();
+      let records = [];
+      data.staff.forEach(s => {
+        s.salaryHistory.forEach(sh => {
+          records.push({ staffName: s.name, staffId: s.staffId, ...sh });
+        });
+      });
+      if (records.length === 0) {
+        document.getElementById("staffAccBody").innerHTML = '<tr><td colspan="9" class="no-data">No salary records yet.</td></tr>';
+        return;
+      }
+      document.getElementById("staffAccBody").innerHTML = records.map(r => `
+        <tr>
+          <td>${UI.escapeHtml(r.staffName)}</td>
+          <td>${r.staffId}</td>
+          <td>${UI.escapeHtml(r.month)}</td>
+          <td>${UI.formatCurrency(r.baseSalary)}</td>
+          <td>${UI.formatCurrency(r.deductions)}</td>
+          <td>${UI.formatCurrency(r.adjustments)}</td>
+          <td>${UI.formatCurrency(r.finalSalary)}</td>
+          <td><span class="badge badge-${r.status === 'Paid' ? 'paid' : 'unpaid'}">${r.status}</span></td>
+          <td>${r.paymentDate ? UI.formatDate(r.paymentDate) : '-'}</td>
+        </tr>
+      `).join("");
+    }
+
+    /* ===== Handle add transaction (expense or other income) ===== */
+    function handleAddTransaction(e) {
+      e.preventDefault();
+      const data = DataManager.getData();
+      const type = document.getElementById("txnType").value;
+      const id = (type === "expenses" ? "E" : "OI") + String(data.accounts[type].length + 1).padStart(3, "0");
+      data.accounts[type].push({
+        id: id,
+        title: document.getElementById("txnTitle").value.trim(),
+        date: document.getElementById("txnDate").value,
+        amount: parseInt(document.getElementById("txnAmount").value),
+        description: document.getElementById("txnDesc").value.trim(),
+      });
+      DataManager.saveData(data);
+      UI.toast("Transaction added", "success");
+      e.target.reset();
+      document.getElementById("txnDate").value = new Date().toISOString().split("T")[0];
+      renderAccStats();
+      renderTransactions();
+      return false;
+    }
+
+    /* ===== Render all general transactions ===== */
+    function renderTransactions() {
+      const data = DataManager.getData();
+      let txns = [];
+      /* Fee payments as income */
+      data.students.forEach(s => {
+        s.fees.payments.forEach(p => {
+          txns.push({ date: p.date, type: "Fee Income", desc: "Fee payment — " + s.name, amount: p.amount, method: p.method, related: s.name });
+        });
+      });
+      /* Other income */
+      data.accounts.otherIncome.forEach(i => {
+        txns.push({ date: i.date, type: "Other Income", desc: i.title, amount: i.amount, method: "-", related: "-" });
+      });
+      /* Expenses */
+      data.accounts.expenses.forEach(e => {
+        txns.push({ date: e.date, type: "Expense", desc: e.title, amount: e.amount, method: "-", related: "-" });
+      });
+      /* Staff salaries as expenses */
+      data.staff.forEach(s => {
+        s.salaryHistory.forEach(sh => {
+          txns.push({ date: sh.paymentDate || sh.month, type: "Salary Expense", desc: "Salary — " + s.name, amount: sh.finalSalary, method: "Bank", related: s.name });
+        });
+      });
+      txns.sort((a, b) => new Date(b.date) - new Date(a.date));
+      if (txns.length === 0) {
+        document.getElementById("txnTableBody").innerHTML = '<tr><td colspan="5" class="no-data">No transactions yet.</td></tr>';
+        return;
+      }
+      document.getElementById("txnTableBody").innerHTML = txns.map(t => `
+        <tr>
+          <td>${UI.formatDate(t.date)}</td>
+          <td><span class="badge ${t.type === 'Expense' || t.type === 'Salary Expense' ? 'badge-unpaid' : 'badge-paid'}">${t.type}</span></td>
+          <td>${UI.escapeHtml(t.desc)}</td>
+          <td>${UI.formatCurrency(t.amount)}</td>
+          <td>${UI.escapeHtml(t.related)}</td>
+        </tr>
+      `).join("");
+    }
+
+    /* ===== Initialize ===== */
+    (function init() {
+      document.getElementById("txnDate").value = new Date().toISOString().split("T")[0];
+      renderAccStats();
+      renderStudentAccounts();
+      renderStaffAccounts();
+      renderTransactions();
+    })();
+  </script>
+</body>
+</html>

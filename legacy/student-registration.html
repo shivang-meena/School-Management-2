@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Registration — Greenwood ERP</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="public-page">
+
+  <!-- ===== Public Header ===== -->
+  <header class="top-header">
+    <div class="header-brand">
+      <span class="logo-icon">🎓</span>
+      <span class="brand-text">Greenwood International School</span>
+    </div>
+    <div class="header-right">
+      <a href="index.html" class="btn btn-outline btn-sm">&larr; Home</a>
+    </div>
+  </header>
+
+  <!-- ===== Registration Form ===== -->
+  <div class="main-content" style="padding-top:var(--sp-6);">
+    <div style="max-width:800px;margin:0 auto;">
+      <h1 class="page-title">Student Registration</h1>
+      <p class="page-subtitle">Submit your admission application. The admin will verify and approve your request before a Student ID is generated.</p>
+
+      <div id="alertContainer"></div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Admission Application Form</h3>
+        </div>
+        <div class="card-body">
+          <form id="registrationForm" onsubmit="return handleRegistration(event)">
+            <!-- Student Personal Details -->
+            <h4 style="margin-bottom:var(--sp-3);color:var(--primary-600);">Student Details</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="name">Student Name <span class="req">*</span></label>
+                <input type="text" id="name" class="form-control" placeholder="Full name" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="dob">Date of Birth <span class="req">*</span></label>
+                <input type="date" id="dob" class="form-control" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="gender">Gender <span class="req">*</span></label>
+                <select id="gender" class="form-select" required>
+                  <option value="">Select gender</option>
+                  <option>Male</option>
+                  <option>Female</option>
+                  <option>Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="mobile">Mobile Number <span class="req">*</span></label>
+                <input type="tel" id="mobile" class="form-control" placeholder="10-digit mobile number" pattern="[0-9]{10}" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="email">Email</label>
+                <input type="email" id="email" class="form-control" placeholder="student@email.com" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="address">Address <span class="req">*</span></label>
+              <textarea id="address" class="form-textarea" placeholder="Residential address" required></textarea>
+            </div>
+
+            <!-- School Details -->
+            <h4 style="margin:var(--sp-5) 0 var(--sp-3);color:var(--primary-600);">Previous School & Class</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="previousSchool">Previous School</label>
+                <input type="text" id="previousSchool" class="form-control" placeholder="Previous school name" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="applyingClass">Applying Class <span class="req">*</span></label>
+                <select id="applyingClass" class="form-select" required>
+                  <option value="">Select class</option>
+                  <option>Class 6</option>
+                  <option>Class 7</option>
+                  <option>Class 8</option>
+                  <option>Class 9</option>
+                  <option>Class 10</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Parent/Guardian Details -->
+            <h4 style="margin:var(--sp-5) 0 var(--sp-3);color:var(--primary-600);">Parent / Guardian Details</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="parentName">Parent/Guardian Name <span class="req">*</span></label>
+                <input type="text" id="parentName" class="form-control" placeholder="Full name" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="parentMobile">Parent/Guardian Mobile <span class="req">*</span></label>
+                <input type="tel" id="parentMobile" class="form-control" placeholder="10-digit mobile number" pattern="[0-9]{10}" required />
+              </div>
+            </div>
+
+            <!-- Document Upload Placeholders -->
+            <h4 style="margin:var(--sp-5) 0 var(--sp-3);color:var(--primary-600);">Documents</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Birth Certificate</label>
+                <div class="file-placeholder">📄 Click to upload (placeholder)</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Previous School Report</label>
+                <div class="file-placeholder">📄 Click to upload (placeholder)</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Passport Photo</label>
+                <div class="file-placeholder">📄 Click to upload (placeholder)</div>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg btn-block">Submit Registration</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Success Modal ===== -->
+  <div class="modal-overlay" id="successModal">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3>Registration Submitted</h3>
+      </div>
+      <div class="modal-body" style="text-align:center;padding:var(--sp-6);">
+        <div style="font-size:3rem;margin-bottom:var(--sp-3);">✅</div>
+        <p style="font-size:1rem;font-weight:600;margin-bottom:var(--sp-2);">Your registration request has been submitted.</p>
+        <p style="color:var(--text-secondary);">Please wait for admin verification and approval.</p>
+      </div>
+      <div class="modal-footer">
+        <a href="index.html" class="btn btn-primary">Back to Home</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    /* ===== Handle student registration form submission ===== */
+    function handleRegistration(e) {
+      e.preventDefault();
+
+      /* Basic form validation */
+      const fields = [
+        { id: "name", label: "Student Name", required: true },
+        { id: "dob", label: "Date of Birth", required: true },
+        { id: "gender", label: "Gender", required: true },
+        { id: "mobile", label: "Mobile Number", required: true, pattern: /^[0-9]{10}$/ },
+        { id: "address", label: "Address", required: true },
+        { id: "applyingClass", label: "Applying Class", required: true },
+        { id: "parentName", label: "Parent/Guardian Name", required: true },
+        { id: "parentMobile", label: "Parent/Guardian Mobile", required: true, pattern: /^[0-9]{10}$/ },
+      ];
+      if (!validateForm(fields)) return false;
+
+      /* Build registration object */
+      const data = DataManager.getData();
+      const regId = "REG" + String(data.pendingRegistrations.length + 1).padStart(3, "0");
+      const registration = {
+        id: regId,
+        name: document.getElementById("name").value.trim(),
+        dob: document.getElementById("dob").value,
+        gender: document.getElementById("gender").value,
+        mobile: document.getElementById("mobile").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        address: document.getElementById("address").value.trim(),
+        previousSchool: document.getElementById("previousSchool").value.trim(),
+        applyingClass: document.getElementById("applyingClass").value,
+        parentName: document.getElementById("parentName").value.trim(),
+        parentMobile: document.getElementById("parentMobile").value.trim(),
+        status: "Pending",
+        submittedDate: new Date().toISOString().split("T")[0],
+      };
+
+      /* Save to localStorage as pending */
+      data.pendingRegistrations.push(registration);
+      DataManager.saveData(data);
+
+      /* Show success modal */
+      UI.openModal("successModal");
+      return false;
+    }
+  </script>
+</body>
+</html>

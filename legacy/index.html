@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Greenwood International School — ERP System</title>
+  <link rel="stylesheet" href="style.css" />
+  <meta property="og:image" content="https://bolt.new/static/og_default.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="https://bolt.new/static/og_default.png">
+</head>
+<body class="public-page">
+
+  <!-- ===== Public Top Header ===== -->
+  <header class="top-header">
+    <div class="header-brand">
+      <span class="logo-icon">🎓</span>
+      <span class="brand-text">Greenwood International School</span>
+    </div>
+    <div class="header-right">
+      <a href="admin-login.html" class="btn btn-outline btn-sm">Admin Login</a>
+    </div>
+  </header>
+
+  <!-- ===== Hero Section with School Campus Image ===== -->
+  <section class="hero">
+    <div class="hero-bg" id="heroBg"></div>
+    <div class="hero-content">
+      <h1>Welcome to Greenwood ERP</h1>
+      <p>A complete School Management System for students, staff, and administration. Manage admissions, attendance, fees, exams, and more — all in one place.</p>
+      <div class="cta-row" style="padding:0;">
+        <a href="admin-login.html" class="btn btn-primary btn-lg">Admin Login</a>
+        <a href="user-login.html?role=staff" class="btn btn-secondary btn-lg">Staff Login</a>
+        <a href="user-login.html?role=student" class="btn btn-secondary btn-lg">Student Login</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Overview Stat Cards ===== -->
+  <div class="main-content" style="padding-top:var(--sp-6);">
+    <div class="container" style="max-width:1200px;margin:0 auto;">
+      <h2 class="section-heading">School Overview</h2>
+      <p class="section-sub">Quick snapshot of school statistics</p>
+
+      <div class="stat-grid" id="overviewStats">
+        <!-- Stats injected by JS -->
+      </div>
+
+      <!-- ===== Notice Board Preview ===== -->
+      <div class="card mb-5">
+        <div class="card-header">
+          <h3>📢 Notice Board</h3>
+          <span class="text-sm text-muted">Latest announcements</span>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <ul class="notice-list" id="noticePreview"><!-- Notices injected by JS --></ul>
+        </div>
+      </div>
+
+      <!-- ===== School Images Section ===== -->
+      <h2 class="section-heading">Our Campus</h2>
+      <p class="section-sub">A glimpse of life at Greenwood</p>
+      <div class="landing-image-section" id="campusImages"><!-- Images injected by JS --></div>
+
+      <!-- ===== Module Cards ===== -->
+      <h2 class="section-heading">ERP Modules</h2>
+      <p class="section-sub">Everything you need to run the school efficiently</p>
+      <div class="module-grid">
+        <div class="module-card">
+          <div class="module-icon blue">👨‍🎓</div>
+          <h3>Student Management</h3>
+          <p>Admissions, profiles, enrollment, and records</p>
+        </div>
+        <div class="module-card">
+          <div class="module-icon teal">👩‍🏫</div>
+          <h3>Staff Management</h3>
+          <p>Teachers and staff records, assignments, salaries</p>
+        </div>
+        <div class="module-card">
+          <div class="module-icon amber">📚</div>
+          <h3>Curriculum Management</h3>
+          <p>Subjects, syllabus, timetable, and daily lectures</p>
+        </div>
+        <div class="module-card">
+          <div class="module-icon green">✅</div>
+          <h3>Attendance</h3>
+          <p>Student and staff attendance tracking</p>
+        </div>
+        <div class="module-card">
+          <div class="module-icon orange">💳</div>
+          <h3>Fee Management</h3>
+          <p>Fee structure, payments, receipts, and history</p>
+        </div>
+        <div class="module-card">
+          <div class="module-icon red">🧾</div>
+          <h3>Accounts Management</h3>
+          <p>Income, expenses, and financial transactions</p>
+        </div>
+        <div class="module-card">
+          <div class="module-icon blue">📝</div>
+          <h3>Exam & Results</h3>
+          <p>Exam creation, marks entry, grades, and report cards</p>
+        </div>
+      </div>
+
+      <!-- ===== Login CTA Buttons ===== -->
+      <div class="card" style="text-align:center;padding:var(--sp-6);">
+        <h3 style="margin-bottom:var(--sp-2);">Get Started</h3>
+        <p class="text-muted mb-4">Choose your role to access the ERP system</p>
+        <div class="cta-row">
+          <a href="admin-login.html" class="btn btn-primary btn-lg">Admin Login</a>
+          <a href="user-login.html?role=student" class="btn btn-secondary btn-lg">Student Login</a>
+          <a href="student-registration.html" class="btn btn-success btn-lg">Student Registration</a>
+          <a href="user-login.html?role=staff" class="btn btn-secondary btn-lg">Staff Login</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Footer ===== -->
+  <footer class="footer">
+    <p>Greenwood International School &middot; Estd. 1998 &middot; 123 Education Lane, New Delhi &middot; +91 98765 43210</p>
+    <p style="margin-top:var(--sp-1);">This is a frontend prototype with dummy data. No real authentication or backend.</p>
+  </footer>
+
+  <script src="script.js"></script>
+  <script>
+    /* ===== Render hero background ===== */
+    document.getElementById("heroBg").style.backgroundImage = `url(${SCHOOL_IMAGES.campus})`;
+
+    /* ===== Render overview stat cards ===== */
+    (function renderOverview() {
+      const data = DataManager.getData();
+      const stats = [
+        { label: "Total Students", value: data.students.length, icon: "👨‍🎓", color: "blue", meta: "Enrolled this year" },
+        { label: "Total Staff", value: data.staff.length, icon: "👩‍🏫", color: "teal", meta: "Teachers & employees" },
+        { label: "Total Classes", value: data.classes.length, icon: "🏫", color: "amber", meta: "Class 6 to Class 10" },
+        { label: "Latest Notices", value: data.notices.filter(n => n.published).length, icon: "📢", color: "green", meta: "Published notices" },
+      ];
+      document.getElementById("overviewStats").innerHTML = stats.map(s => `
+        <div class="stat-card">
+          <div class="stat-icon ${s.color}">${s.icon}</div>
+          <div class="stat-info">
+            <div class="stat-label">${s.label}</div>
+            <div class="stat-value">${s.value}</div>
+            <div class="stat-meta">${s.meta}</div>
+          </div>
+        </div>
+      `).join("");
+    })();
+
+    /* ===== Render notice board preview (latest 5) ===== */
+    (function renderNotices() {
+      const data = DataManager.getData();
+      const notices = data.notices.filter(n => n.published).slice(0, 5);
+      if (notices.length === 0) {
+        document.getElementById("noticePreview").innerHTML = '<li class="no-data">No notices published yet.</li>';
+        return;
+      }
+      document.getElementById("noticePreview").innerHTML = notices.map(n => `
+        <li class="notice-item">
+          <div class="notice-title">${UI.escapeHtml(n.title)}</div>
+          <div class="notice-date">${UI.formatDate(n.date)}</div>
+          <div class="notice-msg">${UI.escapeHtml(n.message)}</div>
+          <div class="notice-audience"><span class="badge badge-info">${UI.escapeHtml(n.audience)}</span></div>
+        </li>
+      `).join("");
+    })();
+
+    /* ===== Render campus images ===== */
+    (function renderImages() {
+      const imgs = [
+        { url: SCHOOL_IMAGES.classroom, label: "Interactive Classrooms" },
+        { url: SCHOOL_IMAGES.students, label: "Engaged Students" },
+        { url: SCHOOL_IMAGES.teacher, label: "Dedicated Teachers" },
+        { url: SCHOOL_IMAGES.library, label: "Well-Stocked Library" },
+        { url: SCHOOL_IMAGES.exam, label: "Exam Hall" },
+        { url: SCHOOL_IMAGES.collaboration, label: "Collaborative Learning" },
+      ];
+      document.getElementById("campusImages").innerHTML = imgs.map(i => `
+        <div class="landing-image-card" style="background-image:url(${i.url})">
+          <span class="img-label">${i.label}</span>
+        </div>
+      `).join("");
+    })();
+  </script>
+</body>
+</html>

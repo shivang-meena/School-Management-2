@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — Greenwood ERP</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ===== App Shell (Header + Sidebar + Content) ===== -->
+  <div id="appShell"></div>
+
+  <script src="script.js"></script>
+  <script>
+    /* ===== Auth guard: admin only ===== */
+    const session = Auth.requireAdmin();
+
+    /* ===== Render shell (header + sidebar) ===== */
+    document.getElementById("appShell").innerHTML = `
+      ${Layout.renderShell(session, Layout.adminSidebar("admin-dashboard.html"), "admin-dashboard.html")}
+        <h1 class="page-title">Admin Dashboard</h1>
+        <p class="page-subtitle">Welcome back, ${UI.escapeHtml(session.name)}. Here's your school overview.</p>
+
+        <!-- Notice Board Section (shown first) -->
+        <div class="card mb-5">
+          <div class="card-header">
+            <h3>📢 Notice Board</h3>
+            <a href="notices.html" class="btn btn-outline btn-sm">Manage Notices</a>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <ul class="notice-list" id="dashNotices"></ul>
+          </div>
+        </div>
+
+        <!-- Summary Stat Cards -->
+        <div class="stat-grid" id="dashStats"></div>
+
+        <!-- Recent Student Registrations Table -->
+        <div class="card">
+          <div class="card-header">
+            <h3>📋 Recent Student Registrations</h3>
+            <a href="students.html" class="btn btn-outline btn-sm">View All</a>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div class="table-wrapper">
+              <table class="data-table" id="regTable">
+                <thead>
+                  <tr>
+                    <th>Reg ID</th>
+                    <th>Student Name</th>
+                    <th>Applying Class</th>
+                    <th>Parent Name</th>
+                    <th>Submitted Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="regTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </main></div>
+    `;
+
+    /* ===== Render dashboard notices ===== */
+    (function renderDashNotices() {
+      const notices = getNoticesFor("admin");
+      if (notices.length === 0) {
+        document.getElementById("dashNotices").innerHTML = '<li class="no-data">No notices published.</li>';
+        return;
+      }
+      document.getElementById("dashNotices").innerHTML = notices.slice(0, 5).map(n => `
+        <li class="notice-item">
+          <div class="notice-title">${UI.escapeHtml(n.title)}</div>
+          <div class="notice-date">${UI.formatDate(n.date)}</div>
+          <div class="notice-msg">${UI.escapeHtml(n.message)}</div>
+          <div class="notice-audience"><span class="badge badge-info">${UI.escapeHtml(n.audience)}</span></div>
+        </li>
+      `).join("");
+    })();
+
+    /* ===== Render summary stat cards ===== */
+    (function renderDashStats() {
+      const data = DataManager.getData();
+      const totalStudents = data.students.length;
+      const totalStaff = data.staff.length;
+      const feesCollected = data.students.reduce((sum, s) => sum + s.fees.paidAmount, 0);
+      const pendingFees = data.students.reduce((sum, s) => sum + Calc.studentPendingFee(s), 0);
+      const totalExpenses = data.accounts.expenses.reduce((sum, e) => sum + e.amount, 0);
+      const otherIncome = data.accounts.otherIncome.reduce((sum, i) => sum + i.amount, 0);
+      const totalIncome = feesCollected + otherIncome;
+      const today = new Date().toISOString().split("T")[0];
+      const studentPresentToday = data.students.filter(s => s.attendance.some(a => a.date === today && (a.status === "present" || a.status === "late"))).length;
+      const staffPresentToday = data.staff.filter(s => s.attendance.some(a => a.date === today && (a.status === "present" || a.status === "late"))).length;
+
+      const stats = [
+        { label: "Total Students", value: totalStudents, icon: "👨‍🎓", color: "blue" },
+        { label: "Total Staff", value: totalStaff, icon: "👩‍🏫", color: "teal" },
+        { label: "Today's Student Attendance", value: studentPresentToday + "/" + totalStudents, icon: "✅", color: "green" },
+        { label: "Today's Staff Attendance", value: staffPresentToday + "/" + totalStaff, icon: "📋", color: "amber" },
+        { label: "Fees Collected", value: UI.formatCurrency(feesCollected), icon: "💰", color: "green" },
+        { label: "Pending Fees", value: UI.formatCurrency(pendingFees), icon: "⚠️", color: "orange" },
+        { label: "Total Income", value: UI.formatCurrency(totalIncome), icon: "📈", color: "blue" },
+        { label: "Total Expenses", value: UI.formatCurrency(totalExpenses), icon: "📉", color: "red" },
+      ];
+
+      document.getElementById("dashStats").innerHTML = stats.map(s => `
+        <div class="stat-card">
+          <div class="stat-icon ${s.color}">${s.icon}</div>
+          <div class="stat-info">
+            <div class="stat-label">${s.label}</div>
+            <div class="stat-value">${s.value}</div>
+          </div>
+        </div>
+      `).join("");
+    })();
+
+    /* ===== Render recent registration table ===== */
+    (function renderRegTable() {
+      const data = DataManager.getData();
+      const regs = data.pendingRegistrations.slice(-8).reverse();
+      const badgeMap = { "Pending": "badge-pending", "Verified": "badge-verified", "Approved": "badge-approved", "Rejected": "badge-rejected" };
+      if (regs.length === 0) {
+        document.getElementById("regTableBody").innerHTML = '<tr><td colspan="6" class="no-data">No registrations yet.</td></tr>';
+        return;
+      }
+      document.getElementById("regTableBody").innerHTML = regs.map(r => `
+        <tr>
+          <td>${r.id}</td>
+          <td>${UI.escapeHtml(r.name)}</td>
+          <td>${UI.escapeHtml(r.applyingClass)}</td>
+          <td>${UI.escapeHtml(r.parentName)}</td>
+          <td>${UI.formatDate(r.submittedDate)}</td>
+          <td><span class="badge ${badgeMap[r.status] || "badge-pending"}">${r.status}</span></td>
+        </tr>
+      `).join("");
+    })();
+  </script>
+</body>
+</html>
