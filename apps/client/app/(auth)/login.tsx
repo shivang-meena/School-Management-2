@@ -18,44 +18,35 @@ export default function LoginScreen() {
   const { login, isLoading: authLoading } = useAuth();
 
   const [role, setRole] = useState<Role>((params.role as Role) || 'ADMIN');
-  const [userId, setUserId] = useState(
-    role === 'ADMIN' ? 'admin' : role === 'STAFF' ? 'ST001' : 'STU001'
-  );
-  const [password, setPassword] = useState(
-    role === 'ADMIN' ? 'admin123' : role === 'STAFF' ? 'staff123' : 'student123'
-  );
+  const [userId, setUserId] = useState('');
+  const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   const handleRoleChange = (selectedRole: Role) => {
     setRole(selectedRole);
     setErrorMessage('');
-    if (selectedRole === 'ADMIN') {
-      setUserId('admin');
-      setPassword('admin123');
-    } else if (selectedRole === 'STAFF') {
-      setUserId('ST001');
-      setPassword('staff123');
-    } else {
-      setUserId('STU001');
-      setPassword('student123');
-    }
+    setUserId('');
+    setPassword('');
   };
 
   const handleLogin = async () => {
     setErrorMessage('');
     setIsSubmitting(true);
     try {
-      await login({
+      const profile = await login({
         userId: userId.trim(),
         password,
         role,
       });
 
-      // Route based on role
+      if (profile.mustChangePassword && role === 'ADMIN') {
+        router.replace('/(auth)/change-password');
+        return;
+      }
       if (role === 'ADMIN') {
         router.replace('/(admin)/dashboard');
-      } else if (role === 'STAFF') {
+      } else if (role === 'EMPLOYEE') {
         router.replace('/(staff)/dashboard');
       } else {
         router.replace('/(student)/dashboard');
@@ -75,20 +66,20 @@ export default function LoginScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.logoIcon}>🎓</Text>
-          <Text style={styles.title}>Greenwood ERP</Text>
-          <Text style={styles.subtitle}>Sign in to access your portal</Text>
+          <Text style={styles.title}>Arihant Public School</Text>
+          <Text style={styles.subtitle}>One secure campus. Every school workflow.</Text>
         </View>
 
         {/* Role Switcher Tabs */}
         <View style={styles.roleTabs}>
-          {(['ADMIN', 'STAFF', 'STUDENT'] as Role[]).map((r) => (
+          {(['ADMIN', 'EMPLOYEE', 'STUDENT'] as Role[]).map((r) => (
             <TouchableOpacity
               key={r}
               style={[styles.roleTab, role === r && styles.activeRoleTab]}
               onPress={() => handleRoleChange(r)}
             >
               <Text style={[styles.roleTabText, role === r && styles.activeRoleTabText]}>
-                {r === 'ADMIN' ? 'Admin' : r === 'STAFF' ? 'Teacher' : 'Student'}
+                {r === 'ADMIN' ? 'Admin' : r === 'EMPLOYEE' ? 'Employee' : 'Student'}
               </Text>
             </TouchableOpacity>
           ))}
@@ -104,7 +95,7 @@ export default function LoginScreen() {
         {/* Form Inputs */}
         <View style={styles.form}>
           <Text style={styles.label}>
-            {role === 'ADMIN' ? 'Username / ID' : role === 'STAFF' ? 'Staff ID (e.g. ST001)' : 'Student ID (e.g. STU001)'}
+            {role === 'ADMIN' ? 'Admin login ID' : role === 'EMPLOYEE' ? 'Employee ID (EMP000001)' : 'Student ID (STU000001)'}
           </Text>
           <TextInput
             style={styles.input}
@@ -147,14 +138,14 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#071A2F',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   card: {
     backgroundColor: '#ffffff',
-    borderRadius: 16,
+    borderRadius: 24,
     padding: 28,
     width: '100%',
     maxWidth: 420,
@@ -242,7 +233,7 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   loginButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#C88728',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',

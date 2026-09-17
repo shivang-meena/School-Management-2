@@ -1,0 +1,1 @@
+import React from 'react'; import { PortalModuleScreen } from '../../src/components/PortalModuleScreen'; export default function Screen(){return <PortalModuleScreen title="Employee Notices" eyebrow="SCHOOL COMMUNICATION" description="Published notices for employees and the wider school community." endpoint="/notices"/>}

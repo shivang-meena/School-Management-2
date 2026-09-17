@@ -25,15 +25,15 @@ export default function IndexScreen() {
     address: '',
     previousSchool: '',
     applyingClass: 'Class 6',
-    parentName: '',
-    parentMobile: '',
+    guardianName: '',
+    guardianContact: '',
   });
 
   const { mutate: submitAdmission, isPending } = useSubmitAdmission();
-  const { data: publicNotices } = useNotices();
+  const { data: publicNotices } = useNotices('PUBLIC');
 
   const handleSubmitAdmission = () => {
-    if (!formData.name || !formData.mobile || !formData.email || !formData.parentName) {
+    if (!formData.name || !formData.mobile || !formData.guardianName) {
       Alert.alert('Validation Error', 'Please fill all required admission fields.');
       return;
     }
@@ -51,8 +51,8 @@ export default function IndexScreen() {
           address: '',
           previousSchool: '',
           applyingClass: 'Class 6',
-          parentName: '',
-          parentMobile: '',
+          guardianName: '',
+          guardianContact: '',
         });
       },
       onError: (err: any) => {
@@ -68,7 +68,7 @@ export default function IndexScreen() {
         {/* Hero Section */}
         <View style={styles.hero}>
           <Text style={styles.heroTag}>Excellence in Education Since 1998</Text>
-          <Text style={styles.heroTitle}>Greenwood International School</Text>
+          <Text style={styles.heroTitle}>Arihant Public School</Text>
           <Text style={styles.heroSubtitle}>
             Nurturing knowledge, character, and global leadership through our modern integrated campus and tech-enabled ERP system.
           </Text>
@@ -108,14 +108,14 @@ export default function IndexScreen() {
 
             <TouchableOpacity
               style={styles.card}
-              onPress={() => router.push({ pathname: '/(auth)/login', params: { role: 'STAFF' } })}
+              onPress={() => router.push({ pathname: '/(auth)/login', params: { role: 'EMPLOYEE' } })}
             >
               <Text style={styles.cardIcon}>👩‍🏫</Text>
-              <Text style={styles.cardTitle}>Staff / Teacher Portal</Text>
+              <Text style={styles.cardTitle}>Employee / Teacher Portal</Text>
               <Text style={styles.cardDesc}>
                 Manage assigned classes, mark student attendance, review salary slips and publish curriculum.
               </Text>
-              <Text style={styles.cardLink}>Staff Login →</Text>
+              <Text style={styles.cardLink}>Employee Login →</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -125,7 +125,7 @@ export default function IndexScreen() {
               <Text style={styles.cardIcon}>👨‍🎓</Text>
               <Text style={styles.cardTitle}>Student Portal</Text>
               <Text style={styles.cardDesc}>
-                View academic attendance percentage, check fee dues and receipts, download report cards & timetable.
+                View attendance, fee dues, verified receipts, published results and the current timetable.
               </Text>
               <Text style={styles.cardLink}>Student Login →</Text>
             </TouchableOpacity>
@@ -198,8 +198,8 @@ export default function IndexScreen() {
               <Text style={styles.label}>Parent / Guardian Name *</Text>
               <TextInput
                 style={styles.input}
-                value={formData.parentName}
-                onChangeText={(t) => setFormData({ ...formData, parentName: t })}
+                value={formData.guardianName}
+                onChangeText={(t) => setFormData({ ...formData, guardianName: t })}
                 placeholder="Parent Full Name"
               />
 
@@ -207,8 +207,8 @@ export default function IndexScreen() {
               <TextInput
                 style={styles.input}
                 keyboardType="phone-pad"
-                value={formData.parentMobile}
-                onChangeText={(t) => setFormData({ ...formData, parentMobile: t })}
+                value={formData.guardianContact}
+                onChangeText={(t) => setFormData({ ...formData, guardianContact: t })}
                 placeholder="Parent Mobile Number"
               />
 
@@ -250,13 +250,13 @@ export default function IndexScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#F4F1EA',
   },
   scroll: {
     paddingBottom: 40,
   },
   hero: {
-    backgroundColor: '#1e3a8a',
+    backgroundColor: '#071A2F',
     paddingHorizontal: 24,
     paddingVertical: 48,
     alignItems: 'center',
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   primaryBtn: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#C88728',
     paddingHorizontal: 22,
     paddingVertical: 12,
     borderRadius: 8,

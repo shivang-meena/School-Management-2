@@ -5,9 +5,12 @@ import { useRouter, usePathname } from 'expo-router';
 export const ADMIN_NAV_LINKS = [
   { href: '/(admin)/dashboard', label: 'Dashboard', icon: '📊' },
   { href: '/(admin)/students', label: 'Students', icon: '👨‍🎓' },
-  { href: '/(admin)/staff', label: 'Staff', icon: '👩‍🏫' },
+  { href: '/(admin)/staff', label: 'Employees', icon: '👩‍🏫' },
+  { href: '/(admin)/academics', label: 'Academics', icon: '🏫' },
   { href: '/(admin)/attendance', label: 'Attendance', icon: '✅' },
   { href: '/(admin)/fees', label: 'Fees', icon: '💳' },
+  { href: '/(admin)/salary', label: 'Salary', icon: '₹' },
+  { href: '/(admin)/timetable', label: 'Timetable', icon: '🗓️' },
   { href: '/(admin)/exams', label: 'Exams & Marks', icon: '📝' },
   { href: '/(admin)/notices', label: 'Notices', icon: '📢' },
   { href: '/(admin)/accounts', label: 'Accounts', icon: '🧾' },
@@ -40,9 +43,9 @@ export const AdminNav: React.FC = () => {
 
 const styles = StyleSheet.create({
   navContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#0B2743',
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: '#164A6B',
     paddingVertical: 6,
   },
   scroll: {
@@ -57,12 +60,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#12385A',
   },
   activeLink: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#E6A84A',
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: '#F5C66C',
   },
   icon: {
     fontSize: 16,
@@ -70,10 +73,10 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#64748b',
+    color: '#D8EAF2',
   },
   activeLabel: {
-    color: '#2563eb',
+    color: '#071A2F',
     fontWeight: '700',
   },
 });

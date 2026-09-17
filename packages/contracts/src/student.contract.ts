@@ -3,36 +3,35 @@ import { z } from 'zod';
 export const GenderEnum = z.enum(['Male', 'Female', 'Other']);
 
 export const CreateStudentSchema = z.object({
-  studentId: z.string().min(1, 'Student ID is required'),
   name: z.string().min(2, 'Name is required'),
   dob: z.string(),
   gender: GenderEnum,
-  mobile: z.string().min(10, 'Mobile must be at least 10 digits'),
-  email: z.string().email('Invalid email address'),
+  mobile: z.string().min(10, 'Mobile must be at least 10 digits').optional().or(z.literal('')),
+  email: z.string().email('Invalid email address').optional().or(z.literal('')),
   address: z.string().min(1, 'Address is required'),
-  previousSchool: z.string().optional().nullable(),
-  class: z.string().min(1, 'Class is required'),
-  section: z.string().min(1, 'Section is required'),
-  rollNo: z.number().int().positive(),
-  parentName: z.string().min(2, 'Parent name is required'),
-  parentMobile: z.string().min(10, 'Parent mobile is required'),
-  password: z.string().min(6).optional(),
+  guardianName: z.string().min(2, 'Guardian name is required'),
+  guardianContact: z.string().min(10, 'Guardian contact is required'),
+  admissionDate: z.string(),
+  academicYearId: z.string().uuid(),
+  sectionId: z.string().uuid(),
+  rollNumber: z.number().int().positive(),
+  password: z.string().min(8).optional(),
 });
 export type CreateStudentInput = z.infer<typeof CreateStudentSchema>;
 
-export const UpdateStudentSchema = CreateStudentSchema.partial().omit({ studentId: true });
+export const UpdateStudentSchema = CreateStudentSchema.omit({ password: true }).partial();
 export type UpdateStudentInput = z.infer<typeof UpdateStudentSchema>;
 
 export const PendingRegistrationSchema = z.object({
   name: z.string().min(2, 'Name is required'),
   dob: z.string(),
   gender: GenderEnum,
-  mobile: z.string().min(10),
-  email: z.string().email(),
+  mobile: z.string().min(10).optional(),
+  email: z.string().email().optional().or(z.literal('')),
   address: z.string().min(1),
   previousSchool: z.string().optional().nullable(),
   applyingClass: z.string().min(1),
-  parentName: z.string().min(2),
-  parentMobile: z.string().min(10),
+  guardianName: z.string().min(2),
+  guardianContact: z.string().min(10),
 });
 export type PendingRegistrationInput = z.infer<typeof PendingRegistrationSchema>;

@@ -1,431 +1,96 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  StyleSheet,
-  Alert,
-  Modal,
-  ActivityIndicator,
-} from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { api } from '../../src/services/api';
 import { Header } from '../../src/components/Header';
 import { AdminNav } from '../../src/components/AdminNav';
-import { useStudents, useClasses, useCreateStudent } from '../../src/hooks/useQueries';
-import { api } from '../../src/services/api';
-import { useQueryClient } from '@tanstack/react-query';
 
-export default function StudentsManagementScreen() {
-  const queryClient = useQueryClient();
-  const [selectedClass, setSelectedClass] = useState<string>('');
-  const [search, setSearch] = useState<string>('');
-  const [modalVisible, setModalVisible] = useState(false);
+const today = new Date().toISOString().slice(0, 10);
+const initial = { name: '', dob: '2012-01-01', gender: 'Male', mobile: '', email: '', address: '', guardianName: '', guardianContact: '', admissionDate: today, rollNumber: '' };
+function dateOnly(value: any) { return value ? String(value).slice(0, 10) : ''; }
+function message(error: any) { const value = error?.response?.data?.message; return Array.isArray(value) ? value.join('\n') : value || 'Please check the details and try again.'; }
 
-  const [formData, setFormData] = useState({
-    studentId: '',
-    name: '',
-    dob: '2011-04-15',
-    gender: 'Male' as 'Male' | 'Female' | 'Other',
-    mobile: '',
-    email: '',
-    address: '',
-    previousSchool: '',
-    class: 'Class 8',
-    section: 'A',
-    rollNo: 1,
-    parentName: '',
-    parentMobile: '',
-  });
-
-  const { data: students, isLoading } = useStudents({
-    class: selectedClass || undefined,
-    search: search || undefined,
-  });
-
-  const { data: classes } = useClasses();
-  const { mutate: createStudent, isPending: isCreating } = useCreateStudent();
-
-  const handleCreateStudent = () => {
-    if (!formData.studentId || !formData.name || !formData.email || !formData.parentName) {
-      Alert.alert('Validation Error', 'Please complete all required fields.');
-      return;
-    }
-
-    createStudent(
-      {
-        ...formData,
-        rollNo: Number(formData.rollNo),
-      },
-      {
-        onSuccess: () => {
-          Alert.alert('Success', 'Student registered successfully!');
-          setModalVisible(false);
-          setFormData({
-            studentId: '',
-            name: '',
-            dob: '2011-04-15',
-            gender: 'Male',
-            mobile: '',
-            email: '',
-            address: '',
-            previousSchool: '',
-            class: 'Class 8',
-            section: 'A',
-            rollNo: 1,
-            parentName: '',
-            parentMobile: '',
-          });
-        },
-        onError: (err: any) => {
-          Alert.alert('Error', err.response?.data?.message || 'Failed to create student.');
-        },
-      }
-    );
-  };
-
-  const handleDelete = (id: string, name: string) => {
-    Alert.alert('Confirm Delete', `Are you sure you want to remove ${name}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await api.delete(`/students/${id}`);
-            queryClient.invalidateQueries({ queryKey: ['students'] });
-            Alert.alert('Deleted', 'Student record removed.');
-          } catch {
-            Alert.alert('Error', 'Failed to delete student.');
-          }
-        },
-      },
-    ]);
-  };
-
-  return (
-    <View style={styles.container}>
-      <Header title="Student Directory" />
-      <AdminNav />
-
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.topBar}>
-          <View>
-            <Text style={styles.pageTitle}>Student Management</Text>
-            <Text style={styles.pageSubtitle}>Total Enrolled: {students?.length || 0}</Text>
-          </View>
-
-          <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
-            <Text style={styles.addBtnText}>+ Register Student</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Filters */}
-        <View style={styles.filterRow}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by name, ID or email..."
-            value={search}
-            onChangeText={setSearch}
-          />
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.classChips}>
-            <TouchableOpacity
-              style={[styles.chip, !selectedClass && styles.activeChip]}
-              onPress={() => setSelectedClass('')}
-            >
-              <Text style={[styles.chipText, !selectedClass && styles.activeChipText]}>All Classes</Text>
-            </TouchableOpacity>
-            {classes?.map((c: any) => (
-              <TouchableOpacity
-                key={c.id}
-                style={[styles.chip, selectedClass === c.name && styles.activeChip]}
-                onPress={() => setSelectedClass(selectedClass === c.name ? '' : c.name)}
-              >
-                <Text style={[styles.chipText, selectedClass === c.name && styles.activeChipText]}>
-                  {c.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Students Table / Cards */}
-        {isLoading ? (
-          <ActivityIndicator size="large" color="#2563eb" style={{ marginTop: 40 }} />
-        ) : (
-          <View style={styles.studentList}>
-            {students?.map((s: any) => {
-              const pendingFee = s.totalFee - s.paidAmount;
-              const feeStatus = pendingFee <= 0 ? 'Paid' : s.paidAmount > 0 ? 'Partial' : 'Unpaid';
-
-              return (
-                <View key={s.id} style={styles.studentCard}>
-                  <View style={styles.cardHeader}>
-                    <View>
-                      <Text style={styles.studentName}>{s.name}</Text>
-                      <Text style={styles.studentMeta}>
-                        ID: <Text style={{ fontWeight: '700' }}>{s.studentId}</Text> | {s.class} - {s.section} | Roll: {s.rollNo}
-                      </Text>
-                    </View>
-                    <View style={[
-                      styles.feeBadge,
-                      feeStatus === 'Paid' ? styles.badgePaid : feeStatus === 'Partial' ? styles.badgePartial : styles.badgeUnpaid
-                    ]}>
-                      <Text style={styles.badgeText}>{feeStatus}</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.cardDetails}>
-                    <Text style={styles.detailText}>📱 {s.mobile || '-'} | ✉️ {s.email}</Text>
-                    <Text style={styles.detailText}>👨‍👩‍👦 Parent: {s.parentName} ({s.parentMobile})</Text>
-                    <Text style={styles.detailText}>
-                      💰 Fees: ₹{s.paidAmount?.toLocaleString('en-IN')} / ₹{s.totalFee?.toLocaleString('en-IN')}
-                    </Text>
-                  </View>
-
-                  <View style={styles.cardActions}>
-                    <TouchableOpacity
-                      style={styles.deleteBtn}
-                      onPress={() => handleDelete(s.id, s.name)}
-                    >
-                      <Text style={styles.deleteBtnText}>Delete Record</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Register Student Modal */}
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <ScrollView>
-              <Text style={styles.modalTitle}>Register New Student</Text>
-
-              <Text style={styles.label}>Student ID *</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.studentId}
-                onChangeText={(t) => setFormData({ ...formData, studentId: t })}
-                placeholder="e.g. STU009"
-              />
-
-              <Text style={styles.label}>Full Name *</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.name}
-                onChangeText={(t) => setFormData({ ...formData, name: t })}
-                placeholder="Student Name"
-              />
-
-              <Text style={styles.label}>Email *</Text>
-              <TextInput
-                style={styles.input}
-                keyboardType="email-address"
-                value={formData.email}
-                onChangeText={(t) => setFormData({ ...formData, email: t })}
-                placeholder="student@greenwood.edu.in"
-              />
-
-              <Text style={styles.label}>Mobile *</Text>
-              <TextInput
-                style={styles.input}
-                keyboardType="phone-pad"
-                value={formData.mobile}
-                onChangeText={(t) => setFormData({ ...formData, mobile: t })}
-                placeholder="Mobile number"
-              />
-
-              <View style={styles.row}>
-                <View style={{ flex: 1, marginRight: 8 }}>
-                  <Text style={styles.label}>Class</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.class}
-                    onChangeText={(t) => setFormData({ ...formData, class: t })}
-                    placeholder="Class 8"
-                  />
-                </View>
-                <View style={{ flex: 1, marginLeft: 8 }}>
-                  <Text style={styles.label}>Section</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={formData.section}
-                    onChangeText={(t) => setFormData({ ...formData, section: t })}
-                    placeholder="A"
-                  />
-                </View>
-              </View>
-
-              <Text style={styles.label}>Roll No</Text>
-              <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                value={String(formData.rollNo)}
-                onChangeText={(t) => setFormData({ ...formData, rollNo: Number(t) || 1 })}
-                placeholder="1"
-              />
-
-              <Text style={styles.label}>Parent Name *</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.parentName}
-                onChangeText={(t) => setFormData({ ...formData, parentName: t })}
-                placeholder="Guardian Name"
-              />
-
-              <Text style={styles.label}>Parent Mobile *</Text>
-              <TextInput
-                style={styles.input}
-                keyboardType="phone-pad"
-                value={formData.parentMobile}
-                onChangeText={(t) => setFormData({ ...formData, parentMobile: t })}
-                placeholder="Parent Mobile"
-              />
-
-              <Text style={styles.label}>Residential Address</Text>
-              <TextInput
-                style={[styles.input, { height: 55 }]}
-                multiline
-                value={formData.address}
-                onChangeText={(t) => setFormData({ ...formData, address: t })}
-                placeholder="Address"
-              />
-
-              <View style={styles.modalFooter}>
-                <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
-                  <Text style={styles.cancelBtnText}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.saveBtn}
-                  onPress={handleCreateStudent}
-                  disabled={isCreating}
-                >
-                  <Text style={styles.saveBtnText}>
-                    {isCreating ? 'Saving...' : 'Register Student'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-    </View>
-  );
+function Field({ label, value, onChangeText, placeholder, multiline = false, editable = true }: any) {
+  return <View style={styles.field}><Text style={styles.label}>{label}</Text><TextInput editable={editable} value={String(value ?? '')} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#8c96a5" multiline={multiline} style={[styles.input, multiline && styles.multiline, !editable && styles.readonly]} /></View>;
+}
+function Choices({ label, value, values, onChange }: any) {
+  return <View style={styles.field}><Text style={styles.label}>{label}</Text><View style={styles.choices}>{values.map((item: string) => <TouchableOpacity accessibilityRole="button" key={item} onPress={() => onChange(item)} style={[styles.choice, value === item && styles.choiceActive]}><Text style={value === item ? styles.choiceTextActive : styles.choiceText}>{item}</Text></TouchableOpacity>)}</View></View>;
+}
+function SelectCards({ label, value, items, onChange, getLabel }: any) {
+  return <View style={styles.field}><Text style={styles.label}>{label}</Text><View style={styles.choices}>{items.map((item: any) => <TouchableOpacity accessibilityRole="button" key={item.id} onPress={() => onChange(item.id)} style={[styles.choice, value === item.id && styles.choiceActive]}><Text style={value === item.id ? styles.choiceTextActive : styles.choiceText}>{getLabel(item)}</Text></TouchableOpacity>)}</View></View>;
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  scroll: { padding: 20, paddingBottom: 40 },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  pageTitle: { fontSize: 22, fontWeight: '800', color: '#0f172a' },
-  pageSubtitle: { fontSize: 13, color: '#64748b' },
-  addBtn: {
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  addBtnText: { color: '#ffffff', fontWeight: '700', fontSize: 14 },
-  filterRow: { marginBottom: 18, gap: 10 },
-  searchInput: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
-  },
-  classChips: { flexDirection: 'row' },
-  chip: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-  },
-  activeChip: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
-  chipText: { fontSize: 12, fontWeight: '600', color: '#475569' },
-  activeChipText: { color: '#ffffff' },
-  studentList: { gap: 12 },
-  studentCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 10,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  studentName: { fontSize: 16, fontWeight: '700', color: '#1e293b' },
-  studentMeta: { fontSize: 13, color: '#64748b', marginTop: 2 },
-  feeBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  badgePaid: { backgroundColor: '#dcfce7' },
-  badgePartial: { backgroundColor: '#fef3c7' },
-  badgeUnpaid: { backgroundColor: '#fee2e2' },
-  badgeText: { fontSize: 11, fontWeight: '700' },
-  cardDetails: { gap: 4, marginVertical: 6 },
-  detailText: { fontSize: 12, color: '#475569' },
-  cardActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    paddingTop: 10,
-    marginTop: 6,
-  },
-  deleteBtn: { paddingHorizontal: 10, paddingVertical: 4 },
-  deleteBtnText: { color: '#ef4444', fontSize: 12, fontWeight: '600' },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 24,
-    width: '100%',
-    maxWidth: 500,
-    maxHeight: '90%',
-  },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: '#0f172a', marginBottom: 14 },
-  label: { fontSize: 12, fontWeight: '600', color: '#334155', marginBottom: 4 },
-  input: {
-    backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 13,
-    marginBottom: 10,
-  },
-  row: { flexDirection: 'row' },
-  modalFooter: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 10 },
-  cancelBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6, borderWidth: 1, borderColor: '#cbd5e1' },
-  cancelBtnText: { color: '#64748b', fontWeight: '600', fontSize: 13 },
-  saveBtn: { backgroundColor: '#2563eb', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 },
-  saveBtnText: { color: '#ffffff', fontWeight: '700', fontSize: 13 },
-});
+export default function StudentsScreen() {
+  const client = useQueryClient();
+  const [form, setForm] = useState<any>(initial);
+  const [edit, setEdit] = useState<any>({});
+  const [open, setOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [passwordChangedFor, setPasswordChangedFor] = useState<string | null>(null);
+  const [deleteReason, setDeleteReason] = useState('');
+  const students = useQuery<any>({ queryKey: ['students'], queryFn: async () => (await api.get('/students')).data });
+  const academics = useQuery<any>({ queryKey: ['academics'], queryFn: async () => (await api.get('/academics')).data });
+  const detail = useQuery<any>({ queryKey: ['student-detail', selectedId], queryFn: async () => (await api.get('/students/' + selectedId)).data, enabled: !!selectedId });
+  const years = academics.data?.academicYears || [];
+  const sections = useMemo(() => (academics.data?.classes || []).flatMap((schoolClass: any) => (schoolClass.sections || []).map((section: any) => ({ ...section, className: schoolClass.name }))), [academics.data]);
+  const defaultYear = years.find((item: any) => item.isCurrent) || years[0];
+  const defaultSection = sections[0];
+
+  useEffect(() => {
+    if (!detail.data) return;
+    const enrollment = detail.data.enrollments?.find((item: any) => item.status === 'CURRENT') || detail.data.enrollments?.[0];
+    setEdit({ name: detail.data.name || '', dob: dateOnly(detail.data.dob), gender: detail.data.gender || 'Other', mobile: detail.data.mobile || '', email: detail.data.email || '', address: detail.data.address || '', guardianName: detail.data.guardianName || '', guardianContact: detail.data.guardianContact || '', admissionDate: dateOnly(detail.data.admissionDate), academicYearId: enrollment?.academicYearId || '', sectionId: enrollment?.sectionId || '', rollNumber: String(enrollment?.rollNumber || '') });
+  }, [detail.data]);
+
+  const setCreate = (key: string, value: string) => setForm((old: any) => ({ ...old, [key]: value }));
+  const setStudent = (key: string, value: string) => setEdit((old: any) => ({ ...old, [key]: value }));
+  const validate = (value: any) => {
+    if (!value.name || !value.guardianName || !value.guardianContact || !value.address || !value.rollNumber) { Alert.alert('Missing details', 'Name, guardian details, address and roll number are required.'); return false; }
+    if (value.mobile && value.mobile.replace(/\D/g, '').length < 10) { Alert.alert('Invalid mobile', 'Mobile number must contain at least 10 digits.'); return false; }
+    return true;
+  };
+  const create = async () => {
+    if (!validate(form) || !defaultYear?.id || !defaultSection?.id) return;
+    setSaving(true);
+    try { const { data } = await api.post('/students', { ...form, mobile: form.mobile || undefined, email: form.email || undefined, rollNumber: Number(form.rollNumber), academicYearId: defaultYear.id, sectionId: defaultSection.id }); const credentials = data.temporaryCredentials; Alert.alert('Student created', 'Student ID: ' + credentials.loginId + '\nPassword set by admin successfully.'); setForm(initial); setOpen(false); await client.invalidateQueries({ queryKey: ['students'] }); } catch (error: any) { Alert.alert('Could not create student', message(error)); } finally { setSaving(false); }
+  };
+  const save = async () => {
+    if (!selectedId || !validate(edit)) return;
+    setSaving(true);
+    try { await api.patch('/students/' + selectedId, { ...edit, rollNumber: Number(edit.rollNumber) }); Alert.alert('Student updated', 'All edited details were saved successfully.'); await Promise.all([client.invalidateQueries({ queryKey: ['students'] }), client.invalidateQueries({ queryKey: ['student-detail', selectedId] })]); } catch (error: any) { Alert.alert('Could not update student', message(error)); } finally { setSaving(false); }
+  };
+  const resetPassword = async () => {
+    if (!selectedId) return;
+    setSaving(true);
+    if (adminPassword.length < 8) { setSaving(false); return Alert.alert('Password too short', 'Admin password must have at least 8 characters.'); }
+    try { const { data } = await api.post('/students/' + selectedId + '/reset-password', { password: adminPassword }); Alert.alert('Password updated', 'Login ID: ' + data.loginId + '\nThe student can now sign in with the password set by you.'); setAdminPassword(''); setPasswordChangedFor(selectedId); await client.invalidateQueries({ queryKey: ['student-detail', selectedId] }); } catch (error: any) { Alert.alert('Password update failed', message(error)); } finally { setSaving(false); }
+  };
+  const deactivateStudent = async () => {
+    if (!selectedId || !deleteReason.trim()) return Alert.alert('Reason required', 'Enter a reason before deleting this student.');
+    setSaving(true);
+    try { await api.post('/students/' + selectedId + '/deactivate', { reason: deleteReason.trim() }); Alert.alert('Student deleted', 'The student account is now inactive and all historical records are preserved.'); setDeleteReason(''); setSelectedId(null); await client.invalidateQueries({ queryKey: ['students'] }); } catch (error: any) { Alert.alert('Could not delete student', message(error)); } finally { setSaving(false); }
+  };
+
+  return <View style={styles.page}><Header /><AdminNav /><ScrollView contentContainerStyle={styles.content}>
+    <View style={styles.hero}><View><Text style={styles.eyebrow}>STUDENT DIRECTORY</Text><Text style={styles.title}>Students</Text><Text style={styles.sub}>Tap any student to view and edit the complete profile.</Text></View><TouchableOpacity accessibilityRole="button" style={styles.primary} onPress={() => setOpen(!open)}><Text style={styles.primaryText}>{open ? 'Close form' : '+ Add student'}</Text></TouchableOpacity></View>
+    {open ? <View style={styles.form}><Text style={styles.formTitle}>New student</Text><Field label="Full name *" value={form.name} onChangeText={(value: string) => setCreate('name', value)} placeholder="Aarav Sharma" /><View style={styles.row}><View style={styles.half}><Field label="Date of birth *" value={form.dob} onChangeText={(value: string) => setCreate('dob', value)} placeholder="YYYY-MM-DD" /></View><View style={styles.half}><Field label="Admission date *" value={form.admissionDate} onChangeText={(value: string) => setCreate('admissionDate', value)} placeholder="YYYY-MM-DD" /></View></View><Choices label="Gender" value={form.gender} values={['Male', 'Female', 'Other']} onChange={(value: string) => setCreate('gender', value)} /><Field label="Guardian name *" value={form.guardianName} onChangeText={(value: string) => setCreate('guardianName', value)} placeholder="Parent / guardian" /><Field label="Guardian contact *" value={form.guardianContact} onChangeText={(value: string) => setCreate('guardianContact', value)} placeholder="Phone number" /><Field label="Mobile" value={form.mobile} onChangeText={(value: string) => setCreate('mobile', value)} placeholder="Optional, minimum 10 digits" /><Field label="Email" value={form.email} onChangeText={(value: string) => setCreate('email', value)} placeholder="student@example.com" /><Field label="Roll number *" value={form.rollNumber} onChangeText={(value: string) => setCreate('rollNumber', value)} placeholder="e.g. 12" /><Field label="Address *" value={form.address} onChangeText={(value: string) => setCreate('address', value)} placeholder="Full address" multiline /><Text style={styles.setup}>Admission: {defaultYear?.name || 'current year'} · {defaultSection?.className || 'Class 1'} / Section {defaultSection?.name || 'A'}</Text><TouchableOpacity accessibilityRole="button" style={styles.save} onPress={create} disabled={saving}>{saving ? <ActivityIndicator color="#071d33" /> : <Text style={styles.saveText}>Create student</Text>}</TouchableOpacity></View> : null}
+
+    <Modal visible={!!selectedId} transparent animationType="fade" onRequestClose={() => setSelectedId(null)}>
+      <View style={styles.overlay} accessibilityViewIsModal>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close student details" style={StyleSheet.absoluteFill} onPress={() => setSelectedId(null)} />
+        <View style={styles.modalShell}>
+          <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator>
+            {selectedId ? <View style={styles.detailPanel}>{detail.isLoading ? <ActivityIndicator color="#e8aa43" /> : detail.isError ? <Text style={styles.error}>Could not load student details.</Text> : <><View style={styles.detailHeader}><View><Text style={styles.eyebrow}>COMPLETE STUDENT PROFILE</Text><Text style={styles.formTitle}>{detail.data?.name}</Text><Text style={styles.meta}>Login ID: {detail.data?.user?.loginId || detail.data?.studentId}</Text></View><TouchableOpacity accessibilityRole="button" style={styles.close} onPress={() => setSelectedId(null)}><Text style={styles.closeText}>Close ✕</Text></TouchableOpacity></View><View style={styles.security}><Text style={styles.securityTitle}>{passwordChangedFor === selectedId ? 'Password changed successfully ✓' : 'Admin-controlled password'}</Text><Text style={styles.securityText}>Students cannot change their password. Set a new password here; the existing password is never displayed.</Text><Text style={styles.meta}>{passwordChangedFor === selectedId ? 'The new admin-set password is active.' : 'Password change required: No'}</Text><Field label="New password (minimum 8 characters)" value={adminPassword} onChangeText={setAdminPassword} placeholder="Enter password" /><TouchableOpacity accessibilityRole="button" style={styles.secondary} onPress={resetPassword} disabled={saving}><Text style={styles.secondaryText}>{passwordChangedFor === selectedId ? 'Change password again' : 'Set student password'}</Text></TouchableOpacity></View><Field label="Student ID" value={detail.data?.studentId} editable={false} /><Field label="Full name *" value={edit.name} onChangeText={(value: string) => setStudent('name', value)} /><View style={styles.row}><View style={styles.half}><Field label="Date of birth *" value={edit.dob} onChangeText={(value: string) => setStudent('dob', value)} /></View><View style={styles.half}><Field label="Admission date *" value={edit.admissionDate} onChangeText={(value: string) => setStudent('admissionDate', value)} /></View></View><Choices label="Gender" value={edit.gender} values={['Male', 'Female', 'Other']} onChange={(value: string) => setStudent('gender', value)} /><Field label="Mobile" value={edit.mobile} onChangeText={(value: string) => setStudent('mobile', value)} /><Field label="Email" value={edit.email} onChangeText={(value: string) => setStudent('email', value)} /><Field label="Guardian name *" value={edit.guardianName} onChangeText={(value: string) => setStudent('guardianName', value)} /><Field label="Guardian contact *" value={edit.guardianContact} onChangeText={(value: string) => setStudent('guardianContact', value)} /><Field label="Address *" value={edit.address} onChangeText={(value: string) => setStudent('address', value)} multiline /><SelectCards label="Academic year" value={edit.academicYearId} items={years} onChange={(value: string) => setStudent('academicYearId', value)} getLabel={(item: any) => item.name} /><SelectCards label="Class / section" value={edit.sectionId} items={sections} onChange={(value: string) => setStudent('sectionId', value)} getLabel={(item: any) => item.className + ' / ' + item.name} /><Field label="Roll number *" value={edit.rollNumber} onChangeText={(value: string) => setStudent('rollNumber', value)} /><TouchableOpacity accessibilityRole="button" style={styles.save} onPress={save} disabled={saving}>{saving ? <ActivityIndicator color="#071d33" /> : <Text style={styles.saveText}>Save student changes</Text>}</TouchableOpacity><View style={styles.dangerZone}><Text style={styles.dangerTitle}>Delete student access</Text><Text style={styles.dangerText}>This deactivates login and preserves attendance, fees and results history.</Text><Field label="Reason *" value={deleteReason} onChangeText={setDeleteReason} placeholder="Transferred to another school" /><TouchableOpacity accessibilityRole="button" style={styles.dangerButton} onPress={deactivateStudent} disabled={saving}><Text style={styles.dangerButtonText}>Delete student</Text></TouchableOpacity></View></>}</View> : null}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+
+    {students.isLoading ? <ActivityIndicator color="#e8aa43" /> : students.isError ? <Text style={styles.error}>Unable to load students.</Text> : (students.data || []).length === 0 ? <Text style={styles.empty}>No students yet. Add the first student above.</Text> : (students.data || []).map((student: any) => { const enrollment = student.enrollments?.find((item: any) => item.status === 'CURRENT') || student.enrollments?.[0]; return <TouchableOpacity accessibilityRole="button" style={[styles.card, selectedId === student.id && styles.cardSelected]} key={student.id} onPress={() => setSelectedId(student.id)}><View><Text style={styles.cardTitle}>{student.name}</Text><Text style={styles.meta}>{student.studentId} · {enrollment?.section?.schoolClass?.name || 'Class'} {enrollment?.section?.name || ''} · Roll {enrollment?.rollNumber || '—'}</Text><Text style={styles.tap}>Tap to view complete details and edit</Text></View><Text style={styles.badge}>{student.status || 'ACTIVE'}</Text></TouchableOpacity>; })}
+  </ScrollView></View>;
+}
+
+const styles = StyleSheet.create({ page: { flex: 1, backgroundColor: '#f4f1ea' }, content: { padding: 24, maxWidth: 1100, width: '100%', alignSelf: 'center', gap: 16 }, hero: { backgroundColor: '#08233d', borderRadius: 22, padding: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 16 }, eyebrow: { color: '#e8aa43', fontSize: 11, fontWeight: '800', letterSpacing: 2 }, title: { color: '#fff', fontSize: 32, fontWeight: '800', marginTop: 6 }, sub: { color: '#c8d3df', marginTop: 4 }, primary: { backgroundColor: '#e8aa43', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12 }, primaryText: { color: '#071d33', fontWeight: '800' }, form: { backgroundColor: '#fff', borderRadius: 18, padding: 20, gap: 10 }, overlay: { flex: 1, backgroundColor: 'rgba(4, 17, 30, 0.72)', alignItems: 'center', justifyContent: 'center', padding: 18 }, modalShell: { width: '92%', maxWidth: 780, maxHeight: '90%', backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 16 }, modalContent: { padding: 0 }, detailPanel: { backgroundColor: '#fff', padding: 22, gap: 11 }, detailHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }, formTitle: { color: '#08233d', fontSize: 22, fontWeight: '800', marginBottom: 4 }, field: { gap: 5, flex: 1 }, label: { color: '#506176', fontSize: 12, fontWeight: '700' }, input: { borderWidth: 1, borderColor: '#dbe1e8', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, color: '#172b42', backgroundColor: '#fbfcfd' }, readonly: { backgroundColor: '#edf1f5', color: '#66768a' }, multiline: { minHeight: 70, textAlignVertical: 'top' }, row: { flexDirection: 'row', gap: 10 }, half: { flex: 1 }, choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 }, choice: { borderWidth: 1, borderColor: '#dbe1e8', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 9 }, choiceActive: { backgroundColor: '#08233d', borderColor: '#08233d' }, choiceText: { color: '#506176' }, choiceTextActive: { color: '#fff', fontWeight: '700' }, setup: { color: '#607187', fontSize: 12, marginTop: 4 }, save: { backgroundColor: '#e8aa43', borderRadius: 11, padding: 14, alignItems: 'center', marginTop: 4 }, saveText: { color: '#071d33', fontWeight: '800' }, secondary: { alignSelf: 'flex-start', backgroundColor: '#08233d', borderRadius: 9, paddingHorizontal: 13, paddingVertical: 10, marginTop: 5 }, secondaryText: { color: '#fff', fontWeight: '800' }, close: { backgroundColor: '#edf1f5', borderRadius: 9, paddingHorizontal: 13, paddingVertical: 9 }, closeText: { color: '#243a52', fontWeight: '700' }, security: { backgroundColor: '#fff7e8', borderRadius: 12, padding: 14, gap: 5 }, securityTitle: { color: '#744b0d', fontWeight: '800' }, securityText: { color: '#715b39', lineHeight: 19 }, card: { backgroundColor: '#fff', borderRadius: 16, padding: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 2, borderColor: 'transparent' }, cardSelected: { borderColor: '#e8aa43' }, cardTitle: { color: '#08233d', fontSize: 17, fontWeight: '800' }, meta: { color: '#6c7b8d', marginTop: 5 }, tap: { color: '#a46c17', fontSize: 11, fontWeight: '700', marginTop: 7 }, badge: { color: '#18734a', fontWeight: '800', fontSize: 11 }, empty: { color: '#607187', textAlign: 'center', padding: 30 }, error: { color: '#b42318' } });
+Object.assign(styles, { dangerZone: { backgroundColor: '#fff0f0', borderRadius: 12, padding: 14, gap: 7 }, dangerTitle: { color: '#9e2b25', fontWeight: '800' }, dangerText: { color: '#7e4b48' }, dangerButton: { backgroundColor: '#b42318', borderRadius: 9, padding: 12, alignItems: 'center' }, dangerButtonText: { color: '#fff', fontWeight: '800' } });

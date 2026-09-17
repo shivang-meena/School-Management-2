@@ -6,7 +6,7 @@ interface AuthContextType {
   user: UserProfile | null;
   token: string | null;
   isLoading: boolean;
-  login: (input: LoginInput) => Promise<void>;
+  login: (input: LoginInput) => Promise<UserProfile>;
   logout: () => void;
 }
 
@@ -47,6 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('erp_auth_token', accessToken);
       localStorage.setItem('erp_auth_user', JSON.stringify(profile));
     }
+    return profile as UserProfile;
   };
 
   const logout = () => {

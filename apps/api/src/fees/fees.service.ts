@@ -1,98 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { RecordPaymentInput, PaymentMethodEnum } from '@erp/contracts';
-
-@Injectable()
-export class FeesService {
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'; import { createHmac, randomUUID } from 'crypto'; import { PaymentMethod, Role, TransactionStatus, TransactionType } from '@prisma/client'; import { PrismaService } from '../prisma/prisma.service';
+@Injectable() export class FeesService {
   constructor(private readonly prisma: PrismaService) {}
-
-  async getAllPayments() {
-    return this.prisma.feePayment.findMany({
-      include: {
-        student: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async mySummary(actor: any) { const account = await this.prisma.studentFeeAccount.findFirst({ where: { student: { studentId: actor.studentId } }, orderBy: { createdAt: 'desc' } }); if (!account) throw new NotFoundException('Fee account not found'); return this.summary(account.id, actor); }
+  async summary(feeAccountId: string, actor: any) { const account = await this.prisma.studentFeeAccount.findUnique({ where: { id: feeAccountId }, include: { student: true, academicYear: true, adjustments: true, transactions: true } }); if (!account) throw new NotFoundException('Fee account not found'); if (actor.role === Role.STUDENT && actor.studentId !== account.student.studentId) throw new ForbiddenException('Own fee account only'); const adjustments = account.adjustments.reduce((s, a) => s + Number(a.amount), 0), paid = account.transactions.filter((t) => t.status === TransactionStatus.SUCCESS).reduce((s, t) => s + Number(t.amount), 0), reversed = account.transactions.filter((t) => t.status === TransactionStatus.REVERSED).reduce((s, t) => s + Number(t.amount), 0), assessed = Number(account.assessedFee) + adjustments, netPaid = paid - reversed; return { ...account, assessed, netPaid, outstanding: Math.max(assessed - netPaid, 0), creditBalance: Math.max(netPaid - assessed, 0) }; }
+  structures() { return this.prisma.classFeeStructure.findMany({ include: { schoolClass: true, academicYear: true }, orderBy: { createdAt: 'desc' } }); }
+  accounts() { return this.prisma.studentFeeAccount.findMany({ include: { student: true, academicYear: true, transactions: true }, orderBy: { createdAt: 'desc' } }); }
+  upsertStructure(body: any) { if (!(body.totalFee >= 0)) throw new BadRequestException('Fee must be non-negative'); return this.prisma.classFeeStructure.upsert({ where: { classId_academicYearId: { classId: body.classId, academicYearId: body.academicYearId } }, create: { classId: body.classId, academicYearId: body.academicYearId, totalFee: body.totalFee }, update: { totalFee: body.totalFee, active: true } }); }
+  async manualPayment(body: any, actorId: string) { const summary = await this.summary(body.feeAccountId, { role: Role.ADMIN }); if (!(body.amount > 0) || body.amount > summary.outstanding) throw new BadRequestException('Amount must be positive and not exceed outstanding balance'); if (body.date > new Date().toISOString().slice(0, 10)) throw new BadRequestException('Future payment date is not allowed'); return this.prisma.$transaction(async (tx) => { const seq = await tx.idSequence.upsert({ where: { key: 'RECEIPT' }, create: { key: 'RECEIPT', nextValue: 2 }, update: { nextValue: { increment: 1 } } }); const status = body.method === PaymentMethod.CHEQUE ? TransactionStatus.PENDING : TransactionStatus.SUCCESS; const payment = await tx.feeTransaction.create({ data: { feeAccountId: body.feeAccountId, receiptNo: `APS-RCP-${String(seq.nextValue - 1).padStart(7, '0')}`, amount: body.amount, paymentDate: new Date(body.date), method: body.method, status, reference: body.reference, remarks: body.remarks, idempotencyKey: body.idempotencyKey, recordedById: actorId } }); if (status === TransactionStatus.SUCCESS) await tx.accountTransaction.create({ data: { type: TransactionType.INCOME, title: `Fee receipt ${payment.receiptNo}`, amount: body.amount, transactionDate: new Date(body.date), sourceType: 'FEE_PAYMENT', sourceReference: `FEE:${payment.id}`, feeTransactionId: payment.id, recordedById: actorId } }); return payment; }); }
+  async createOnlineOrder(feeAccountId: string, amount: number, actor: any) { const summary = await this.summary(feeAccountId, actor); if (!(amount > 0) || amount > summary.outstanding) throw new BadRequestException('Invalid amount'); const key = process.env.RAZORPAY_KEY_ID, secret = process.env.RAZORPAY_KEY_SECRET; if (!key || !secret) throw new BadRequestException('Razorpay test credentials are not configured'); const localOrderId = `APS-${randomUUID()}`; const response = await fetch('https://api.razorpay.com/v1/orders', { method: 'POST', headers: { Authorization: `Basic ${Buffer.from(`${key}:${secret}`).toString('base64')}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: Math.round(amount * 100), currency: 'INR', receipt: localOrderId }) }); if (!response.ok) throw new BadRequestException('Payment gateway order creation failed'); const gateway: any = await response.json(); const order = await this.prisma.paymentOrder.create({ data: { localOrderId, gatewayOrderId: gateway.id, feeAccountId, expectedAmount: amount } }); return { orderId: order.id, gatewayOrderId: gateway.id, amount, currency: 'INR', keyId: key };
   }
-
-  async getFeeOverview() {
-    const students = await this.prisma.student.findMany();
-    const payments = await this.prisma.feePayment.findMany();
-
-    const totalExpected = students.reduce((sum, s) => sum + s.totalFee, 0);
-    const totalCollected = payments.reduce((sum, p) => sum + p.amount, 0);
-    const totalPending = totalExpected - totalCollected;
-
-    return {
-      totalExpected,
-      totalCollected,
-      totalPending,
-      totalStudents: students.length,
-      paidInFull: students.filter((s) => s.paidAmount >= s.totalFee).length,
-      partialPaid: students.filter((s) => s.paidAmount > 0 && s.paidAmount < s.totalFee).length,
-      unpaid: students.filter((s) => s.paidAmount === 0).length,
-    };
-  }
-
-  async recordPayment(dto: RecordPaymentInput) {
-    const student = await this.prisma.student.findUnique({
-      where: { studentId: dto.studentId },
-    });
-
-    if (!student) {
-      throw new NotFoundException('Student not found');
-    }
-
-    // Generate unique receipt number
-    const count = await this.prisma.feePayment.count();
-    const receiptNo = `RCP${String(count + 1).padStart(3, '0')}`;
-
-    const payment = await this.prisma.feePayment.create({
-      data: {
-        receiptNo,
-        studentId: dto.studentId,
-        amount: dto.amount,
-        date: dto.date || new Date().toISOString().split('T')[0],
-        method: dto.method as any,
-        remarks: dto.remarks || null,
-      },
-    });
-
-    // Update student's paidAmount
-    const newPaidAmount = student.paidAmount + dto.amount;
-    await this.prisma.student.update({
-      where: { studentId: dto.studentId },
-      data: { paidAmount: newPaidAmount },
-    });
-
-    return payment;
-  }
-
-  async getStudentFeeSummary(studentId: string) {
-    const student = await this.prisma.student.findUnique({
-      where: { studentId },
-      include: { feePayments: { orderBy: { date: 'desc' } } },
-    });
-
-    if (!student) {
-      throw new NotFoundException('Student not found');
-    }
-
-    const pending = student.totalFee - student.paidAmount;
-    let status = 'Unpaid';
-    if (pending <= 0) status = 'Paid';
-    else if (student.paidAmount > 0) status = 'Partial';
-
-    return {
-      studentId: student.studentId,
-      name: student.name,
-      class: student.class,
-      section: student.section,
-      totalFee: student.totalFee,
-      paidAmount: student.paidAmount,
-      pendingFee: Math.max(0, pending),
-      status,
-      payments: student.feePayments,
-    };
-  }
+  async verifyOnline(body: any, actor: any) { const order = await this.prisma.paymentOrder.findUnique({ where: { id: body.orderId }, include: { feeAccount: { include: { student: true } }, transactions: true } }); if (!order) throw new NotFoundException('Payment order not found'); if (actor.role === Role.STUDENT && actor.studentId !== order.feeAccount.student.studentId) throw new ForbiddenException('Own fee account only'); if (order.transactions.some((t) => t.status === TransactionStatus.SUCCESS)) return { status: 'SUCCESS', alreadyProcessed: true }; const secret = process.env.RAZORPAY_KEY_SECRET; if (!secret) throw new BadRequestException('Gateway secret is missing'); const signature = createHmac('sha256', secret).update(`${order.gatewayOrderId}|${body.razorpayPaymentId}`).digest('hex'); if (signature !== body.razorpaySignature) throw new ForbiddenException('Invalid payment signature'); return this.creditOnline(order, body.razorpayPaymentId, actor.id); }
+  private creditOnline(order: any, gatewayPaymentId: string, actorId: string) { return this.prisma.$transaction(async (tx) => { const seq = await tx.idSequence.upsert({ where: { key: 'RECEIPT' }, create: { key: 'RECEIPT', nextValue: 2 }, update: { nextValue: { increment: 1 } } }); const payment = await tx.feeTransaction.create({ data: { feeAccountId: order.feeAccountId, paymentOrderId: order.id, receiptNo: `APS-RCP-${String(seq.nextValue - 1).padStart(7, '0')}`, gatewayPaymentId, amount: order.expectedAmount, paymentDate: new Date(), method: PaymentMethod.ONLINE, status: TransactionStatus.SUCCESS, recordedById: actorId } }); await tx.paymentOrder.update({ where: { id: order.id }, data: { status: TransactionStatus.SUCCESS, verifiedAt: new Date() } }); await tx.accountTransaction.create({ data: { type: TransactionType.INCOME, title: `Online fee ${payment.receiptNo}`, amount: payment.amount, transactionDate: new Date(), sourceType: 'FEE_PAYMENT', sourceReference: `FEE:${payment.id}`, feeTransactionId: payment.id, recordedById: actorId } }); return payment; }); }
 }

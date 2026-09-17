@@ -1,20 +1,20 @@
 import { z } from 'zod';
 
+export const EmployeeSubRoleEnum = z.enum(['TEACHER', 'ACCOUNTANT', 'RECEPTIONIST', 'LIBRARIAN', 'OTHER']);
 export const CreateStaffSchema = z.object({
-  staffId: z.string().min(1, 'Staff ID is required'),
-  name: z.string().min(2, 'Name is required'),
-  designation: z.string().min(1, 'Designation is required'),
+  name: z.string().min(2),
+  subRole: EmployeeSubRoleEnum,
+  designation: z.string().min(2),
+  primarySubjectId: z.string().uuid().optional().nullable(),
   joiningDate: z.string(),
-  baseSalary: z.number().positive('Base salary must be greater than 0'),
-  mobile: z.string().min(10, 'Mobile must be at least 10 digits'),
-  email: z.string().email('Invalid email address'),
-  address: z.string().min(1, 'Address is required'),
-  assignedClass: z.string().optional().nullable(),
-  assignedSection: z.string().optional().nullable(),
-  assignedSubject: z.string().optional().nullable(),
-  password: z.string().min(6).optional(),
+  mobile: z.string().min(10).optional(),
+  email: z.string().email().optional().or(z.literal('')),
+  address: z.string().min(1),
+  baseSalary: z.number().positive(),
+  canMarkStudentAttendance: z.boolean().default(false),
+  canMarkEmployeeAttendance: z.boolean().default(false),
+  password: z.string().min(8).optional(),
 });
 export type CreateStaffInput = z.infer<typeof CreateStaffSchema>;
-
-export const UpdateStaffSchema = CreateStaffSchema.partial().omit({ staffId: true });
+export const UpdateStaffSchema = CreateStaffSchema.omit({ baseSalary: true, password: true }).partial();
 export type UpdateStaffInput = z.infer<typeof UpdateStaffSchema>;

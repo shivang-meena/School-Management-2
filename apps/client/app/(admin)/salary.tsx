@@ -1,0 +1,1 @@
+import React from 'react'; import { AdminOperationsScreen } from '../../src/components/AdminOperationsScreen'; export default function Screen(){return <AdminOperationsScreen mode="salary" title="Salary & Payroll" eyebrow="GENERATE • FINALIZE • PAY" description="Generate monthly salary from attendance, finalize reviewed calculations and record payments."/>}

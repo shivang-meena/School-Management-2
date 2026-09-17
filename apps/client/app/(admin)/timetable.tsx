@@ -1,0 +1,1 @@
+import React from 'react'; import { AdminOperationsScreen } from '../../src/components/AdminOperationsScreen'; export default function Screen(){return <AdminOperationsScreen mode="timetable" title="Timetable" eyebrow="LIVE ACADEMIC SCHEDULE" description="Create lecture and break periods with section and teacher conflict protection."/>}

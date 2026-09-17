@@ -17,7 +17,7 @@ export const Header: React.FC<{ title?: string }> = ({ title }) => {
       <View style={styles.left}>
         <Text style={styles.logoIcon}>🎓</Text>
         <View>
-          <Text style={styles.brandTitle}>Greenwood ERP</Text>
+          <Text style={styles.brandTitle}>Arihant Public School</Text>
           {title ? <Text style={styles.subTitle}>{title}</Text> : null}
         </View>
       </View>
@@ -26,7 +26,7 @@ export const Header: React.FC<{ title?: string }> = ({ title }) => {
         {user ? (
           <View style={styles.userContainer}>
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>{user.name || user.userId}</Text>
+              <Text style={styles.userName}>{user.name || user.loginId}</Text>
               <Text style={[styles.roleBadge, user.role === 'ADMIN' ? styles.adminBadge : styles.otherBadge]}>
                 {user.role}
               </Text>
@@ -47,14 +47,14 @@ export const Header: React.FC<{ title?: string }> = ({ title }) => {
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#071A2F',
     paddingHorizontal: 20,
     paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: '#12385A',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -72,11 +72,11 @@ const styles = StyleSheet.create({
   brandTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0f172a',
+    color: '#ffffff',
   },
   subTitle: {
     fontSize: 12,
-    color: '#64748b',
+    color: '#9FC7DA',
     fontWeight: '500',
   },
   right: {
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#ffffff',
   },
   roleBadge: {
     fontSize: 10,

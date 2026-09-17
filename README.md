@@ -1,116 +1,84 @@
-# Greenwood School ERP — Full-Stack Monorepo
+# Arihant Public School ERP
 
-Enterprise School & Student Management ERP rebuilt with a modern, type-safe full-stack architecture.
+Full-stack school ERP using the existing agreed stack: Expo/React Native, NestJS, PostgreSQL, Prisma and JWT. The workspace is an npm monorepo.
 
----
+## Implemented scope
 
-## 🛠️ Tech Stack
+- Secure `ADMIN`, `EMPLOYEE` and `STUDENT` accounts with temporary-password enforcement, session revocation, deactivation and login lockout.
+- Database-backed `STU000001` / `EMP000001` sequences.
+- Academic years, classes, sections, subjects, school calendar, enrollment history and teacher/class-teacher assignments.
+- Scoped student and employee attendance with audit history and Asia/Kolkata date rules.
+- Effective salary revisions, fixed 30-day draft calculations, finalization and partial payment transactions.
+- Class/year fee structures, per-student fee snapshots, manual receipts, credit balances and Razorpay test-order/signature verification.
+- Timetable conflict validation, assessments, distinct absent/not-entered results and publication controls.
+- Audience-aware notices, linked cash ledger and critical audit events.
+- Responsive role portals with loading, empty and error states; no fabricated dashboard values.
 
-### 📱 Frontend (`apps/client`)
-- **Framework**: React Native with **Expo SDK 57**
-- **Router**: **Expo Router** (file-based navigation with layouts & route groups)
-- **Styling**: **Tailwind CSS v4** + responsive styles
-- **State & Caching**: **TanStack React Query v5**
-- **Contracts & Validation**: **Zod**
-- **Language**: TypeScript
+Parent portal, library/transport/hostel modules, homework submission, automated bank salary payout and report-card PDF remain outside this release.
 
-### ⚙️ Backend (`apps/api`)
-- **Framework**: **NestJS v11**
-- **Authentication**: **Passport + JWT** with role-based guards (`ADMIN`, `STAFF`, `STUDENT`)
-- **Security**: **Helmet** security headers + **bcryptjs** password hashing + CORS
-- **Validation**: **class-validator**, **class-transformer**, and shared **Zod** contracts
-- **API Documentation**: **Swagger UI** at `http://localhost:3000/api/docs`
-- **Language**: TypeScript
+## Workspace
 
-### 🗄️ Database & ORM
-- **Database**: **PostgreSQL 16** (Alpine) containerized via **Docker Compose**
-- **ORM**: **Prisma ORM v6** with automated schema synchronization and seed scripts
+Run every command below from:
 
-### 🏗️ Monorepo Architecture
-- **Workspaces**: npm workspaces (`apps/*`, `packages/*`)
-  - `apps/api` → NestJS v11 REST API
-  - `apps/client` → Expo React Native (Web, iOS, Android)
-  - `packages/contracts` → Shared Zod validation schemas & types
-
----
-
-## 🚀 Getting Started
-
-### 1. Prerequisites
-- **Node.js**: v20+ or v22+
-- **Docker & Docker Compose**: running on your machine
-
-### 2. Start PostgreSQL 16
-```bash
-docker compose up -d
+```text
+C:\Users\DELL\Desktop\erp2\new erp chatgpt\School-Management
 ```
 
-### 3. Install Dependencies & Initialize Database
-```bash
+## First-time setup
+
+Prerequisites: Node.js 20+, npm, Docker Desktop with Docker Compose.
+
+```powershell
+Copy-Item .env.example .env
 npm install
-npm run build --workspace=@erp/contracts
+docker compose up -d
 npm run prisma:generate
-npm run prisma:migrate
+npx prisma migrate dev --schema apps/api/prisma/schema.prisma --name arihant_erp_foundation
 npm run prisma:seed
 ```
 
-### 4. Run Backend API
-```bash
+Before migration, edit `.env` and set a long random `JWT_SECRET`. Add Razorpay **test** credentials only when testing online fees. `ALLOWED_ORIGINS` must explicitly list each frontend origin.
+
+The compose file uses a new `pgdata_arihant` volume, so the old prototype `pgdata` volume is left intact. If you intentionally want to migrate real legacy records, stop here and perform a reviewed staging migration/mapping for old `STAFF`, class strings, fee records and results; do not reset either volume.
+
+## Run locally
+
+Open two PowerShell terminals in the workspace directory.
+
+Terminal 1 — backend:
+
+```powershell
 npm run dev:api
 ```
-- API Base URL: `http://localhost:3000/api`
-- Swagger Docs: `http://localhost:3000/api/docs`
 
-### 5. Run Frontend Expo App
-```bash
+- API: `http://localhost:3000/api`
+- Swagger: `http://localhost:3000/api/docs`
+
+Terminal 2 — Expo frontend:
+
+```powershell
 npm run dev:client
 ```
-- Or run web directly:
-```bash
-npx expo start --web --workspace=@erp/client
+
+Then press `w` for web, `a` for Android emulator, or scan the Expo QR code on a compatible device.
+
+Direct web command:
+
+```powershell
+npm run web --workspace=@erp/client
 ```
 
----
+## Seed administrator
 
-## 🔑 Default Login Credentials (Pre-seeded)
+- Login ID: `admin`
+- Temporary password: `Arihant@2026`
+- First login requires an immediate password change and revokes the temporary session afterward.
 
-| Role | User ID / Username | Password | Notes |
-|---|---|---|---|
-| **Administrator** | `admin` | `admin123` | Full access to student records, staff payroll, fees, exams, notices & accounts |
-| **Staff / Teacher** | `ST001` | `staff123` | Senior Teacher (Priya Sharma) - assigned Class 8 Mathematics |
-| **Staff / Teacher** | `ST002` | `staff123` | Teacher (Amit Verma) - assigned Class 7 Science |
-| **Student** | `STU001` | `student123` | Aarav Patel - Class 8 A |
-| **Student** | `STU002` | `student123` | Diya Sharma - Class 8 A |
+The seed intentionally creates only foundation data: administrator, academic year 2026–27, Classes 1–12 with Section A, core subjects and fee structures. It does not generate fake students, employees, attendance, results or collections.
 
----
+## Production notes
 
-## 📁 Repository Structure
-
-```
-Student-management/
-├── apps/
-│   ├── api/                     # NestJS v11 REST backend
-│   │   ├── prisma/              # schema.prisma & seed.ts
-│   │   └── src/
-│   │       ├── auth/            # Passport JWT, guards, login
-│   │       ├── students/        # Student CRUD & public admissions
-│   │       ├── staff/           # Staff management & salary calculations
-│   │       ├── attendance/      # Student & staff attendance tracking
-│   │       ├── fees/            # Fee collections & receipt numbering
-│   │       ├── exams/           # Exam schedules & marks entry
-│   │       ├── notices/         # Announcement board with audience targeting
-│   │       └── accounts/        # Operational income & expense ledger
-│   └── client/                  # Expo SDK 57 React Native application
-│       ├── app/                 # Expo Router file-based pages
-│       │   ├── index.tsx        # School showcase & admission form
-│       │   ├── (auth)/login.tsx # Unified portal login
-│       │   ├── (admin)/         # Admin dashboard & management screens
-│       │   ├── (student)/       # Student report card, attendance & fee ledger
-│       │   └── (staff)/         # Teacher dashboard, salary slip & attendance
-│       └── src/                 # React Query hooks, services, and components
-├── packages/
-│   └── contracts/               # Shared Zod validation schemas
-├── legacy/                      # Archived original HTML/JS/CSS static prototype
-├── docker-compose.yml           # PostgreSQL 16 Alpine configuration
-└── package.json                 # Monorepo root workspaces configuration
-```
+- Use HTTPS, a production-grade JWT secret and restricted origins.
+- Use Razorpay live keys only after test-mode verification and webhook/reconciliation review.
+- Schedule PostgreSQL backups and verify a restore before launch.
+- Apply migrations to staging first and reconcile counts, balances and relationships before production.

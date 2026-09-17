@@ -15,8 +15,9 @@ async function bootstrap() {
   );
 
   // CORS: Allow mobile and web client
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:8081,http://localhost:19006').split(',').map((value) => value.trim());
   app.enableCors({
-    origin: '*',
+    origin: allowedOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
@@ -29,14 +30,14 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true,
       transform: true,
-      forbidNonWhitelisted: false,
+      forbidNonWhitelisted: true,
     }),
   );
 
   // Swagger Documentation Setup
   const config = new DocumentBuilder()
     .setTitle('School ERP API')
-    .setDescription('NestJS v11 backend API for Greenwood School Management ERP')
+    .setDescription('NestJS v11 backend API for Arihant Public School ERP')
     .setVersion('1.0.0')
     .addBearerAuth()
     .addTag('auth', 'Authentication and user session management')

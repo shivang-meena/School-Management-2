@@ -1,117 +1,43 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { Role } from '@prisma/client';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ActorType, EmployeeStatus, Role } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { CreateStaffInput, UpdateStaffInput } from '@erp/contracts';
+import { PrismaService } from '../prisma/prisma.service';
 
-@Injectable()
-export class StaffService {
+@Injectable() export class StaffService {
   constructor(private readonly prisma: PrismaService) {}
-
-  async findAll(query?: { designation?: string; search?: string }) {
-    const where: any = {};
-    if (query?.designation) where.designation = query.designation;
-    if (query?.search) {
-      where.OR = [
-        { name: { contains: query.search, mode: 'insensitive' } },
-        { staffId: { contains: query.search, mode: 'insensitive' } },
-        { email: { contains: query.search, mode: 'insensitive' } },
-      ];
-    }
-
-    return this.prisma.staff.findMany({
-      where,
-      orderBy: { staffId: 'asc' },
+  findAll(query: any = {}) { return this.prisma.employee.findMany({ where: { status: query.status || undefined, subRole: query.subRole || undefined, OR: query.search ? [{ name: { contains: query.search, mode: 'insensitive' } }, { employeeId: { contains: query.search, mode: 'insensitive' } }] : undefined }, include: { primarySubject: { select: { name: true, code: true } }, teachingAssignments: { include: { subject: { select: { name: true, code: true } } }, orderBy: { effectiveFrom: 'desc' }, take: 1 }, salaryRevisions: { orderBy: { effectiveDate: 'desc' }, take: 1 } }, take: Math.min(Number(query.limit) || 50, 100), skip: Number(query.offset) || 0, orderBy: { employeeId: 'asc' } }); }
+  async findOne(id: string, actor: any) {
+    const employee = await this.prisma.employee.findFirst({ where: { OR: [{ id }, { employeeId: id }, { legacyStaffId: id }] }, include: { salaryRevisions: { orderBy: { effectiveDate: 'desc' } }, teachingAssignments: { include: { section: { include: { schoolClass: true } }, subject: true } }, classTeacherAssignments: { include: { section: { include: { schoolClass: true } } } }, monthlySalaries: { include: { payments: true }, orderBy: [{ year: 'desc' }, { month: 'desc' }] } } });
+    if (!employee) throw new NotFoundException('Employee not found');
+    if (actor.role === Role.EMPLOYEE && actor.employeeId !== employee.employeeId) throw new ForbiddenException('You can only view your own employee record');
+    return employee;
+  }
+  async create(dto: CreateStaffInput, actorId: string) {
+      const temporaryPassword = dto.password || 'Arihant@2026';
+    return this.prisma.$transaction(async (tx) => {
+      const seq = await tx.idSequence.upsert({ where: { key: 'EMPLOYEE' }, create: { key: 'EMPLOYEE', nextValue: 2 }, update: { nextValue: { increment: 1 } } });
+      const employeeId = `EMP${String(seq.nextValue - 1).padStart(6, '0')}`;
+      const user = await tx.user.create({ data: { loginId: employeeId, name: dto.name, email: dto.email || null, passwordHash: await bcrypt.hash(temporaryPassword, 12), role: Role.EMPLOYEE, mustChangePassword: false } });
+      if (dto.subRole === 'TEACHER' && !dto.primarySubjectId) throw new BadRequestException('Teacher subject is required');
+      if (dto.primarySubjectId && !await tx.subject.findUnique({ where: { id: dto.primarySubjectId } })) throw new BadRequestException('Selected subject not found');
+      const employee = await tx.employee.create({ data: { employeeId, userId: user.id, name: dto.name, mobile: dto.mobile || null, email: dto.email || null, address: dto.address, subRole: dto.subRole, designation: dto.designation, primarySubjectId: dto.subRole === 'TEACHER' ? dto.primarySubjectId : null, joiningDate: new Date(dto.joiningDate), canMarkStudentAttendance: dto.canMarkStudentAttendance, canMarkEmployeeAttendance: dto.canMarkEmployeeAttendance } });
+      await tx.salaryRevision.create({ data: { employeeId: employee.id, amount: dto.baseSalary, effectiveDate: new Date(dto.joiningDate), reason: 'Initial salary', changedById: actorId } });
+      await tx.auditEvent.create({ data: { actorType: ActorType.USER, actorId, action: 'EMPLOYEE_CREATED', entityType: 'Employee', entityId: employee.id, after: { employeeId, subRole: employee.subRole } } });
+      return { employee, temporaryCredentials: { loginId: employeeId, password: temporaryPassword } };
     });
   }
-
-  async findOne(id: string) {
-    const staff = await this.prisma.staff.findFirst({
-      where: {
-        OR: [{ id }, { staffId: id }],
-      },
-    });
-
-    if (!staff) {
-      throw new NotFoundException('Staff member not found');
-    }
-    return staff;
+  async setPassword(id: string, password: string, actorId: string) {
+    if (!password || password.length < 8) throw new BadRequestException('Password must have at least 8 characters');
+    const employee = await this.prisma.employee.findFirst({ where: { OR: [{ id }, { employeeId: id }] } }); if (!employee) throw new NotFoundException('Employee not found');
+    await this.prisma.$transaction([this.prisma.user.update({ where: { id: employee.userId }, data: { passwordHash: await bcrypt.hash(password, 12), mustChangePassword: false, loginAttempts: 0, lockedUntil: null, sessionVersion: { increment: 1 } } }), this.prisma.session.updateMany({ where: { userId: employee.userId, revokedAt: null }, data: { revokedAt: new Date() } }), this.prisma.auditEvent.create({ data: { actorType: ActorType.USER, actorId, action: 'EMPLOYEE_PASSWORD_RESET', entityType: 'Employee', entityId: employee.id } })]);
+    return { message: 'Password updated', loginId: employee.employeeId };
   }
-
-  async create(dto: CreateStaffInput) {
-    const existing = await this.prisma.staff.findFirst({
-      where: {
-        OR: [{ staffId: dto.staffId }, { email: dto.email }],
-      },
-    });
-    if (existing) {
-      throw new ConflictException('Staff ID or Email already exists');
-    }
-
-    const defaultPassword = dto.password || 'staff123';
-    const passwordHash = await bcrypt.hash(defaultPassword, 10);
-
-    const user = await this.prisma.user.create({
-      data: {
-        userId: dto.staffId,
-        name: dto.name,
-        email: dto.email,
-        passwordHash,
-        role: Role.STAFF,
-      },
-    });
-
-    return this.prisma.staff.create({
-      data: {
-        staffId: dto.staffId,
-        name: dto.name,
-        designation: dto.designation,
-        joiningDate: dto.joiningDate,
-        baseSalary: dto.baseSalary,
-        mobile: dto.mobile,
-        email: dto.email,
-        address: dto.address,
-        assignedClass: dto.assignedClass || null,
-        assignedSection: dto.assignedSection || null,
-        assignedSubject: dto.assignedSubject || null,
-        userId: user.id,
-      },
-    });
+  async update(id: string, dto: UpdateStaffInput, actorId: string) {
+    const employee = await this.prisma.employee.findFirst({ where: { OR: [{ id }, { employeeId: id }] } }); if (!employee) throw new NotFoundException('Employee not found');
+    const updated = await this.prisma.employee.update({ where: { id: employee.id }, data: { ...dto, joiningDate: dto.joiningDate ? new Date(dto.joiningDate) : undefined, email: dto.email || undefined } });
+    await this.prisma.auditEvent.create({ data: { actorType: ActorType.USER, actorId, action: 'EMPLOYEE_UPDATED', entityType: 'Employee', entityId: employee.id, before: employee, after: updated } }); return updated;
   }
-
-  async update(id: string, dto: UpdateStaffInput) {
-    const staff = await this.findOne(id);
-    return this.prisma.staff.update({
-      where: { id: staff.id },
-      data: dto as any,
-    });
-  }
-
-  async remove(id: string) {
-    const staff = await this.findOne(id);
-    if (staff.userId) {
-      await this.prisma.user.delete({ where: { id: staff.userId } });
-    }
-    return this.prisma.staff.delete({ where: { id: staff.id } });
-  }
-
-  async calculateSalary(staffId: string, workingDays: number, absentDays: number, bonusDeduction: number = 0) {
-    const staff = await this.findOne(staffId);
-    const perDaySalary = staff.baseSalary / (workingDays || 30);
-    const absentDeduction = absentDays * perDaySalary;
-    const finalSalary = staff.baseSalary - absentDeduction + Number(bonusDeduction);
-
-    return {
-      staffId: staff.staffId,
-      name: staff.name,
-      baseSalary: staff.baseSalary,
-      workingDays,
-      absentDays,
-      presentDays: workingDays - absentDays,
-      perDaySalary: Math.round(perDaySalary),
-      absentDeduction: Math.round(absentDeduction),
-      adjustment: bonusDeduction,
-      finalSalary: Math.round(finalSalary),
-    };
-  }
+  async addSalaryRevision(id: string, body: any, actorId: string) { const employee = await this.prisma.employee.findFirst({ where: { OR: [{ id }, { employeeId: id }] } }); if (!employee) throw new NotFoundException('Employee not found'); if (!(body.amount > 0) || !body.reason) throw new BadRequestException('Positive amount and reason required'); return this.prisma.salaryRevision.create({ data: { employeeId: employee.id, amount: body.amount, effectiveDate: new Date(body.effectiveDate), reason: body.reason, changedById: actorId } }); }
+  async deactivate(id: string, actorId: string, reason: string) { if (!reason) throw new BadRequestException('Reason required'); const employee = await this.prisma.employee.findFirst({ where: { OR: [{ id }, { employeeId: id }] } }); if (!employee) throw new NotFoundException('Employee not found'); const activeAssignments = await this.prisma.classTeacherAssignment.count({ where: { employeeId: employee.id, OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date() } }] } }); if (activeAssignments) throw new BadRequestException('Resolve active class-teacher assignments first'); await this.prisma.$transaction([this.prisma.employee.update({ where: { id: employee.id }, data: { status: EmployeeStatus.INACTIVE, leavingDate: new Date() } }), this.prisma.user.update({ where: { id: employee.userId }, data: { status: 'INACTIVE', sessionVersion: { increment: 1 } } }), this.prisma.session.updateMany({ where: { userId: employee.userId, revokedAt: null }, data: { revokedAt: new Date() } }), this.prisma.auditEvent.create({ data: { actorType: ActorType.USER, actorId, action: 'EMPLOYEE_DEACTIVATED', entityType: 'Employee', entityId: employee.id, reason } })]); return { message: 'Employee deactivated; history retained' }; }
 }

@@ -1,0 +1,1 @@
+import React from 'react'; import { AdminOperationsScreen } from '../../src/components/AdminOperationsScreen'; export default function Screen(){return <AdminOperationsScreen mode="academics" title="Academic Structure" eyebrow="SESSION • CLASSES • SUBJECTS" description="Create academic years, classes, sections, subjects, calendar days and teacher assignments."/>}

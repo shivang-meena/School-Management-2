@@ -1,22 +1,22 @@
 {
   "expo": {
-    "name": "Greenwood School ERP",
-    "slug": "greenwood-erp",
+    "name": "Arihant Public School ERP",
+    "slug": "arihant-public-school-erp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "greenwood-erp",
+    "scheme": "arihant-school-erp",
     "userInterfaceStyle": "light",
     "splash": {
       "resizeMode": "contain",
-      "backgroundColor": "#1e3a8a"
+      "backgroundColor": "#071A2F"
     },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#1e3a8a"
+        "backgroundColor": "#071A2F"
       }
     },
     "web": {
