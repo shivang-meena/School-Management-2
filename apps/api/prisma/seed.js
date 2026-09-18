@@ -7,10 +7,10 @@ async function main() {
   const passwordHash = await bcrypt.hash('Arihant@2026', 12);
   await prisma.user.upsert({
     where: { loginId: 'admin' },
-    update: {},
+    update: { mustChangePassword: false },
     create: {
       loginId: 'admin', name: 'School Administrator', email: 'admin@arihantpublicschool.edu',
-      passwordHash, role: Role.ADMIN, mustChangePassword: true,
+      passwordHash, role: Role.ADMIN, mustChangePassword: false,
     },
   });
 

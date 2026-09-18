@@ -4,7 +4,7 @@ import * as bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 async function main() {
   const passwordHash = await bcrypt.hash('Arihant@2026', 12);
-  await prisma.user.upsert({ where: { loginId: 'admin' }, update: {}, create: { loginId: 'admin', name: 'School Administrator', email: 'admin@arihantpublicschool.edu', passwordHash, role: Role.ADMIN, mustChangePassword: true } });
+  await prisma.user.upsert({ where: { loginId: 'admin' }, update: { mustChangePassword: false }, create: { loginId: 'admin', name: 'School Administrator', email: 'admin@arihantpublicschool.edu', passwordHash, role: Role.ADMIN, mustChangePassword: false } });
   const year = await prisma.academicYear.upsert({ where: { name: '2026-27' }, update: { isCurrent: true }, create: { name: '2026-27', startDate: new Date('2026-04-01'), endDate: new Date('2027-03-31'), isCurrent: true } });
   for (let grade = 1; grade <= 12; grade += 1) {
     const schoolClass = await prisma.schoolClass.upsert({ where: { name: `Class ${grade}` }, update: {}, create: { name: `Class ${grade}`, sortOrder: grade } });

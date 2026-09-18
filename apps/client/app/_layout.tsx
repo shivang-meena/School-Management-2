@@ -28,7 +28,6 @@ export default function RootLayout() {
           >
             <Stack.Screen name="index" options={{ title: 'Arihant Public School ERP' }} />
             <Stack.Screen name="(auth)/login" options={{ title: 'Login' }} />
-            <Stack.Screen name="(auth)/change-password" options={{ title: 'Secure your account' }} />
             <Stack.Screen name="(admin)/dashboard" options={{ title: 'Admin Dashboard' }} />
             <Stack.Screen name="(admin)/students" options={{ title: 'Students' }} />
             <Stack.Screen name="(admin)/staff" options={{ title: 'Employees' }} />

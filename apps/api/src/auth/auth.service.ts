@@ -23,7 +23,7 @@ export class AuthService {
       await this.prisma.user.update({ where: { id: user.id }, data: { loginAttempts: attempts, lockedUntil: attempts >= 5 ? new Date(Date.now() + 15 * 60_000) : null } });
       throw new UnauthorizedException('Invalid credentials');
     }
-    await this.prisma.user.update({ where: { id: user.id }, data: { loginAttempts: 0, lockedUntil: null, mustChangePassword: user.role === 'ADMIN' ? user.mustChangePassword : false } });
+    await this.prisma.user.update({ where: { id: user.id }, data: { loginAttempts: 0, lockedUntil: null, mustChangePassword: false } });
     const jti = randomUUID();
     const accessToken = this.jwt.sign({ sub: user.id, role: user.role, version: user.sessionVersion, jti });
     await this.prisma.session.create({ data: { userId: user.id, tokenHash: this.hash(jti), expiresAt: new Date(Date.now() + 8 * 60 * 60_000) } });

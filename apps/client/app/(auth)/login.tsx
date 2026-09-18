@@ -40,10 +40,6 @@ export default function LoginScreen() {
         role,
       });
 
-      if (profile.mustChangePassword && role === 'ADMIN') {
-        router.replace('/(auth)/change-password');
-        return;
-      }
       if (role === 'ADMIN') {
         router.replace('/(admin)/dashboard');
       } else if (role === 'EMPLOYEE') {

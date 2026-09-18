@@ -137,7 +137,7 @@ model User {
   passwordHash       String
   role               Role
   status             UserStatus           @default(ACTIVE)
-  mustChangePassword Boolean              @default(true)
+  mustChangePassword Boolean              @default(false)
   sessionVersion     Int                  @default(1)
   loginAttempts      Int                  @default(0)
   lockedUntil        DateTime?
