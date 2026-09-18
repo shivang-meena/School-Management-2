@@ -1,1 +1,6 @@
-import React from 'react'; import { AdminOperationsScreen } from '../../src/components/AdminOperationsScreen'; export default function Screen(){return <AdminOperationsScreen mode="attendance" title="Attendance" eyebrow="STUDENTS & EMPLOYEES" description="Select a person, date and status to create or correct an audited attendance record."/>}
+import React from 'react';
+import { AttendanceScreen } from '../../src/components/AttendanceScreen';
+
+export default function Screen() {
+  return <AttendanceScreen />;
+}

@@ -41,7 +41,9 @@ export default function RootLayout() {
             <Stack.Screen name="(admin)/salary" options={{ title: 'Salary' }} />
             <Stack.Screen name="(admin)/timetable" options={{ title: 'Timetable' }} />
             <Stack.Screen name="(student)/dashboard" options={{ title: 'Student Portal' }} />
+            <Stack.Screen name="(student)/calendar" options={{ title: 'Academic Calendar' }} />
             <Stack.Screen name="(staff)/dashboard" options={{ title: 'Staff Portal' }} />
+            <Stack.Screen name="(staff)/calendar" options={{ title: 'Academic Calendar' }} />
           </Stack>
         </AuthProvider>
       </QueryClientProvider>

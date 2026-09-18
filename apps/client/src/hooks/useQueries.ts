@@ -19,7 +19,7 @@ export const useExams = (filters?: any) => query('assessments', '/assessments', 
 export const useStudentReport = () => query('assessments', '/assessments');
 export const useCreateExam = () => mutation('/assessments', ['assessments']);
 export const useAccountsOverview = () => query('accounts', '/accounts/summary');
-export const useAttendanceByDate = (_targetType: string, date: string) => query('attendance', '/attendance/students', { date }, false);
+export const useAttendanceByDate = (targetType: 'STUDENT' | 'EMPLOYEE', date: string, sectionId?: string) => query('attendance', `/attendance/${targetType === 'STUDENT' ? 'students' : 'employees'}`, { date, sectionId }, false);
 export const useIndividualAttendance = (targetType: 'STUDENT' | 'EMPLOYEE' | 'STAFF', id?: string) => query('attendance', `/attendance/${targetType === 'STUDENT' ? 'students' : 'employees'}/${id}`, undefined, !!id);
 export const useMarkAttendance = () => { const client = useQueryClient(); return useMutation({ mutationFn: async ({ targetType, data }: any) => (await api.post(`/attendance/${targetType === 'STUDENT' ? 'students' : 'employees'}`, data)).data, onSuccess: () => client.invalidateQueries({ queryKey: ['attendance'] }) }); };
 export const useSubmitAdmission = () => mutation('/students/register-admission', []);

@@ -1,1 +1,8 @@
-import React from 'react'; import { useAuth } from '../../src/hooks/useAuth'; import { PortalModuleScreen } from '../../src/components/PortalModuleScreen'; export default function Screen(){const {user}=useAuth();return <PortalModuleScreen title="Own Attendance" eyebrow="EMPLOYEE ATTENDANCE" description="Your daily attendance history, including paid leave, unpaid leave and half days." endpoint={`/attendance/employees/${user?.employeeId}`}/>}
+import React from 'react';
+import { useAuth } from '../../src/hooks/useAuth';
+import { EmployeeAttendanceScreen } from '../../src/components/EmployeeAttendanceScreen';
+
+export default function Screen() {
+  const { user } = useAuth();
+  return <EmployeeAttendanceScreen employeeId={user?.employeeId} />;
+}

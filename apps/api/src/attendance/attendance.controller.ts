@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client'; import { MarkAttendanceSchema } from '@erp/contracts'; import { JwtAuthGuard } from '../auth/jwt-auth.guard'; import { Roles } from '../auth/roles.decorator'; import { RolesGuard } from '../auth/roles.guard'; import { AttendanceService } from './attendance.service';
 @Controller('attendance') @UseGuards(JwtAuthGuard, RolesGuard) export class AttendanceController {
   constructor(private readonly service: AttendanceService) {}
+  @Get('students') @Roles(Role.ADMIN, Role.EMPLOYEE) studentRoster(@Query('sectionId') sectionId: string, @Query('date') date: string, @Req() req: any) { return this.service.studentRoster(sectionId, date, req.user); }
+  @Get('employees') @Roles(Role.ADMIN, Role.EMPLOYEE) employeeRoster(@Query('date') date: string, @Req() req: any) { return this.service.employeeRoster(date, req.user); }
   @Post('students') @Roles(Role.ADMIN, Role.EMPLOYEE) students(@Body() b: unknown, @Req() req: any) { return this.service.markStudents(MarkAttendanceSchema.parse(b), req.user); }
   @Post('employees') @Roles(Role.ADMIN, Role.EMPLOYEE) employees(@Body() b: unknown, @Req() req: any) { return this.service.markEmployees(MarkAttendanceSchema.parse(b), req.user); }
   @Get('students/:studentId') @Roles(Role.ADMIN, Role.EMPLOYEE, Role.STUDENT) studentHistory(@Param('studentId') id: string, @Req() req: any) { return this.service.studentHistory(id, req.user); }

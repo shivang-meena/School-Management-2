@@ -12,10 +12,12 @@ enum Role {
   EMPLOYEE
   STUDENT
 }
+
 enum UserStatus {
   ACTIVE
   INACTIVE
 }
+
 enum EmployeeSubRole {
   TEACHER
   ACCOUNTANT
@@ -23,31 +25,38 @@ enum EmployeeSubRole {
   LIBRARIAN
   OTHER
 }
+
 enum StudentStatus {
   ACTIVE
   INACTIVE
   LEFT_SCHOOL
 }
+
 enum EmployeeStatus {
   ACTIVE
   INACTIVE
   LEFT
 }
+
 enum RegistrationStatus {
   PENDING
   APPROVED
   REJECTED
 }
+
 enum EnrollmentStatus {
   CURRENT
   CLOSED
 }
+
 enum StudentAttendanceStatus {
   PRESENT
   ABSENT
+  HALF_DAY
   LATE
   LEAVE
 }
+
 enum EmployeeAttendanceStatus {
   PRESENT
   ABSENT
@@ -58,15 +67,18 @@ enum EmployeeAttendanceStatus {
   HOLIDAY
   WEEKLY_OFF
 }
+
 enum CalendarDayType {
   WORKING_DAY
   HOLIDAY
   WEEKLY_OFF
 }
+
 enum CalculationStatus {
   DRAFT
   FINALIZED
 }
+
 enum PaymentMethod {
   CASH
   ONLINE
@@ -74,6 +86,7 @@ enum PaymentMethod {
   CHEQUE
   OTHER
 }
+
 enum TransactionStatus {
   PENDING
   SUCCESS
@@ -81,69 +94,77 @@ enum TransactionStatus {
   REVERSED
   BOUNCED
 }
+
 enum TransactionType {
   EXPENSE
   INCOME
 }
+
 enum AssessmentType {
   TEST
   EXAM
   ASSIGNMENT
 }
+
 enum ResultEntryStatus {
   NOT_ENTERED
   ABSENT
   MARKS_ENTERED
 }
+
 enum AudienceType {
   ALL
   EMPLOYEES
   STUDENTS
   SELECTED_SECTIONS
 }
+
 enum TimetableEntryType {
   LECTURE
   BREAK
 }
+
 enum ActorType {
   USER
   SYSTEM
 }
 
 model User {
-  id String @id @default(uuid())
-  loginId String @unique
-  name String
-  email String?
-  passwordHash String
-  role Role
-  status UserStatus @default(ACTIVE)
-  mustChangePassword Boolean @default(true)
-  sessionVersion Int @default(1)
-  loginAttempts Int @default(0)
-  lockedUntil DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  student Student?
-  employee Employee?
-  sessions Session[]
-  auditEvents AuditEvent[] @relation("AuditActor")
-  notices Notice[] @relation("NoticeCreator")
-  ledgerEntries AccountTransaction[] @relation("LedgerRecorder")
-  salaryPayments SalaryPayment[] @relation("SalaryRecorder")
-  feeTransactions FeeTransaction[] @relation("FeeRecorder")
-  attendanceChanges AttendanceChange[] @relation("AttendanceActor")
+  id                 String               @id @default(uuid())
+  loginId            String               @unique
+  name               String
+  email              String?
+  passwordHash       String
+  role               Role
+  status             UserStatus           @default(ACTIVE)
+  mustChangePassword Boolean              @default(true)
+  sessionVersion     Int                  @default(1)
+  loginAttempts      Int                  @default(0)
+  lockedUntil        DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  student            Student?
+  employee           Employee?
+  sessions           Session[]
+  auditEvents        AuditEvent[]         @relation("AuditActor")
+  notices            Notice[]             @relation("NoticeCreator")
+  ledgerEntries      AccountTransaction[] @relation("LedgerRecorder")
+  salaryPayments     SalaryPayment[]      @relation("SalaryRecorder")
+  feeTransactions    FeeTransaction[]     @relation("FeeRecorder")
+  attendanceChanges  AttendanceChange[]   @relation("AttendanceActor")
+
   @@map("users")
 }
 
 model Session {
-  id String @id @default(uuid())
-  userId String
-  tokenHash String @unique
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
   expiresAt DateTime
   revokedAt DateTime?
-  createdAt DateTime @default(now())
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
   @@index([userId, expiresAt])
   @@map("sessions")
 }
@@ -152,529 +173,585 @@ model IdSequence {
   key       String   @id
   nextValue Int
   updatedAt DateTime @updatedAt
+
   @@map("id_sequences")
 }
 
 model Student {
-  id String @id @default(uuid())
-  studentId String @unique
-  userId String @unique
-  name String
-  dob DateTime @db.Date
-  gender String
-  mobile String?
-  email String?
-  address String
-  guardianName String
+  id              String                @id @default(uuid())
+  studentId       String                @unique
+  userId          String                @unique
+  name            String
+  dob             DateTime              @db.Date
+  gender          String
+  mobile          String?
+  email           String?
+  address         String
+  guardianName    String
   guardianContact String
-  admissionDate DateTime @db.Date
-  status StudentStatus @default(ACTIVE)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
-  enrollments StudentEnrollment[]
-  feeAccounts StudentFeeAccount[]
-  attendance StudentAttendance[]
-  results ExamResult[]
-  registrations PendingRegistration[]
+  admissionDate   DateTime              @db.Date
+  status          StudentStatus         @default(ACTIVE)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  enrollments     StudentEnrollment[]
+  feeAccounts     StudentFeeAccount[]
+  attendance      StudentAttendance[]
+  results         ExamResult[]
+  registrations   PendingRegistration[]
+
   @@index([status, name])
   @@map("students")
 }
 
 model Employee {
-  id String @id @default(uuid())
-  employeeId String @unique
-  legacyStaffId String? @unique
-  userId String @unique
-  name String
-  mobile String?
-  email String?
-  address String
-  subRole EmployeeSubRole
-  designation String
-  primarySubjectId String?
-  joiningDate DateTime @db.Date
-  leavingDate DateTime? @db.Date
-  status EmployeeStatus @default(ACTIVE)
-  canMarkStudentAttendance Boolean @default(false)
-  canMarkEmployeeAttendance Boolean @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
-  primarySubject Subject? @relation("EmployeePrimarySubject", fields: [primarySubjectId], references: [id], onDelete: Restrict)
-  teachingAssignments TeacherAssignment[]
-  classTeacherAssignments ClassTeacherAssignment[]
-  attendance EmployeeAttendance[]
-  salaryRevisions SalaryRevision[]
-  monthlySalaries MonthlySalary[]
-  timetableEntries LectureTimetableEntry[]
-  permission EmployeeAttendancePermission? @relation("PermissionOwner")
-  permissionTargets EmployeeAttendancePermissionTarget[]
+  id                        String                               @id @default(uuid())
+  employeeId                String                               @unique
+  legacyStaffId             String?                              @unique
+  userId                    String                               @unique
+  name                      String
+  mobile                    String?
+  email                     String?
+  address                   String
+  subRole                   EmployeeSubRole
+  designation               String
+  primarySubjectId          String?
+  joiningDate               DateTime                             @db.Date
+  leavingDate               DateTime?                            @db.Date
+  status                    EmployeeStatus                       @default(ACTIVE)
+  canMarkStudentAttendance  Boolean                              @default(false)
+  canMarkEmployeeAttendance Boolean                              @default(false)
+  createdAt                 DateTime                             @default(now())
+  updatedAt                 DateTime                             @updatedAt
+  user                      User                                 @relation(fields: [userId], references: [id], onDelete: Restrict)
+  primarySubject            Subject?                             @relation("EmployeePrimarySubject", fields: [primarySubjectId], references: [id], onDelete: Restrict)
+  teachingAssignments       TeacherAssignment[]
+  classTeacherAssignments   ClassTeacherAssignment[]
+  attendance                EmployeeAttendance[]
+  salaryRevisions           SalaryRevision[]
+  monthlySalaries           MonthlySalary[]
+  timetableEntries          LectureTimetableEntry[]
+  permission                EmployeeAttendancePermission?        @relation("PermissionOwner")
+  permissionTargets         EmployeeAttendancePermissionTarget[]
+
   @@index([status, subRole])
   @@map("employees")
 }
 
 model EmployeeAttendancePermission {
-  id String @id @default(uuid())
-  employeeId String @unique
-  allOtherEmployees Boolean @default(false)
-  active Boolean @default(true)
-  employee Employee @relation("PermissionOwner", fields: [employeeId], references: [id], onDelete: Restrict)
-  targets EmployeeAttendancePermissionTarget[]
+  id                String                               @id @default(uuid())
+  employeeId        String                               @unique
+  allOtherEmployees Boolean                              @default(false)
+  active            Boolean                              @default(true)
+  employee          Employee                             @relation("PermissionOwner", fields: [employeeId], references: [id], onDelete: Restrict)
+  targets           EmployeeAttendancePermissionTarget[]
+
   @@map("employee_attendance_permissions")
 }
+
 model EmployeeAttendancePermissionTarget {
   permissionId String
-  employeeId String
-  permission EmployeeAttendancePermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  employeeId   String
+  permission   EmployeeAttendancePermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  employee     Employee                     @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
   @@id([permissionId, employeeId])
   @@map("employee_attendance_permission_targets")
 }
 
 model PendingRegistration {
-  id String @id @default(uuid())
-  name String
-  dob DateTime @db.Date
-  gender String
-  mobile String?
-  email String?
-  address String
-  previousSchool String?
-  applyingClass String
-  guardianName String
-  guardianContact String
-  status RegistrationStatus @default(PENDING)
-  rejectionReason String?
+  id                String             @id @default(uuid())
+  name              String
+  dob               DateTime           @db.Date
+  gender            String
+  mobile            String?
+  email             String?
+  address           String
+  previousSchool    String?
+  applyingClass     String
+  guardianName      String
+  guardianContact   String
+  status            RegistrationStatus @default(PENDING)
+  rejectionReason   String?
   approvedStudentId String?
-  submittedAt DateTime @default(now())
-  reviewedAt DateTime?
-  approvedStudent Student? @relation(fields: [approvedStudentId], references: [id], onDelete: Restrict)
+  submittedAt       DateTime           @default(now())
+  reviewedAt        DateTime?
+  approvedStudent   Student?           @relation(fields: [approvedStudentId], references: [id], onDelete: Restrict)
+
   @@index([status, submittedAt])
   @@map("pending_registrations")
 }
 
 model AcademicYear {
-  id String @id @default(uuid())
-  name String @unique
-  startDate DateTime @db.Date
-  endDate DateTime @db.Date
-  isCurrent Boolean @default(false)
-  enrollments StudentEnrollment[]
-  feeStructures ClassFeeStructure[]
-  feeAccounts StudentFeeAccount[]
-  teacherAssignments TeacherAssignment[]
+  id                      String                   @id @default(uuid())
+  name                    String                   @unique
+  startDate               DateTime                 @db.Date
+  endDate                 DateTime                 @db.Date
+  isCurrent               Boolean                  @default(false)
+  enrollments             StudentEnrollment[]
+  feeStructures           ClassFeeStructure[]
+  feeAccounts             StudentFeeAccount[]
+  teacherAssignments      TeacherAssignment[]
   classTeacherAssignments ClassTeacherAssignment[]
-  calendarDays SchoolCalendar[]
-  timetableEntries LectureTimetableEntry[]
-  assessments Assessment[]
+  calendarDays            SchoolCalendar[]
+  timetableEntries        LectureTimetableEntry[]
+  assessments             Assessment[]
+
   @@map("academic_years")
 }
+
 model SchoolClass {
-  id String @id @default(uuid())
-  name String @unique
-  sortOrder Int @unique
-  sections Section[]
+  id            String              @id @default(uuid())
+  name          String              @unique
+  sortOrder     Int                 @unique
+  sections      Section[]
   feeStructures ClassFeeStructure[]
+
   @@map("classes")
 }
+
 model Section {
-  id String @id @default(uuid())
-  classId String
-  name String
-  capacity Int?
-  schoolClass SchoolClass @relation(fields: [classId], references: [id], onDelete: Restrict)
-  enrollments StudentEnrollment[]
-  teacherAssignments TeacherAssignment[]
+  id                      String                   @id @default(uuid())
+  classId                 String
+  name                    String
+  capacity                Int?
+  schoolClass             SchoolClass              @relation(fields: [classId], references: [id], onDelete: Restrict)
+  enrollments             StudentEnrollment[]
+  teacherAssignments      TeacherAssignment[]
   classTeacherAssignments ClassTeacherAssignment[]
-  timetableEntries LectureTimetableEntry[]
-  assessments Assessment[]
-  noticeAudiences NoticeAudience[]
+  timetableEntries        LectureTimetableEntry[]
+  assessments             Assessment[]
+  noticeAudiences         NoticeAudience[]
+
   @@unique([classId, name])
   @@map("sections")
 }
+
 model Subject {
-  id String @id @default(uuid())
-  code String @unique
-  name String @unique
+  id                 String                  @id @default(uuid())
+  code               String                  @unique
+  name               String                  @unique
   teacherAssignments TeacherAssignment[]
-  timetableEntries LectureTimetableEntry[]
-  assessments Assessment[]
-  primaryTeachers Employee[] @relation("EmployeePrimarySubject")
+  timetableEntries   LectureTimetableEntry[]
+  assessments        Assessment[]
+  primaryTeachers    Employee[]              @relation("EmployeePrimarySubject")
+
   @@map("subjects")
 }
 
 model StudentEnrollment {
-  id String @id @default(uuid())
-  studentId String
+  id             String              @id @default(uuid())
+  studentId      String
   academicYearId String
-  sectionId String
-  rollNumber Int
-  effectiveFrom DateTime @db.Date
-  effectiveTo DateTime? @db.Date
-  status EnrollmentStatus @default(CURRENT)
-  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
-  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  section Section @relation(fields: [sectionId], references: [id], onDelete: Restrict)
-  attendance StudentAttendance[]
+  sectionId      String
+  rollNumber     Int
+  effectiveFrom  DateTime            @db.Date
+  effectiveTo    DateTime?           @db.Date
+  status         EnrollmentStatus    @default(CURRENT)
+  student        Student             @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  academicYear   AcademicYear        @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  section        Section             @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  attendance     StudentAttendance[]
+
   @@unique([academicYearId, sectionId, rollNumber, status])
   @@index([studentId, status])
   @@map("student_enrollments")
 }
+
 model TeacherAssignment {
-  id String @id @default(uuid())
-  employeeId String
+  id             String       @id @default(uuid())
+  employeeId     String
   academicYearId String
-  sectionId String
-  subjectId String
-  effectiveFrom DateTime @db.Date
-  effectiveTo DateTime? @db.Date
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  section Section @relation(fields: [sectionId], references: [id], onDelete: Restrict)
-  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  sectionId      String
+  subjectId      String
+  effectiveFrom  DateTime     @db.Date
+  effectiveTo    DateTime?    @db.Date
+  employee       Employee     @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  section        Section      @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  subject        Subject      @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+
   @@index([employeeId, academicYearId])
   @@map("teacher_assignments")
 }
+
 model ClassTeacherAssignment {
-  id String @id @default(uuid())
-  employeeId String
+  id             String       @id @default(uuid())
+  employeeId     String
   academicYearId String
-  sectionId String
-  effectiveFrom DateTime @db.Date
-  effectiveTo DateTime? @db.Date
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  section Section @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  sectionId      String
+  effectiveFrom  DateTime     @db.Date
+  effectiveTo    DateTime?    @db.Date
+  employee       Employee     @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  section        Section      @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+
   @@index([sectionId, academicYearId, effectiveFrom])
   @@map("class_teacher_assignments")
 }
+
 model SchoolCalendar {
-  id String @id @default(uuid())
+  id             String          @id @default(uuid())
   academicYearId String
-  date DateTime @db.Date
-  dayType CalendarDayType
-  title String?
-  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  date           DateTime        @db.Date
+  dayType        CalendarDayType
+  title          String?
+  academicYear   AcademicYear    @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+
   @@unique([academicYearId, date])
   @@map("school_calendar")
 }
 
 model StudentAttendance {
-  id String @id @default(uuid())
-  studentId String
+  id           String                  @id @default(uuid())
+  studentId    String
   enrollmentId String
-  date DateTime @db.Date
-  status StudentAttendanceStatus
-  remarks String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
-  enrollment StudentEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
-  changes AttendanceChange[]
+  date         DateTime                @db.Date
+  status       StudentAttendanceStatus
+  remarks      String?
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  student      Student                 @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  enrollment   StudentEnrollment       @relation(fields: [enrollmentId], references: [id], onDelete: Restrict)
+  changes      AttendanceChange[]
+
   @@unique([studentId, date])
   @@index([enrollmentId, date])
   @@map("student_attendance")
 }
+
 model EmployeeAttendance {
-  id String @id @default(uuid())
+  id         String                   @id @default(uuid())
   employeeId String
-  date DateTime @db.Date
-  status EmployeeAttendanceStatus
-  remarks String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-  changes AttendanceChange[]
+  date       DateTime                 @db.Date
+  status     EmployeeAttendanceStatus
+  remarks    String?
+  createdAt  DateTime                 @default(now())
+  updatedAt  DateTime                 @updatedAt
+  employee   Employee                 @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  changes    AttendanceChange[]
+
   @@unique([employeeId, date])
   @@index([date, status])
   @@map("employee_attendance")
 }
+
 model AttendanceChange {
-  id String @id @default(uuid())
-  studentAttendanceId String?
+  id                   String              @id @default(uuid())
+  studentAttendanceId  String?
   employeeAttendanceId String?
-  actorId String
-  previousStatus String?
-  newStatus String
-  reason String?
-  createdAt DateTime @default(now())
-  studentAttendance StudentAttendance? @relation(fields: [studentAttendanceId], references: [id], onDelete: Restrict)
-  employeeAttendance EmployeeAttendance? @relation(fields: [employeeAttendanceId], references: [id], onDelete: Restrict)
-  actor User @relation("AttendanceActor", fields: [actorId], references: [id], onDelete: Restrict)
+  actorId              String
+  previousStatus       String?
+  newStatus            String
+  reason               String?
+  createdAt            DateTime            @default(now())
+  studentAttendance    StudentAttendance?  @relation(fields: [studentAttendanceId], references: [id], onDelete: Restrict)
+  employeeAttendance   EmployeeAttendance? @relation(fields: [employeeAttendanceId], references: [id], onDelete: Restrict)
+  actor                User                @relation("AttendanceActor", fields: [actorId], references: [id], onDelete: Restrict)
+
   @@map("attendance_changes")
 }
 
 model SalaryRevision {
-  id String @id @default(uuid())
-  employeeId String
-  amount Decimal @db.Decimal(12, 2)
+  id            String   @id @default(uuid())
+  employeeId    String
+  amount        Decimal  @db.Decimal(12, 2)
   effectiveDate DateTime @db.Date
-  reason String
-  changedById String
-  createdAt DateTime @default(now())
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  reason        String
+  changedById   String
+  createdAt     DateTime @default(now())
+  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
   @@unique([employeeId, effectiveDate])
   @@map("salary_revisions")
 }
+
 model MonthlySalary {
-  id String @id @default(uuid())
-  employeeId String
-  month Int
-  year Int
-  grossAmount Decimal @db.Decimal(12, 2)
-  deductionUnits Decimal @db.Decimal(6, 2)
-  deductionAmount Decimal @db.Decimal(12, 2)
-  adjustmentAmount Decimal @default(0) @db.Decimal(12, 2)
-  adjustmentReason String?
-  netPayable Decimal @db.Decimal(12, 2)
+  id                String            @id @default(uuid())
+  employeeId        String
+  month             Int
+  year              Int
+  grossAmount       Decimal           @db.Decimal(12, 2)
+  deductionUnits    Decimal           @db.Decimal(6, 2)
+  deductionAmount   Decimal           @db.Decimal(12, 2)
+  adjustmentAmount  Decimal           @default(0) @db.Decimal(12, 2)
+  adjustmentReason  String?
+  netPayable        Decimal           @db.Decimal(12, 2)
   calculationStatus CalculationStatus @default(DRAFT)
-  finalizedAt DateTime?
-  snapshot Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-  payments SalaryPayment[]
+  finalizedAt       DateTime?
+  snapshot          Json
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  employee          Employee          @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  payments          SalaryPayment[]
+
   @@unique([employeeId, month, year])
   @@index([year, month])
   @@map("monthly_salaries")
 }
+
 model SalaryPayment {
-  id String @id @default(uuid())
+  id              String              @id @default(uuid())
   monthlySalaryId String
-  amount Decimal @db.Decimal(12, 2)
-  paidDate DateTime @db.Date
-  method PaymentMethod
-  reference String?
-  remarks String?
-  status TransactionStatus @default(SUCCESS)
-  reversalOfId String? @unique
-  recordedById String
-  createdAt DateTime @default(now())
-  monthlySalary MonthlySalary @relation(fields: [monthlySalaryId], references: [id], onDelete: Restrict)
-  reversalOf SalaryPayment? @relation("SalaryReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
-  reversal SalaryPayment? @relation("SalaryReversal")
-  recordedBy User @relation("SalaryRecorder", fields: [recordedById], references: [id], onDelete: Restrict)
-  ledgerEntry AccountTransaction?
+  amount          Decimal             @db.Decimal(12, 2)
+  paidDate        DateTime            @db.Date
+  method          PaymentMethod
+  reference       String?
+  remarks         String?
+  status          TransactionStatus   @default(SUCCESS)
+  reversalOfId    String?             @unique
+  recordedById    String
+  createdAt       DateTime            @default(now())
+  monthlySalary   MonthlySalary       @relation(fields: [monthlySalaryId], references: [id], onDelete: Restrict)
+  reversalOf      SalaryPayment?      @relation("SalaryReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversal        SalaryPayment?      @relation("SalaryReversal")
+  recordedBy      User                @relation("SalaryRecorder", fields: [recordedById], references: [id], onDelete: Restrict)
+  ledgerEntry     AccountTransaction?
+
   @@map("salary_payments")
 }
 
 model ClassFeeStructure {
-  id String @id @default(uuid())
-  classId String
+  id             String              @id @default(uuid())
+  classId        String
   academicYearId String
-  totalFee Decimal @db.Decimal(12, 2)
-  active Boolean @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  schoolClass SchoolClass @relation(fields: [classId], references: [id], onDelete: Restrict)
-  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  feeAccounts StudentFeeAccount[]
+  totalFee       Decimal             @db.Decimal(12, 2)
+  active         Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  schoolClass    SchoolClass         @relation(fields: [classId], references: [id], onDelete: Restrict)
+  academicYear   AcademicYear        @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  feeAccounts    StudentFeeAccount[]
+
   @@unique([classId, academicYearId])
   @@map("class_fee_structures")
 }
+
 model StudentFeeAccount {
-  id String @id @default(uuid())
-  studentId String
+  id             String            @id @default(uuid())
+  studentId      String
   academicYearId String
   feeStructureId String
-  assessedFee Decimal @db.Decimal(12, 2)
-  reviewRequired Boolean @default(false)
-  createdAt DateTime @default(now())
-  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
-  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  feeStructure ClassFeeStructure @relation(fields: [feeStructureId], references: [id], onDelete: Restrict)
-  adjustments FeeAdjustment[]
-  transactions FeeTransaction[]
-  paymentOrders PaymentOrder[]
+  assessedFee    Decimal           @db.Decimal(12, 2)
+  reviewRequired Boolean           @default(false)
+  createdAt      DateTime          @default(now())
+  student        Student           @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  academicYear   AcademicYear      @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  feeStructure   ClassFeeStructure @relation(fields: [feeStructureId], references: [id], onDelete: Restrict)
+  adjustments    FeeAdjustment[]
+  transactions   FeeTransaction[]
+  paymentOrders  PaymentOrder[]
+
   @@unique([studentId, academicYearId])
   @@map("student_fee_accounts")
 }
+
 model FeeAdjustment {
-  id String @id @default(uuid())
+  id           String            @id @default(uuid())
   feeAccountId String
-  amount Decimal @db.Decimal(12, 2)
-  reason String
+  amount       Decimal           @db.Decimal(12, 2)
+  reason       String
   approvedById String
-  createdAt DateTime @default(now())
-  feeAccount StudentFeeAccount @relation(fields: [feeAccountId], references: [id], onDelete: Restrict)
+  createdAt    DateTime          @default(now())
+  feeAccount   StudentFeeAccount @relation(fields: [feeAccountId], references: [id], onDelete: Restrict)
+
   @@map("fee_adjustments")
 }
+
 model PaymentOrder {
-  id String @id @default(uuid())
-  localOrderId String @unique
-  gatewayOrderId String? @unique
-  feeAccountId String
-  expectedAmount Decimal @db.Decimal(12, 2)
-  currency String @default("INR")
-  status TransactionStatus @default(PENDING)
-  verifiedAt DateTime?
-  createdAt DateTime @default(now())
-  feeAccount StudentFeeAccount @relation(fields: [feeAccountId], references: [id], onDelete: Restrict)
-  transactions FeeTransaction[]
-  events PaymentEvent[]
+  id             String            @id @default(uuid())
+  localOrderId   String            @unique
+  gatewayOrderId String?           @unique
+  feeAccountId   String
+  expectedAmount Decimal           @db.Decimal(12, 2)
+  currency       String            @default("INR")
+  status         TransactionStatus @default(PENDING)
+  verifiedAt     DateTime?
+  createdAt      DateTime          @default(now())
+  feeAccount     StudentFeeAccount @relation(fields: [feeAccountId], references: [id], onDelete: Restrict)
+  transactions   FeeTransaction[]
+  events         PaymentEvent[]
+
   @@map("payment_orders")
 }
+
 model FeeTransaction {
-  id String @id @default(uuid())
-  feeAccountId String
-  paymentOrderId String?
-  receiptNo String @unique
-  gatewayPaymentId String? @unique
-  amount Decimal @db.Decimal(12, 2)
-  paymentDate DateTime @db.Date
-  method PaymentMethod
-  status TransactionStatus @default(SUCCESS)
-  reference String?
-  remarks String?
-  idempotencyKey String? @unique
-  reversalOfId String? @unique
-  recordedById String?
-  createdAt DateTime @default(now())
-  feeAccount StudentFeeAccount @relation(fields: [feeAccountId], references: [id], onDelete: Restrict)
-  paymentOrder PaymentOrder? @relation(fields: [paymentOrderId], references: [id], onDelete: Restrict)
-  reversalOf FeeTransaction? @relation("FeeReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
-  reversal FeeTransaction? @relation("FeeReversal")
-  recordedBy User? @relation("FeeRecorder", fields: [recordedById], references: [id], onDelete: Restrict)
-  ledgerEntry AccountTransaction?
+  id               String              @id @default(uuid())
+  feeAccountId     String
+  paymentOrderId   String?
+  receiptNo        String              @unique
+  gatewayPaymentId String?             @unique
+  amount           Decimal             @db.Decimal(12, 2)
+  paymentDate      DateTime            @db.Date
+  method           PaymentMethod
+  status           TransactionStatus   @default(SUCCESS)
+  reference        String?
+  remarks          String?
+  idempotencyKey   String?             @unique
+  reversalOfId     String?             @unique
+  recordedById     String?
+  createdAt        DateTime            @default(now())
+  feeAccount       StudentFeeAccount   @relation(fields: [feeAccountId], references: [id], onDelete: Restrict)
+  paymentOrder     PaymentOrder?       @relation(fields: [paymentOrderId], references: [id], onDelete: Restrict)
+  reversalOf       FeeTransaction?     @relation("FeeReversal", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversal         FeeTransaction?     @relation("FeeReversal")
+  recordedBy       User?               @relation("FeeRecorder", fields: [recordedById], references: [id], onDelete: Restrict)
+  ledgerEntry      AccountTransaction?
+
   @@index([feeAccountId, status])
   @@map("fee_transactions")
 }
+
 model PaymentEvent {
-  id String @id @default(uuid())
-  eventId String @unique
+  id             String        @id @default(uuid())
+  eventId        String        @unique
   paymentOrderId String?
-  eventType String
-  payload Json
-  processedAt DateTime?
-  createdAt DateTime @default(now())
-  paymentOrder PaymentOrder? @relation(fields: [paymentOrderId], references: [id], onDelete: Restrict)
+  eventType      String
+  payload        Json
+  processedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  paymentOrder   PaymentOrder? @relation(fields: [paymentOrderId], references: [id], onDelete: Restrict)
+
   @@map("payment_events")
 }
 
 model LectureTimetableEntry {
-  id String @id @default(uuid())
+  id             String             @id @default(uuid())
   academicYearId String
-  sectionId String
-  employeeId String?
-  subjectId String?
-  entryType TimetableEntryType @default(LECTURE)
-  dayOfWeek Int
-  periodNumber Int
-  startTime DateTime @db.Time(0)
-  endTime DateTime @db.Time(0)
-  effectiveFrom DateTime @db.Date
-  effectiveTo DateTime? @db.Date
-  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  section Section @relation(fields: [sectionId], references: [id], onDelete: Restrict)
-  employee Employee? @relation(fields: [employeeId], references: [id], onDelete: Restrict)
-  subject Subject? @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  sectionId      String
+  employeeId     String?
+  subjectId      String?
+  entryType      TimetableEntryType @default(LECTURE)
+  dayOfWeek      Int
+  periodNumber   Int
+  startTime      DateTime           @db.Time(0)
+  endTime        DateTime           @db.Time(0)
+  effectiveFrom  DateTime           @db.Date
+  effectiveTo    DateTime?          @db.Date
+  academicYear   AcademicYear       @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  section        Section            @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  employee       Employee?          @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  subject        Subject?           @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+
   @@unique([academicYearId, sectionId, dayOfWeek, periodNumber, effectiveFrom])
   @@map("lecture_timetable_entries")
 }
+
 model Assessment {
-  id String @id @default(uuid())
-  academicYearId String
-  sectionId String
-  subjectId String
-  type AssessmentType
-  title String
-  date DateTime @db.Date
-  startTime DateTime? @db.Time(0)
+  id              String         @id @default(uuid())
+  academicYearId  String
+  sectionId       String
+  subjectId       String
+  type            AssessmentType
+  title           String
+  date            DateTime       @db.Date
+  startTime       DateTime?      @db.Time(0)
   durationMinutes Int?
-  maximumMarks Decimal @db.Decimal(7, 2)
-  passMarks Decimal @db.Decimal(7, 2)
-  published Boolean @default(false)
-  publishedAt DateTime?
+  maximumMarks    Decimal        @db.Decimal(7, 2)
+  passMarks       Decimal        @db.Decimal(7, 2)
+  published       Boolean        @default(false)
+  publishedAt     DateTime?
   gradingSchemeId String?
   gradingSnapshot Json?
-  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  section Section @relation(fields: [sectionId], references: [id], onDelete: Restrict)
-  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Restrict)
-  gradingScheme GradingScheme? @relation(fields: [gradingSchemeId], references: [id], onDelete: Restrict)
-  results ExamResult[]
+  academicYear    AcademicYear   @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  section         Section        @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  subject         Subject        @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  gradingScheme   GradingScheme? @relation(fields: [gradingSchemeId], references: [id], onDelete: Restrict)
+  results         ExamResult[]
+
   @@index([sectionId, date])
   @@map("assessments")
 }
+
 model ExamResult {
-  id String @id @default(uuid())
+  id           String            @id @default(uuid())
   assessmentId String
-  studentId String
-  entryStatus ResultEntryStatus @default(NOT_ENTERED)
-  marks Decimal? @db.Decimal(7, 2)
-  remarks String?
-  updatedAt DateTime @updatedAt
-  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
-  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  studentId    String
+  entryStatus  ResultEntryStatus @default(NOT_ENTERED)
+  marks        Decimal?          @db.Decimal(7, 2)
+  remarks      String?
+  updatedAt    DateTime          @updatedAt
+  assessment   Assessment        @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
+  student      Student           @relation(fields: [studentId], references: [id], onDelete: Restrict)
+
   @@unique([assessmentId, studentId])
   @@map("exam_results")
 }
+
 model GradingScheme {
-  id String @id @default(uuid())
-  name String
-  version Int
-  bands Json
-  active Boolean @default(true)
-  createdAt DateTime @default(now())
+  id          String       @id @default(uuid())
+  name        String
+  version     Int
+  bands       Json
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
   assessments Assessment[]
+
   @@unique([name, version])
   @@map("grading_schemes")
 }
 
 model Notice {
-  id String @id @default(uuid())
-  title String
-  message String
-  audience AudienceType
-  published Boolean @default(false)
-  expiresAt DateTime?
+  id          String           @id @default(uuid())
+  title       String
+  message     String
+  audience    AudienceType
+  published   Boolean          @default(false)
+  expiresAt   DateTime?
   createdById String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  createdBy User @relation("NoticeCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  audiences NoticeAudience[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  createdBy   User             @relation("NoticeCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  audiences   NoticeAudience[]
+
   @@map("notices")
 }
+
 model NoticeAudience {
-  noticeId String
+  noticeId  String
   sectionId String
-  notice Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
-  section Section @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  notice    Notice  @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  section   Section @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+
   @@id([noticeId, sectionId])
   @@map("notice_audiences")
 }
+
 model AccountTransaction {
-  id String @id @default(uuid())
-  type TransactionType
-  title String
-  amount Decimal @db.Decimal(12, 2)
-  transactionDate DateTime @db.Date
-  description String?
-  sourceType String
-  sourceReference String @unique
-  feeTransactionId String? @unique
-  salaryPaymentId String? @unique
-  recordedById String
-  reversedAt DateTime?
-  createdAt DateTime @default(now())
-  feeTransaction FeeTransaction? @relation(fields: [feeTransactionId], references: [id], onDelete: Restrict)
-  salaryPayment SalaryPayment? @relation(fields: [salaryPaymentId], references: [id], onDelete: Restrict)
-  recordedBy User @relation("LedgerRecorder", fields: [recordedById], references: [id], onDelete: Restrict)
+  id               String          @id @default(uuid())
+  type             TransactionType
+  title            String
+  amount           Decimal         @db.Decimal(12, 2)
+  transactionDate  DateTime        @db.Date
+  description      String?
+  sourceType       String
+  sourceReference  String          @unique
+  feeTransactionId String?         @unique
+  salaryPaymentId  String?         @unique
+  recordedById     String
+  reversedAt       DateTime?
+  createdAt        DateTime        @default(now())
+  feeTransaction   FeeTransaction? @relation(fields: [feeTransactionId], references: [id], onDelete: Restrict)
+  salaryPayment    SalaryPayment?  @relation(fields: [salaryPaymentId], references: [id], onDelete: Restrict)
+  recordedBy       User            @relation("LedgerRecorder", fields: [recordedById], references: [id], onDelete: Restrict)
+
   @@index([transactionDate, type])
   @@map("account_transactions")
 }
+
 model AuditEvent {
-  id String @id @default(uuid())
-  actorType ActorType
-  actorId String?
-  action String
+  id         String    @id @default(uuid())
+  actorType  ActorType
+  actorId    String?
+  action     String
   entityType String
-  entityId String?
-  before Json?
-  after Json?
-  reason String?
-  createdAt DateTime @default(now())
-  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: Restrict)
+  entityId   String?
+  before     Json?
+  after      Json?
+  reason     String?
+  createdAt  DateTime  @default(now())
+  actor      User?     @relation("AuditActor", fields: [actorId], references: [id], onDelete: Restrict)
+
   @@index([entityType, entityId, createdAt])
   @@map("audit_events")
 }

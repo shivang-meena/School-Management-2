@@ -1,12 +1,13 @@
 import { z } from 'zod';
 
-export const StudentAttendanceStatusEnum = z.enum(['PRESENT', 'ABSENT', 'LATE', 'LEAVE']);
+export const StudentAttendanceStatusEnum = z.enum(['PRESENT', 'ABSENT', 'HALF_DAY']);
 export const EmployeeAttendanceStatusEnum = z.enum(['PRESENT', 'ABSENT', 'LATE', 'HALF_DAY', 'PAID_LEAVE', 'UNPAID_LEAVE', 'HOLIDAY', 'WEEKLY_OFF']);
+export const AttendanceEntryStatusEnum = z.enum(['NONE', 'PRESENT', 'ABSENT', 'HALF_DAY']);
 export const MarkAttendanceSchema = z.object({
   date: z.string(),
   sectionId: z.string().uuid().optional(),
   reason: z.string().optional(),
-  records: z.array(z.object({ id: z.string(), status: z.string(), remarks: z.string().optional() })).min(1),
+  records: z.array(z.object({ id: z.string(), status: AttendanceEntryStatusEnum, remarks: z.string().optional() })).min(1),
 });
 export type MarkAttendanceInput = z.infer<typeof MarkAttendanceSchema>;
 

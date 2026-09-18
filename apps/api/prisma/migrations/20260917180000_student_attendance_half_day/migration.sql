@@ -1,0 +1,1 @@
+ALTER TYPE "StudentAttendanceStatus" ADD VALUE IF NOT EXISTS 'HALF_DAY';

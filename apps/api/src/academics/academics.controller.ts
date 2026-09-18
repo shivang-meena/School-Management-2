@@ -7,8 +7,10 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } f
   @Post('classes') @Roles(Role.ADMIN) schoolClass(@Body() b: any) { return this.service.createClass(b); }
   @Post('sections') @Roles(Role.ADMIN) section(@Body() b: any) { return this.service.createSection(b); }
   @Post('subjects') @Roles(Role.ADMIN) subject(@Body() b: any) { return this.service.createSubject(b); }
-  @Get('calendar') @Roles(Role.ADMIN, Role.EMPLOYEE, Role.STUDENT) calendar(@Query('academicYearId') id: string) { return this.service.calendar(id); }
+  @Get('calendar') @Roles(Role.ADMIN, Role.EMPLOYEE, Role.STUDENT) calendar(@Query('academicYearId') id?: string) { return this.service.calendar(id); }
   @Post('calendar') @Roles(Role.ADMIN) calendarEntry(@Body() b: any) { return this.service.upsertCalendar(b); }
+  @Patch('calendar/:id') @Roles(Role.ADMIN) updateCalendar(@Param('id') id: string, @Body() b: any) { return this.service.updateCalendar(id, b); }
+  @Delete('calendar/:id') @Roles(Role.ADMIN) deleteCalendar(@Param('id') id: string) { return this.service.deleteCalendar(id); }
   @Post('teacher-assignments') @Roles(Role.ADMIN) teacher(@Body() b: any) { return this.service.assignTeacher(b); }
   @Delete('teacher-assignments/:id') @Roles(Role.ADMIN) deleteTeacher(@Param('id') id: string) { return this.service.deleteAssignment(id); }
   @Post('class-teacher-assignments') @Roles(Role.ADMIN) classTeacher(@Body() b: any) { return this.service.assignTeacher(b, true); }
