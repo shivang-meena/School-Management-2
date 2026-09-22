@@ -1,140 +1,20 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image, View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
+import { colors } from '../theme';
 
 export const Header: React.FC<{ title?: string }> = ({ title }) => {
   const { user, logout } = useAuth();
   const router = useRouter();
-
-  const handleLogout = () => {
-    logout();
-    router.replace('/(auth)/login');
-  };
-
-  return (
-    <View style={styles.header}>
-      <View style={styles.left}>
-        <Text style={styles.logoIcon}>🎓</Text>
-        <View>
-          <Text style={styles.brandTitle}>Arihant Public School</Text>
-          {title ? <Text style={styles.subTitle}>{title}</Text> : null}
-        </View>
-      </View>
-
-      <View style={styles.right}>
-        {user ? (
-          <View style={styles.userContainer}>
-            <View style={styles.userInfo}>
-              <Text style={styles.userName}>{user.name || user.loginId}</Text>
-              <Text style={[styles.roleBadge, user.role === 'ADMIN' ? styles.adminBadge : styles.otherBadge]}>
-                {user.role}
-              </Text>
-            </View>
-            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-              <Text style={styles.logoutText}>Logout</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity style={styles.loginBtn} onPress={() => router.push('/(auth)/login')}>
-            <Text style={styles.loginBtnText}>Sign In</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
+  const { width } = useWindowDimensions();
+  return <View style={s.header}>
+    <View style={s.brand}><Image source={require('../../assets/icon.png')} style={s.brandLogo} resizeMode="contain" /><View style={{ flexShrink: 1 }}><Text style={s.name}>SHIVORA TECHNOLOGIES</Text><Text style={s.caption}>{title || 'TECHNOLOGY FOR BETTER WORKFLOWS'}</Text></View></View>
+    <View style={s.actions}>{user && width > 600 ? <Text style={s.user}>{user.name || user.loginId}</Text> : null}<TouchableOpacity accessibilityRole="button" style={s.button} onPress={() => { if (user) logout(); router.replace('/(auth)/login'); }}><Text style={s.buttonText}>{user ? 'Sign out' : 'Sign in  →'}</Text></TouchableOpacity></View>
+  </View>;
 };
-
-const styles = StyleSheet.create({
-  header: {
-    backgroundColor: '#071A2F',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: '#12385A',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  left: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  logoIcon: {
-    fontSize: 28,
-  },
-  brandTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  subTitle: {
-    fontSize: 12,
-    color: '#9FC7DA',
-    fontWeight: '500',
-  },
-  right: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  userContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  userInfo: {
-    alignItems: 'flex-end',
-  },
-  userName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#ffffff',
-  },
-  roleBadge: {
-    fontSize: 10,
-    fontWeight: '700',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginTop: 2,
-    textTransform: 'uppercase',
-  },
-  adminBadge: {
-    backgroundColor: '#fee2e2',
-    color: '#b91c1c',
-  },
-  otherBadge: {
-    backgroundColor: '#e0e7ff',
-    color: '#3730a3',
-  },
-  logoutBtn: {
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-  },
-  logoutText: {
-    fontSize: 13,
-    color: '#475569',
-    fontWeight: '600',
-  },
-  loginBtn: {
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  loginBtnText: {
-    color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
+const s = StyleSheet.create({
+  header: { backgroundColor: '#fff', paddingHorizontal: 24, paddingVertical: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', borderBottomWidth: 1, borderBottomColor: colors.border },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1 }, brandLogo: { width: 90, height: 52, borderRadius: 10, backgroundColor: '#fff' }, name: { color: colors.ink, fontSize: 16, fontWeight: '700' }, caption: { color: colors.muted, fontSize: 8, letterSpacing: 1.3, marginTop: 5 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 18 }, user: { color: colors.muted, fontSize: 12 }, button: { backgroundColor: colors.paleBlue, minHeight: 42, paddingHorizontal: 18, borderRadius: 9, justifyContent: 'center' }, buttonText: { color: colors.blue, fontSize: 12, fontWeight: '700' },
 });

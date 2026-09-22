@@ -1,1 +1,6 @@
-import React from 'react'; import { PortalModuleScreen } from '../../src/components/PortalModuleScreen'; export default function Screen(){return <PortalModuleScreen title="Fees & Payments" eyebrow="MY FEE ACCOUNT" description="Assessed fee, verified payments, outstanding balance and credit are calculated from immutable transactions." endpoint="/fees/me"/>}
+import React from 'react';
+import { StudentFeesScreen } from '../../src/components/StudentFeesScreen';
+
+export default function Screen() {
+  return <StudentFeesScreen />;
+}

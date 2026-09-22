@@ -1,0 +1,239 @@
+import React, { useMemo, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { api } from '../services/api';
+import { colors, surfaces } from '../theme';
+
+type Props = {
+  years: any[];
+  classes: any[];
+  teacherAssignments: any[];
+  onSaved?: () => Promise<void> | void;
+};
+
+const today = new Date().toISOString().slice(0, 10);
+
+function normalizedTime(value: string) {
+  const [hoursText, minutesText = '0'] = String(value || '').trim().split(':');
+  const hours = Number(hoursText);
+  const minutes = Number(minutesText);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return value;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+function timeMinutes(value: string) {
+  const [hours, minutes] = normalizedTime(value).split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+function normalizedEndTime(startTime: string, endTime: string) {
+  const normalizedStart = normalizedTime(startTime);
+  const normalizedEnd = normalizedTime(endTime);
+  const startMinutes = timeMinutes(normalizedStart);
+  const endMinutes = timeMinutes(normalizedEnd);
+  const endHour = Number(normalizedEnd.slice(0, 2));
+  if (endMinutes <= startMinutes && endHour < 12) return `${String(endHour + 12).padStart(2, '0')}:${normalizedEnd.slice(3, 5)}`;
+  return normalizedEnd;
+}
+
+function timeLabel(value: any) {
+  const text = String(value || '');
+  return text.includes('T') ? text.slice(11, 16) : text.slice(0, 5);
+}
+
+function dateLabel(value: any) {
+  return String(value || '').slice(0, 10);
+}
+
+function durationLabel(startTime: string, endTime: string) {
+  const effectiveEndTime = normalizedEndTime(startTime, endTime);
+  const minutes = Math.max(timeMinutes(effectiveEndTime) - timeMinutes(startTime), 0);
+  const hours = Math.floor(minutes / 60);
+  const remaining = minutes % 60;
+  return `${hours ? `${hours} hr ` : ''}${remaining ? `${remaining} min` : ''}`.trim() || '—';
+}
+
+function ChoiceField({ label, value, items, onChange, getLabel }: any) {
+  return <View style={s.field}><Text style={s.label}>{label}</Text><View style={s.choices}>{items.map((item: any) => <TouchableOpacity accessibilityRole="button" key={item.id} style={[s.choice, value === item.id && s.choiceOn]} onPress={() => onChange(item.id)}><Text style={value === item.id ? s.choiceTextOn : s.choiceText}>{getLabel(item)}</Text></TouchableOpacity>)}</View></View>;
+}
+
+function InputField({ label, value, onChangeText, placeholder }: any) {
+  return <View style={s.field}><Text style={s.label}>{label}</Text><TextInput style={s.input} value={String(value ?? '')} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#8A96A5" /></View>;
+}
+
+export function ExamTimetableBuilder({ years, classes, teacherAssignments, onSaved }: Props) {
+  const client = useQueryClient();
+  const [academicYearId, setAcademicYearId] = useState('');
+  const [classId, setClassId] = useState('');
+  const [sectionId, setSectionId] = useState('');
+  const [title, setTitle] = useState('');
+  const [type, setType] = useState('EXAM');
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
+  const [entryDate, setEntryDate] = useState(today);
+  const [entrySubjectId, setEntrySubjectId] = useState('');
+  const [entryStartTime, setEntryStartTime] = useState('09:00');
+  const [entryEndTime, setEntryEndTime] = useState('12:00');
+  const [entryMaximumMarks, setEntryMaximumMarks] = useState('100');
+  const [entryPassMarks, setEntryPassMarks] = useState('33');
+  const [entries, setEntries] = useState<any[]>([]);
+  const [formError, setFormError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const selectedYearId = academicYearId || years.find((year: any) => year.isCurrent)?.id || years[0]?.id || '';
+  const selectedClassId = classId || classes[0]?.id || '';
+  const sectionItems = classes.find((schoolClass: any) => schoolClass.id === selectedClassId)?.sections || [];
+  const selectedSectionId = sectionId && sectionItems.some((section: any) => section.id === sectionId) ? sectionId : sectionItems[0]?.id || '';
+  const subjectItems = useMemo(() => {
+    const seen = new Set<string>();
+    return teacherAssignments.filter((assignment: any) => assignment.academicYearId === selectedYearId && assignment.sectionId === selectedSectionId && assignment.subject && !seen.has(assignment.subjectId) && seen.add(assignment.subjectId)).map((assignment: any) => assignment.subject);
+  }, [selectedSectionId, selectedYearId, teacherAssignments]);
+  const timetableQuery = useQuery<any[]>({
+    queryKey: ['exam-timetable-builder', selectedYearId, selectedClassId, selectedSectionId],
+    queryFn: async () => (await api.get('/exam-timetables', { params: { academicYearId: selectedYearId, classId: selectedClassId, sectionId: selectedSectionId } })).data,
+    enabled: !!selectedYearId && !!selectedClassId && !!selectedSectionId,
+  });
+
+  const resetEntries = () => {
+    setEntries([]);
+    setEntrySubjectId('');
+    setFormError('');
+  };
+
+  const handleClassChange = (value: string) => {
+    setClassId(value);
+    setSectionId('');
+    resetEntries();
+  };
+
+  const handleSectionChange = (value: string) => {
+    setSectionId(value);
+    resetEntries();
+  };
+
+  const addEntry = () => {
+    setFormError('');
+    const effectiveEndTime = normalizedEndTime(entryStartTime, entryEndTime);
+    if (!entryDate || entryDate < startDate || entryDate > endDate) { setFormError('Paper date must be inside the selected timetable dates.'); return; }
+    if (!entrySubjectId) { setFormError('Select a subject for this paper.'); return; }
+    if (!entryStartTime || !entryEndTime || timeMinutes(effectiveEndTime) <= timeMinutes(entryStartTime)) { setFormError('End time must be after start time.'); return; }
+    if (entries.some((entry) => entry.subjectId === entrySubjectId)) { setFormError('This subject is already added to the timetable.'); return; }
+    if (entries.some((entry) => entry.date === entryDate && timeMinutes(entryStartTime) < timeMinutes(entry.endTime) && timeMinutes(effectiveEndTime) > timeMinutes(entry.startTime))) { setFormError('This paper overlaps another paper on the same date. Choose a different time.'); return; }
+    setEntries((current) => [...current, { date: entryDate, subjectId: entrySubjectId, startTime: normalizedTime(entryStartTime), endTime: effectiveEndTime, maximumMarks: entryMaximumMarks ? Number(entryMaximumMarks) : undefined, passMarks: entryPassMarks ? Number(entryPassMarks) : undefined }]);
+    setEntryEndTime(effectiveEndTime);
+    setEntrySubjectId('');
+  };
+
+  const saveTimetable = async () => {
+    setFormError('');
+    if (!selectedYearId || !selectedClassId || !selectedSectionId) { setFormError('Select academic year, class and section first.'); return; }
+    if (!title.trim()) { setFormError('Enter a timetable title.'); return; }
+    if (!startDate || !endDate || startDate > endDate) { setFormError('Timetable end date must be on or after the start date.'); return; }
+    const missing = subjectItems.filter((subject: any) => !entries.some((entry) => entry.subjectId === subject.id));
+    if (!subjectItems.length) { setFormError('No subjects are assigned to this section for the selected academic year.'); return; }
+    if (missing.length) { setFormError(`Add every subject before saving: ${missing.map((subject: any) => subject.name).join(', ')}`); return; }
+    setSaving(true);
+    try {
+      await api.post('/exam-timetables', { academicYearId: selectedYearId, classId: selectedClassId, sectionId: selectedSectionId, type, title: title.trim(), startDate, endDate, entries });
+      setEntries([]);
+      setTitle('');
+      await client.invalidateQueries({ queryKey: ['exam-timetable-builder', selectedYearId, selectedClassId, selectedSectionId] });
+      await onSaved?.();
+    } catch (error: any) {
+      const message = error?.response?.data?.message;
+      setFormError(Array.isArray(message) ? message.join('\n') : message || 'The exam timetable could not be saved.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectedClass = classes.find((schoolClass: any) => schoolClass.id === selectedClassId);
+  const selectedSection = sectionItems.find((section: any) => section.id === selectedSectionId);
+
+  return <View style={s.wrapper}>
+    <View style={s.scopePanel}>
+      <Text style={s.eyebrow}>TIMETABLE SCOPE</Text>
+      <Text style={s.panelTitle}>Choose one class and section</Text>
+      <Text style={s.help}>All subjects assigned to this section will be scheduled inside one complete timetable.</Text>
+      <ChoiceField label="Academic year" value={selectedYearId} items={years} onChange={(value: string) => { setAcademicYearId(value); resetEntries(); }} getLabel={(item: any) => item.name} />
+      <ChoiceField label="Class" value={selectedClassId} items={classes} onChange={handleClassChange} getLabel={(item: any) => item.name} />
+      {sectionItems.length ? <ChoiceField label="Section" value={selectedSectionId} items={sectionItems} onChange={handleSectionChange} getLabel={(item: any) => item.name} /> : <Text style={s.warning}>No sections are configured for this class yet.</Text>}
+      {selectedClass && selectedSection ? <Text style={s.scopeText}>Current timetable: {selectedClass.name} · Section {selectedSection.name}</Text> : null}
+    </View>
+
+    <View style={s.panel}>
+      <Text style={s.panelTitle}>Build complete exam timetable</Text>
+      <Text style={s.help}>Add each subject once. Multiple papers on the same date are allowed when their times do not overlap.</Text>
+      <View style={s.choices}>{['EXAM', 'TEST'].map((item) => <TouchableOpacity accessibilityRole="button" key={item} style={[s.choice, type === item && s.choiceOn]} onPress={() => setType(item)}><Text style={type === item ? s.choiceTextOn : s.choiceText}>{item}</Text></TouchableOpacity>)}</View>
+      <InputField label="Timetable title" value={title} onChangeText={setTitle} placeholder="Class 1 A annual exam" />
+      <View style={s.row}><View style={s.half}><InputField label="Start date" value={startDate} onChangeText={setStartDate} placeholder="YYYY-MM-DD" /></View><View style={s.half}><InputField label="End date" value={endDate} onChangeText={setEndDate} placeholder="YYYY-MM-DD" /></View></View>
+      <View style={s.subjectProgress}><Text style={s.progressTitle}>Subjects scheduled</Text><Text style={s.progressValue}>{entries.length} / {subjectItems.length}</Text></View>
+      {subjectItems.length ? <Text style={s.subjectList}>{subjectItems.map((subject: any) => `${subject.code} · ${subject.name}`).join('  |  ')}</Text> : <Text style={s.warning}>No assigned subjects found for this section and academic year.</Text>}
+      <View style={s.entryBox}>
+        <Text style={s.entryTitle}>Add paper</Text>
+        <ChoiceField label="Subject" value={entrySubjectId} items={subjectItems.filter((subject: any) => !entries.some((entry) => entry.subjectId === subject.id))} onChange={setEntrySubjectId} getLabel={(item: any) => `${item.code} · ${item.name}`} />
+        <InputField label="Paper date" value={entryDate} onChangeText={setEntryDate} placeholder="YYYY-MM-DD" />
+        <View style={s.row}><View style={s.half}><InputField label="Start time" value={entryStartTime} onChangeText={setEntryStartTime} placeholder="09:00" /></View><View style={s.half}><InputField label="End time" value={entryEndTime} onChangeText={setEntryEndTime} placeholder="12:00" /></View></View>
+        <Text style={s.duration}>Duration: {entryStartTime && entryEndTime ? durationLabel(entryStartTime, entryEndTime) : '—'}</Text>
+        <View style={s.row}><View style={s.half}><InputField label="Maximum marks" value={entryMaximumMarks} onChangeText={setEntryMaximumMarks} placeholder="100" /></View><View style={s.half}><InputField label="Pass marks" value={entryPassMarks} onChangeText={setEntryPassMarks} placeholder="33" /></View></View>
+        <TouchableOpacity accessibilityRole="button" style={s.secondaryButton} onPress={addEntry}><Text style={s.secondaryText}>Add subject paper</Text></TouchableOpacity>
+      </View>
+      {entries.map((entry, index) => <View style={s.entryRow} key={`${entry.subjectId}-${entry.date}`}><View style={s.entryCopy}><Text style={s.entrySubject}>{subjectItems.find((subject: any) => subject.id === entry.subjectId)?.name || 'Subject'}</Text><Text style={s.entryMeta}>{entry.date} · {entry.startTime}–{entry.endTime} · {durationLabel(entry.startTime, entry.endTime)} · Max {entry.maximumMarks || '—'} · Pass {entry.passMarks || '—'}</Text></View><TouchableOpacity accessibilityRole="button" onPress={() => setEntries((current) => current.filter((_, itemIndex) => itemIndex !== index))}><Text style={s.remove}>Remove</Text></TouchableOpacity></View>)}
+      {formError ? <Text style={s.error}>{formError}</Text> : null}
+      <TouchableOpacity accessibilityRole="button" disabled={saving} style={[s.save, saving && s.disabled]} onPress={saveTimetable}>{saving ? <ActivityIndicator color="#071D33" /> : <Text style={s.saveText}>Save complete timetable</Text>}</TouchableOpacity>
+    </View>
+
+    <View style={s.existingPanel}><View style={s.listHeader}><View><Text style={s.panelTitle}>Saved timetables</Text><Text style={s.help}>{selectedClass?.name || 'Class'} · Section {selectedSection?.name || '—'}</Text></View><TouchableOpacity accessibilityRole="button" onPress={() => timetableQuery.refetch()}><Text style={s.refresh}>↻ Refresh</Text></TouchableOpacity></View>
+      {timetableQuery.isLoading ? <ActivityIndicator color={colors.blue} /> : timetableQuery.isError ? <Text style={s.error}>Saved timetables could not be loaded.</Text> : timetableQuery.data?.length ? timetableQuery.data.map((timetable: any) => <View style={s.savedCard} key={timetable.id}><View style={s.savedHeader}><View><Text style={s.savedTitle}>{timetable.title}</Text><Text style={s.savedMeta}>{timetable.type} · {dateLabel(timetable.startDate)} to {dateLabel(timetable.endDate)} · {timetable.section?.name ? `Section ${timetable.section.name}` : 'Legacy class timetable'}</Text></View><Text style={s.badge}>SAVED</Text></View>{(timetable.entries || []).map((entry: any) => <View style={s.savedEntry} key={entry.id}><Text style={s.savedSubject}>{entry.subject?.name || entry.holidayTitle || 'Holiday'}</Text><Text style={s.savedMeta}>{dateLabel(entry.date)} · {entry.isHoliday ? 'Holiday' : `${timeLabel(entry.startTime)}–${timeLabel(entry.endTime)} · ${durationLabel(timeLabel(entry.startTime), timeLabel(entry.endTime))}`}</Text></View>)}</View>) : <Text style={s.help}>No timetable has been saved for this class and section yet.</Text>}
+    </View>
+  </View>;
+}
+
+const s = StyleSheet.create({
+  wrapper: { gap: 18 },
+  scopePanel: { backgroundColor: '#EEF4FF', borderColor: '#C9D9FF', borderWidth: 1, borderRadius: 18, padding: 20, ...surfaces.card },
+  panel: { backgroundColor: '#fff', borderRadius: 18, padding: 20, ...surfaces.card },
+  existingPanel: { backgroundColor: '#fff', borderRadius: 18, padding: 20, ...surfaces.card },
+  eyebrow: { color: colors.blue, fontSize: 10, fontWeight: '800', letterSpacing: 1.5 },
+  panelTitle: { color: colors.ink, fontSize: 19, fontWeight: '800', marginTop: 5 },
+  help: { color: colors.muted, fontSize: 13, lineHeight: 20, marginTop: 6 },
+  label: { color: colors.ink, fontSize: 13, fontWeight: '700', marginBottom: 7 },
+  field: { marginTop: 16 },
+  choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  choice: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 13, paddingVertical: 10, backgroundColor: '#fff' },
+  choiceOn: { backgroundColor: colors.blue, borderColor: colors.blue },
+  choiceText: { color: colors.ink, fontSize: 13 },
+  choiceTextOn: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  input: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 13, paddingVertical: 12, color: colors.ink, fontSize: 14, backgroundColor: '#FBFCFE' },
+  row: { flexDirection: 'row', gap: 12 },
+  half: { flex: 1, minWidth: 0 },
+  scopeText: { color: colors.blue, fontWeight: '800', fontSize: 13, marginTop: 16 },
+  warning: { color: '#A66B1F', backgroundColor: '#FFF6E5', borderRadius: 10, padding: 12, marginTop: 14, lineHeight: 19 },
+  subjectProgress: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F3F6FB', borderRadius: 12, padding: 13, marginTop: 18 },
+  progressTitle: { color: colors.ink, fontWeight: '800' },
+  progressValue: { color: colors.blue, fontWeight: '800' },
+  subjectList: { color: colors.muted, fontSize: 12, lineHeight: 19, marginTop: 10 },
+  entryBox: { backgroundColor: '#F8FAFD', borderRadius: 14, padding: 15, marginTop: 16 },
+  entryTitle: { color: colors.ink, fontWeight: '800', fontSize: 15 },
+  duration: { color: colors.blue, fontSize: 12, fontWeight: '700', marginTop: 10 },
+  secondaryButton: { backgroundColor: '#E7EEFF', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginTop: 16 },
+  secondaryText: { color: colors.blue, fontWeight: '800' },
+  entryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: colors.border },
+  entryCopy: { flex: 1, minWidth: 0 },
+  entrySubject: { color: colors.ink, fontWeight: '800', fontSize: 14 },
+  entryMeta: { color: colors.muted, fontSize: 12, marginTop: 4, lineHeight: 18 },
+  remove: { color: '#B42318', fontWeight: '800', fontSize: 12 },
+  error: { color: '#B42318', backgroundColor: '#FFF0F0', borderRadius: 10, padding: 12, marginTop: 14, lineHeight: 19 },
+  save: { backgroundColor: colors.blue, borderRadius: 11, minHeight: 48, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, marginTop: 18 },
+  disabled: { opacity: 0.65 },
+  saveText: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
+  refresh: { color: colors.blue, fontWeight: '800' },
+  savedCard: { borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 15, marginTop: 14 },
+  savedHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
+  savedTitle: { color: colors.ink, fontWeight: '800', fontSize: 15 },
+  savedMeta: { color: colors.muted, fontSize: 12, marginTop: 4, lineHeight: 18 },
+  badge: { color: '#18734A', backgroundColor: '#E6F4EC', paddingHorizontal: 9, paddingVertical: 5, borderRadius: 20, fontSize: 10, fontWeight: '800', overflow: 'hidden' },
+  savedEntry: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10, marginTop: 10 },
+  savedSubject: { color: colors.ink, fontWeight: '700', fontSize: 13 },
+});

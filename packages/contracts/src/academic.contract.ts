@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
-export const StudentAttendanceStatusEnum = z.enum(['PRESENT', 'ABSENT', 'HALF_DAY']);
-export const EmployeeAttendanceStatusEnum = z.enum(['PRESENT', 'ABSENT', 'LATE', 'HALF_DAY', 'PAID_LEAVE', 'UNPAID_LEAVE', 'HOLIDAY', 'WEEKLY_OFF']);
-export const AttendanceEntryStatusEnum = z.enum(['NONE', 'PRESENT', 'ABSENT', 'HALF_DAY']);
+export const StudentAttendanceStatusEnum = z.enum(['PRESENT', 'ABSENT', 'LATE']);
+export const EmployeeAttendanceStatusEnum = z.enum(['PRESENT', 'ABSENT', 'LATE']);
+export const AttendanceEntryStatusEnum = z.enum(['NONE', 'PRESENT', 'ABSENT', 'LATE']);
 export const MarkAttendanceSchema = z.object({
   date: z.string(),
   sectionId: z.string().uuid().optional(),
@@ -30,6 +30,18 @@ export const CreateExamSchema = z.object({
   maximumMarks: z.number().positive(), passMarks: z.number().min(0),
 });
 export type CreateExamInput = z.infer<typeof CreateExamSchema>;
+export const CreateExamTimetableSchema = z.object({
+  academicYearId: z.string().uuid(), classId: z.string().uuid(), sectionId: z.string().uuid(),
+  type: z.enum(['TEST', 'EXAM', 'ASSIGNMENT']), title: z.string().min(2),
+  startDate: z.string(), endDate: z.string(),
+  entries: z.array(z.object({
+    subjectId: z.string().uuid().optional(), date: z.string(),
+    startTime: z.string().optional(), endTime: z.string().optional(),
+    isHoliday: z.boolean().default(false), holidayTitle: z.string().optional(),
+    maximumMarks: z.number().positive().optional(), passMarks: z.number().min(0).optional(),
+  })).min(1),
+});
+export type CreateExamTimetableInput = z.infer<typeof CreateExamTimetableSchema>;
 export const EnterMarksSchema = z.object({
   assessmentId: z.string().uuid(),
   results: z.array(z.object({ studentId: z.string(), absent: z.boolean().default(false), marks: z.number().min(0).optional(), remarks: z.string().optional() })),

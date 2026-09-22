@@ -5,12 +5,16 @@ import { PrismaService } from '../prisma/prisma.service';
 @Injectable()
 export class AttendanceService {
   constructor(private readonly prisma: PrismaService) {}
-  private readonly entryStatuses = ['PRESENT', 'ABSENT', 'HALF_DAY'];
+  private readonly entryStatuses = ['PRESENT', 'ABSENT', 'LATE'];
   private today() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }
   private date(value: string) { if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new BadRequestException('Use YYYY-MM-DD date'); return new Date(`${value}T00:00:00.000Z`); }
 
   async studentRoster(sectionId: string, dateValue: string, actor: any) {
     const date = this.date(dateValue);
+    if (actor.role === Role.EMPLOYEE) {
+      const employee = await this.prisma.employee.findUnique({ where: { id: actor.employeeDbId }, select: { canMarkStudentAttendance: true } });
+      if (!employee?.canMarkStudentAttendance) throw new ForbiddenException('Student attendance permission is off');
+    }
     const section = await this.prisma.section.findUnique({ where: { id: sectionId }, include: { schoolClass: true } });
     if (!section) throw new BadRequestException('Selected section not found');
     const enrollments = await this.prisma.studentEnrollment.findMany({
@@ -25,6 +29,10 @@ export class AttendanceService {
 
   async employeeRoster(dateValue: string, actor: any) {
     const date = this.date(dateValue);
+    if (actor.role === Role.EMPLOYEE) {
+      const employee = await this.prisma.employee.findUnique({ where: { id: actor.employeeDbId }, select: { canMarkEmployeeAttendance: true } });
+      if (!employee?.canMarkEmployeeAttendance) throw new ForbiddenException('Employee attendance permission is off');
+    }
     const employees = await this.prisma.employee.findMany({ where: { status: 'ACTIVE', joiningDate: { lte: date }, OR: [{ leavingDate: null }, { leavingDate: { gte: date } }] }, select: { id: true, employeeId: true, name: true, designation: true }, orderBy: { employeeId: 'asc' } });
     const attendance = await this.prisma.employeeAttendance.findMany({ where: { date, employeeId: { in: employees.map((item) => item.id) } }, select: { employeeId: true, status: true } });
     const byEmployee = new Map(attendance.map((item) => [item.employeeId, item.status]));
@@ -37,8 +45,6 @@ export class AttendanceService {
       if (!current) throw new ForbiddenException('Employees cannot correct past attendance');
       const employee = await this.prisma.employee.findUnique({ where: { id: actor.employeeDbId } });
       if (!employee?.canMarkStudentAttendance) throw new ForbiddenException('Student attendance permission is off');
-      const assignment = await this.prisma.classTeacherAssignment.findFirst({ where: { employeeId: actor.employeeDbId, sectionId: dto.sectionId, effectiveFrom: { lte: date }, OR: [{ effectiveTo: null }, { effectiveTo: { gte: date } }] } });
-      if (!assignment) throw new ForbiddenException('No active class-teacher assignment for this section');
     }
     const closedDay = await this.prisma.schoolCalendar.findFirst({ where: { date, dayType: { in: ['HOLIDAY', 'WEEKLY_OFF'] } } });
     if (closedDay) throw new BadRequestException(`${closedDay.dayType}: attendance is disabled`);
@@ -58,13 +64,12 @@ export class AttendanceService {
 
   async markEmployees(dto: any, actor: any) {
     const date = this.date(dto.date); if (dto.date > this.today()) throw new BadRequestException('Future attendance is not allowed'); if (actor.role === Role.EMPLOYEE && dto.date !== this.today()) throw new ForbiddenException('Employees cannot correct past attendance');
-    const permission = actor.role === Role.EMPLOYEE ? await this.prisma.employeeAttendancePermission.findUnique({ where: { employeeId: actor.employeeDbId }, include: { targets: true } }) : null;
-    if (actor.role === Role.EMPLOYEE && !permission?.active) throw new ForbiddenException('Employee attendance permission is off');
+    const employeePermission = actor.role === Role.EMPLOYEE ? await this.prisma.employee.findUnique({ where: { id: actor.employeeDbId }, select: { canMarkEmployeeAttendance: true } }) : null;
+    if (actor.role === Role.EMPLOYEE && !employeePermission?.canMarkEmployeeAttendance) throw new ForbiddenException('Employee attendance permission is off');
     return this.prisma.$transaction(async (tx) => {
       const output = [];
       for (const row of dto.records) {
         if (actor.employeeDbId === row.id) throw new ForbiddenException('You cannot mark your own attendance');
-        if (actor.role === Role.EMPLOYEE && !permission!.allOtherEmployees && !permission!.targets.some((t) => t.employeeId === row.id)) throw new ForbiddenException('Employee is outside your attendance scope');
         if (!this.entryStatuses.includes(row.status)) continue;
         const employee = await tx.employee.findUnique({ where: { id: row.id } }); if (!employee || employee.joiningDate > date || (employee.leavingDate && employee.leavingDate < date)) throw new BadRequestException('Employee is not active on this date');
         const existing = await tx.employeeAttendance.findUnique({ where: { employeeId_date: { employeeId: row.id, date } } });
@@ -82,13 +87,14 @@ export class AttendanceService {
     const enrollment = student.enrollments[0];
     const academicYear = enrollment?.academicYear || null;
     const records = await this.prisma.studentAttendance.findMany({ where: { studentId: student.id, date: academicYear ? { gte: academicYear.startDate, lte: academicYear.endDate } : undefined }, orderBy: { date: 'asc' } });
-    const present = records.filter((r) => r.status === 'PRESENT' || r.status === 'LATE').length;
+    const present = records.filter((r) => r.status === 'PRESENT').length;
+    const late = records.filter((r) => r.status === 'LATE').length;
     const absent = records.filter((r) => r.status === 'ABSENT').length;
     const halfDay = records.filter((r) => r.status === 'HALF_DAY').length;
     const leave = records.filter((r) => r.status === 'LEAVE').length;
     const marked = records.length;
-    const attendedUnits = present + halfDay * 0.5;
-    return { student: { studentId: student.studentId, name: student.name }, academicYear, section: enrollment?.section ? { name: enrollment.section.name, className: enrollment.section.schoolClass.name } : null, summary: { marked, present, absent, halfDay, leave, attendedUnits, percentage: marked ? Math.round(attendedUnits / marked * 10000) / 100 : null }, marked, attended: attendedUnits, absent, halfDay, leave, percentage: marked ? Math.round(attendedUnits / marked * 10000) / 100 : null, records };
+    const attendedUnits = present + late + halfDay * 0.5;
+    return { student: { studentId: student.studentId, name: student.name }, academicYear, section: enrollment?.section ? { name: enrollment.section.name, className: enrollment.section.schoolClass.name } : null, summary: { marked, present, late, absent, halfDay, leave, attendedUnits, percentage: marked ? Math.round(attendedUnits / marked * 10000) / 100 : null }, marked, attended: attendedUnits, absent, late, halfDay, leave, percentage: marked ? Math.round(attendedUnits / marked * 10000) / 100 : null, records };
   }
   async employeeHistory(employeeId: string, actor: any) {
     if (actor.role === Role.EMPLOYEE && actor.employeeId !== employeeId) throw new ForbiddenException('Own attendance only');
@@ -98,12 +104,13 @@ export class AttendanceService {
     ]);
     if (!employee) return null;
     const records = await this.prisma.employeeAttendance.findMany({ where: { employeeId: employee.id, date: academicYear ? { gte: academicYear.startDate, lte: academicYear.endDate } : undefined }, orderBy: { date: 'asc' } });
-    const present = records.filter((r) => r.status === 'PRESENT' || r.status === 'LATE').length;
+    const present = records.filter((r) => r.status === 'PRESENT').length;
+    const late = records.filter((r) => r.status === 'LATE').length;
     const absent = records.filter((r) => r.status === 'ABSENT').length;
     const halfDay = records.filter((r) => r.status === 'HALF_DAY').length;
     const leave = records.filter((r) => ['PAID_LEAVE', 'UNPAID_LEAVE'].includes(r.status)).length;
     const marked = records.length;
-    const attendedUnits = present + halfDay * 0.5;
-    return { employee, academicYear, summary: { marked, present, absent, halfDay, leave, attendedUnits, percentage: marked ? Math.round(attendedUnits / marked * 10000) / 100 : null }, marked, attended: attendedUnits, absent, halfDay, leave, percentage: marked ? Math.round(attendedUnits / marked * 10000) / 100 : null, records };
+    const attendedUnits = present + late + halfDay * 0.5;
+    return { employee, academicYear, summary: { marked, present, late, absent, halfDay, leave, attendedUnits, percentage: marked ? Math.round(attendedUnits / marked * 10000) / 100 : null }, marked, attended: attendedUnits, absent, late, halfDay, leave, percentage: marked ? Math.round(attendedUnits / marked * 10000) / 100 : null, records };
   }
 }

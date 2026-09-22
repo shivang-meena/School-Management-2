@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Arihant Public School ERP",
-    "slug": "arihant-public-school-erp",
+    "name": "Shivora Technologies",
+    "slug": "shivora-technologies",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "arihant-school-erp",
+    "scheme": "shivora-technologies",
     "userInterfaceStyle": "light",
     "splash": {
       "resizeMode": "contain",

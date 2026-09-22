@@ -23,26 +23,14 @@ export default function RootLayout() {
           <Stack
             screenOptions={{
               headerShown: false,
-              contentStyle: { backgroundColor: '#F4F1EA' },
+              contentStyle: { backgroundColor: '#F3F6FB' },
             }}
           >
-            <Stack.Screen name="index" options={{ title: 'Arihant Public School ERP' }} />
+            <Stack.Screen name="index" options={{ title: 'Shivora Technologies' }} />
             <Stack.Screen name="(auth)/login" options={{ title: 'Login' }} />
-            <Stack.Screen name="(admin)/dashboard" options={{ title: 'Admin Dashboard' }} />
-            <Stack.Screen name="(admin)/students" options={{ title: 'Students' }} />
-            <Stack.Screen name="(admin)/staff" options={{ title: 'Employees' }} />
-            <Stack.Screen name="(admin)/attendance" options={{ title: 'Attendance' }} />
-            <Stack.Screen name="(admin)/fees" options={{ title: 'Fee Management' }} />
-            <Stack.Screen name="(admin)/exams" options={{ title: 'Exams' }} />
-            <Stack.Screen name="(admin)/notices" options={{ title: 'Notice Board' }} />
-            <Stack.Screen name="(admin)/accounts" options={{ title: 'Accounts' }} />
-            <Stack.Screen name="(admin)/academics" options={{ title: 'Academic Structure' }} />
-            <Stack.Screen name="(admin)/salary" options={{ title: 'Salary' }} />
-            <Stack.Screen name="(admin)/timetable" options={{ title: 'Timetable' }} />
-            <Stack.Screen name="(student)/dashboard" options={{ title: 'Student Portal' }} />
-            <Stack.Screen name="(student)/calendar" options={{ title: 'Academic Calendar' }} />
-            <Stack.Screen name="(staff)/dashboard" options={{ title: 'Staff Portal' }} />
-            <Stack.Screen name="(staff)/calendar" options={{ title: 'Academic Calendar' }} />
+            <Stack.Screen name="(admin)" options={{ title: 'Administration' }} />
+            <Stack.Screen name="(student)" options={{ title: 'Student Portal' }} />
+            <Stack.Screen name="(staff)" options={{ title: 'Employee Portal' }} />
           </Stack>
         </AuthProvider>
       </QueryClientProvider>

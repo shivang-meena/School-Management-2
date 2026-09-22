@@ -18,6 +18,8 @@ export const UserProfileSchema = z.object({
   role: RoleEnum,
   studentId: z.string().optional(),
   employeeId: z.string().optional(),
+  canMarkStudentAttendance: z.boolean().optional(),
+  canMarkEmployeeAttendance: z.boolean().optional(),
   mustChangePassword: z.boolean(),
 });
 export type UserProfile = z.infer<typeof UserProfileSchema>;

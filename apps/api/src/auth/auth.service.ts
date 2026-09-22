@@ -55,6 +55,6 @@ export class AuthService {
 
   private hash(value: string) { return createHash('sha256').update(value).digest('hex'); }
   private profile(user: any) {
-    return { id: user.id, loginId: user.loginId, email: user.email, name: user.name, role: user.role, studentId: user.student?.studentId, employeeId: user.employee?.employeeId, mustChangePassword: user.mustChangePassword };
+    return { id: user.id, loginId: user.loginId, email: user.email, name: user.name, role: user.role, studentId: user.student?.studentId, employeeId: user.employee?.employeeId, canMarkStudentAttendance: user.employee?.canMarkStudentAttendance || false, canMarkEmployeeAttendance: user.employee?.canMarkEmployeeAttendance || false, mustChangePassword: user.mustChangePassword };
   }
 }

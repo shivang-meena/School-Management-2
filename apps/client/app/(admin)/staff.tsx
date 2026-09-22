@@ -1,12 +1,10 @@
+import { colors, surfaces } from '../../src/theme';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../src/services/api';
-import { Header } from '../../src/components/Header';
-import { AdminNav } from '../../src/components/AdminNav';
-
 const today = new Date().toISOString().slice(0, 10);
-const initial = { name: '', subRole: 'TEACHER', designation: '', joiningDate: today, mobile: '', email: '', address: '', baseSalary: '', canMarkStudentAttendance: true, canMarkEmployeeAttendance: false };
+const initial = { name: '', subRole: 'TEACHER', designation: '', joiningDate: today, mobile: '', email: '', address: '', baseSalary: '', canMarkStudentAttendance: false, canMarkEmployeeAttendance: false };
 function Field({ label, value, onChangeText, placeholder, multiline = false, editable = true }: any) { return <View style={s.field}><Text style={s.label}>{label}</Text><TextInput editable={editable} value={String(value ?? '')} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#8c96a5" multiline={multiline} style={[s.input, multiline && s.multiline, !editable && s.readonly]} /></View>; }
 function Toggle({ label, value, onPress }: any) { return <TouchableOpacity accessibilityRole="checkbox" onPress={onPress} style={s.toggle}><View style={[s.check, value && s.checkOn]}><Text style={s.checkText}>{value ? '✓' : ''}</Text></View><Text style={s.toggleText}>{label}</Text></TouchableOpacity>; }
 function Choices({ label, value, values, onChange }: any) { return <View style={s.field}><Text style={s.label}>{label}</Text><View style={s.choices}>{values.map((v: string) => <TouchableOpacity accessibilityRole="button" key={v} style={[s.choice, value === v && s.choiceOn]} onPress={() => onChange(v)}><Text style={value === v ? s.choiceTextOn : s.choiceText}>{v}</Text></TouchableOpacity>)}</View></View>; }
@@ -22,8 +20,114 @@ export default function StaffScreen() {
   const save = async () => { if (!selectedId || !editState.name || !editState.designation || !editState.joiningDate) return Alert.alert('Missing details', 'Name, designation and joining date are required.'); setSaving(true); try { await api.patch('/employees/' + selectedId, { name: editState.name, subRole: editState.subRole, designation: editState.designation, joiningDate: editState.joiningDate, mobile: editState.mobile || undefined, email: editState.email || undefined, address: editState.address, canMarkStudentAttendance: editState.canMarkStudentAttendance, canMarkEmployeeAttendance: editState.canMarkEmployeeAttendance }); const oldSalary = Number(detail.data?.salaryRevisions?.[0]?.amount || 0), newSalary = Number(editState.baseSalary); if (newSalary > 0 && newSalary !== oldSalary) await api.post('/employees/' + selectedId + '/salary-revisions', { amount: newSalary, effectiveDate: editState.joiningDate, reason: 'Admin profile update' }); Alert.alert('Employee updated', 'All edited details were saved successfully.'); await Promise.all([client.invalidateQueries({ queryKey: ['employees'] }), client.invalidateQueries({ queryKey: ['employee-detail', selectedId] })]); } catch (e: any) { Alert.alert('Could not update employee', e?.response?.data?.message || 'Please check the form and try again.'); } finally { setSaving(false); } };
   const setPassword = async () => { if (!selectedId || adminPassword.length < 8) return Alert.alert('Password required', 'Enter at least 8 characters.'); setSaving(true); try { await api.post('/employees/' + selectedId + '/password', { password: adminPassword }); Alert.alert('Password updated', 'Employee can now sign in with the password set by Admin.'); setAdminPassword(''); } catch (e: any) { Alert.alert('Password update failed', e?.response?.data?.message || 'Please try again.'); } finally { setSaving(false); } };
   const deactivate = async () => { if (!selectedId || !deleteReason.trim()) return Alert.alert('Reason required', 'Enter a reason before deleting this employee.'); setSaving(true); try { await api.post('/employees/' + selectedId + '/deactivate', { reason: deleteReason.trim() }); Alert.alert('Employee deleted', 'The employee account is inactive and payroll history is preserved.'); setSelectedId(null); setDeleteReason(''); await client.invalidateQueries({ queryKey: ['employees'] }); } catch (e: any) { Alert.alert('Could not delete employee', e?.response?.data?.message || 'Resolve active assignments before deleting.'); } finally { setSaving(false); } };
-  return <View style={s.page}><Header /><AdminNav /><ScrollView contentContainerStyle={s.content}><View style={s.hero}><View><Text style={s.eyebrow}>PEOPLE OPERATIONS</Text><Text style={s.title}>Employees</Text><Text style={s.sub}>Tap an employee to view and edit the complete profile.</Text></View><TouchableOpacity accessibilityRole="button" style={s.primary} onPress={() => setOpen(!open)}><Text style={s.primaryText}>{open ? 'Close form' : '+ Add employee'}</Text></TouchableOpacity></View>{open ? <View style={s.form}><Text style={s.formTitle}>New employee</Text><Field label="Full name *" value={form.name} onChangeText={(v: string) => set('name', v)} placeholder="Priya Mehta" /><Choices label="Role" value={form.subRole} values={['TEACHER', 'ACCOUNTANT', 'RECEPTIONIST', 'LIBRARIAN', 'OTHER']} onChange={(v: string) => setForm((p: any) => ({ ...p, subRole: v, primarySubjectId: v === 'TEACHER' ? p.primarySubjectId : null }))} />{form.subRole === 'TEACHER' ? <SubjectChoices subjects={subjects} value={form.primarySubjectId} onChange={(v: string) => set('primarySubjectId', v)} /> : null}<Field label="Designation *" value={form.designation} onChangeText={(v: string) => set('designation', v)} placeholder="Senior Teacher" /><Field label="Joining date *" value={form.joiningDate} onChangeText={(v: string) => set('joiningDate', v)} placeholder="YYYY-MM-DD" /><Field label="Base salary *" value={form.baseSalary} onChangeText={(v: string) => set('baseSalary', v)} placeholder="35000" /><Field label="Mobile" value={form.mobile} onChangeText={(v: string) => set('mobile', v)} placeholder="Phone number" /><Field label="Email" value={form.email} onChangeText={(v: string) => set('email', v)} placeholder="employee@example.com" /><Field label="Address" value={form.address} onChangeText={(v: string) => set('address', v)} placeholder="Full address" multiline /><Toggle label="Can mark student attendance" value={form.canMarkStudentAttendance} onPress={() => set('canMarkStudentAttendance', !form.canMarkStudentAttendance)} /><Toggle label="Can mark employee attendance" value={form.canMarkEmployeeAttendance} onPress={() => set('canMarkEmployeeAttendance', !form.canMarkEmployeeAttendance)} /><TouchableOpacity accessibilityRole="button" style={s.save} onPress={create} disabled={saving}>{saving ? <ActivityIndicator color="#071d33" /> : <Text style={s.saveText}>Create employee</Text>}</TouchableOpacity></View> : null}
+  return <View style={s.page}><ScrollView contentContainerStyle={s.content}><View style={s.hero}><View><Text style={s.eyebrow}>PEOPLE OPERATIONS</Text><Text style={s.title}>Employees</Text><Text style={s.sub}>Tap an employee to view and edit the complete profile.</Text></View><TouchableOpacity accessibilityRole="button" style={s.primary} onPress={() => setOpen(!open)}><Text style={s.primaryText}>{open ? 'Close form' : '+ Add employee'}</Text></TouchableOpacity></View>{open ? <View style={s.form}><Text style={s.formTitle}>New employee</Text><Field label="Full name *" value={form.name} onChangeText={(v: string) => set('name', v)} placeholder="Priya Mehta" /><Choices label="Role" value={form.subRole} values={['TEACHER', 'ACCOUNTANT', 'RECEPTIONIST', 'LIBRARIAN', 'OTHER']} onChange={(v: string) => setForm((p: any) => ({ ...p, subRole: v, primarySubjectId: v === 'TEACHER' ? p.primarySubjectId : null }))} />{form.subRole === 'TEACHER' ? <SubjectChoices subjects={subjects} value={form.primarySubjectId} onChange={(v: string) => set('primarySubjectId', v)} /> : null}<Field label="Designation *" value={form.designation} onChangeText={(v: string) => set('designation', v)} placeholder="Senior Teacher" /><Field label="Joining date *" value={form.joiningDate} onChangeText={(v: string) => set('joiningDate', v)} placeholder="YYYY-MM-DD" /><Field label="Base salary *" value={form.baseSalary} onChangeText={(v: string) => set('baseSalary', v)} placeholder="35000" /><Field label="Mobile" value={form.mobile} onChangeText={(v: string) => set('mobile', v)} placeholder="Phone number" /><Field label="Email" value={form.email} onChangeText={(v: string) => set('email', v)} placeholder="employee@example.com" /><Field label="Address" value={form.address} onChangeText={(v: string) => set('address', v)} placeholder="Full address" multiline /><Toggle label="Can mark student attendance" value={form.canMarkStudentAttendance} onPress={() => set('canMarkStudentAttendance', !form.canMarkStudentAttendance)} /><Toggle label="Can mark employee attendance" value={form.canMarkEmployeeAttendance} onPress={() => set('canMarkEmployeeAttendance', !form.canMarkEmployeeAttendance)} /><TouchableOpacity accessibilityRole="button" style={s.save} onPress={create} disabled={saving}>{saving ? <ActivityIndicator color="#071d33" /> : <Text style={s.saveText}>Create employee</Text>}</TouchableOpacity></View> : null}
     <Modal visible={!!selectedId} transparent animationType="fade" onRequestClose={() => setSelectedId(null)}><View style={s.overlay}><TouchableOpacity accessibilityRole="button" accessibilityLabel="Close employee details" style={StyleSheet.absoluteFill} onPress={() => setSelectedId(null)} /><View style={s.modalShell}><ScrollView contentContainerStyle={s.modalContent}>{selectedId ? <View style={s.detail}><View style={s.detailHeader}><View><Text style={s.eyebrow}>COMPLETE EMPLOYEE PROFILE</Text><Text style={s.formTitle}>{detail.data?.name}</Text><Text style={s.meta}>Employee ID: {detail.data?.employeeId}</Text></View><TouchableOpacity accessibilityRole="button" style={s.close} onPress={() => setSelectedId(null)}><Text style={s.closeText}>Close ✕</Text></TouchableOpacity></View>{detail.isLoading ? <ActivityIndicator color="#e8aa43" /> : detail.isError ? <Text style={s.error}>Could not load employee details.</Text> : <><View style={s.security}><Text style={s.securityTitle}>Admin-controlled password</Text><Text style={s.securityText}>Employees cannot change passwords. Set a new password here; existing passwords are never displayed.</Text><Field label="New password (minimum 8 characters)" value={adminPassword} onChangeText={setAdminPassword} placeholder="Enter password" /><TouchableOpacity accessibilityRole="button" style={s.secondary} onPress={setPassword} disabled={saving}><Text style={s.secondaryText}>Set employee password</Text></TouchableOpacity></View><Field label="Employee ID" value={detail.data?.employeeId} editable={false} /><Field label="Full name *" value={editState.name} onChangeText={(v: string) => setEdit('name', v)} /><Choices label="Role" value={editState.subRole} values={['TEACHER', 'ACCOUNTANT', 'RECEPTIONIST', 'LIBRARIAN', 'OTHER']} onChange={(v: string) => setEdit('subRole', v)} /><Field label="Designation *" value={editState.designation} onChangeText={(v: string) => setEdit('designation', v)} /><Field label="Joining date *" value={editState.joiningDate} onChangeText={(v: string) => setEdit('joiningDate', v)} /><Field label="Base salary" value={editState.baseSalary} onChangeText={(v: string) => setEdit('baseSalary', v)} /><Field label="Mobile" value={editState.mobile} onChangeText={(v: string) => setEdit('mobile', v)} /><Field label="Email" value={editState.email} onChangeText={(v: string) => setEdit('email', v)} /><Field label="Address" value={editState.address} onChangeText={(v: string) => setEdit('address', v)} multiline /><Toggle label="Can mark student attendance" value={!!editState.canMarkStudentAttendance} onPress={() => setEdit('canMarkStudentAttendance', !editState.canMarkStudentAttendance)} /><Toggle label="Can mark employee attendance" value={!!editState.canMarkEmployeeAttendance} onPress={() => setEdit('canMarkEmployeeAttendance', !editState.canMarkEmployeeAttendance)} /><TouchableOpacity accessibilityRole="button" style={s.save} onPress={save} disabled={saving}>{saving ? <ActivityIndicator color="#071d33" /> : <Text style={s.saveText}>Save employee changes</Text>}</TouchableOpacity><View style={s.danger}><Text style={s.dangerTitle}>Delete employee access</Text><Text style={s.dangerText}>This deactivates login and preserves payroll and assignment history.</Text><Field label="Reason *" value={deleteReason} onChangeText={setDeleteReason} placeholder="Left the school" /><TouchableOpacity accessibilityRole="button" style={s.dangerButton} onPress={deactivate} disabled={saving}><Text style={s.dangerButtonText}>Delete employee</Text></TouchableOpacity></View></>}</View> : null}</ScrollView></View></View></Modal>
      {employees.isLoading ? <ActivityIndicator color="#e8aa43" /> : employees.isError ? <Text style={s.error}>Unable to load employees.</Text> : (employees.data || []).length === 0 ? <Text style={s.empty}>No employees yet. Add the first employee above.</Text> : (employees.data || []).map((employee: any) => <TouchableOpacity accessibilityRole="button" style={[s.card, selectedId === employee.id && s.cardSelected]} key={employee.id} onPress={() => setSelectedId(employee.id)}><View><Text style={s.cardTitle}>{employee.name}</Text><Text style={s.meta}>{employee.employeeId} · {employee.subRole || employee.designation}</Text><Text style={s.tap}>Tap to view complete details and edit</Text></View><Text style={s.badge}>{employee.status || 'ACTIVE'}</Text></TouchableOpacity>)}</ScrollView></View>;
 }
-const s = StyleSheet.create({ page: { flex: 1, backgroundColor: '#f4f1ea' }, content: { padding: 24, maxWidth: 1100, width: '100%', alignSelf: 'center', gap: 16 }, hero: { backgroundColor: '#08233d', borderRadius: 22, padding: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 16 }, eyebrow: { color: '#e8aa43', fontSize: 11, fontWeight: '800', letterSpacing: 2 }, title: { color: '#fff', fontSize: 32, fontWeight: '800' }, sub: { color: '#c8d3df', marginTop: 5 }, primary: { backgroundColor: '#e8aa43', borderRadius: 11, paddingHorizontal: 16, paddingVertical: 12 }, primaryText: { color: '#071d33', fontWeight: '800' }, form: { backgroundColor: '#fff', borderRadius: 18, padding: 20, gap: 10 }, detail: { backgroundColor: '#fff', padding: 22, gap: 11 }, detailHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 }, formTitle: { color: '#08233d', fontSize: 22, fontWeight: '800' }, field: { gap: 5, flex: 1 }, label: { color: '#506176', fontSize: 12, fontWeight: '700' }, input: { borderWidth: 1, borderColor: '#dbe1e8', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, color: '#172b42', backgroundColor: '#fbfcfd' }, readonly: { backgroundColor: '#edf1f5' }, multiline: { minHeight: 70, textAlignVertical: 'top' }, choices: { flexDirection: 'row', gap: 7, flexWrap: 'wrap' }, choice: { borderWidth: 1, borderColor: '#dbe1e8', borderRadius: 9, paddingHorizontal: 11, paddingVertical: 9 }, choiceOn: { backgroundColor: '#08233d', borderColor: '#08233d' }, choiceText: { color: '#506176', fontSize: 12 }, choiceTextOn: { color: '#fff', fontWeight: '700', fontSize: 12 }, row: { flexDirection: 'row', gap: 10 }, half: { flex: 1 }, toggle: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 4 }, check: { width: 22, height: 22, borderRadius: 6, borderWidth: 1, borderColor: '#c9d1dc', alignItems: 'center', justifyContent: 'center' }, checkOn: { backgroundColor: '#18734a', borderColor: '#18734a' }, checkText: { color: '#fff', fontWeight: '800' }, toggleText: { color: '#34475e' }, save: { backgroundColor: '#e8aa43', borderRadius: 11, padding: 14, alignItems: 'center' }, saveText: { color: '#071d33', fontWeight: '800' }, secondary: { alignSelf: 'flex-start', backgroundColor: '#08233d', borderRadius: 9, padding: 11 }, secondaryText: { color: '#fff', fontWeight: '800' }, security: { backgroundColor: '#fff7e8', borderRadius: 12, padding: 14, gap: 6 }, securityTitle: { color: '#744b0d', fontWeight: '800' }, securityText: { color: '#715b39', lineHeight: 19 }, close: { backgroundColor: '#edf1f5', borderRadius: 9, padding: 10 }, closeText: { color: '#243a52', fontWeight: '700' }, overlay: { flex: 1, backgroundColor: 'rgba(4,17,30,.72)', alignItems: 'center', justifyContent: 'center', padding: 18 }, modalShell: { width: '92%', maxWidth: 780, maxHeight: '90%', backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden' }, modalContent: { padding: 0 }, card: { backgroundColor: '#fff', borderRadius: 16, padding: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 2, borderColor: 'transparent' }, cardSelected: { borderColor: '#e8aa43' }, cardTitle: { color: '#08233d', fontSize: 17, fontWeight: '800' }, meta: { color: '#6c7b8d', marginTop: 5 }, tap: { color: '#a46c17', fontSize: 11, fontWeight: '700', marginTop: 7 }, badge: { color: '#18734a', fontWeight: '800', fontSize: 11 }, empty: { color: '#607187', textAlign: 'center', padding: 30 }, error: { color: '#b42318' }, danger: { backgroundColor: '#fff0f0', borderRadius: 12, padding: 14, gap: 7 }, dangerTitle: { color: '#9e2b25', fontWeight: '800' }, dangerText: { color: '#7e4b48' }, dangerButton: { backgroundColor: '#b42318', borderRadius: 9, padding: 12, alignItems: 'center' }, dangerButtonText: { color: '#fff', fontWeight: '800' } });
+const s = StyleSheet.create({ page: { flex: 1, backgroundColor: colors.background },
+  
+  content: { ...surfaces.content, gap: 16 },
+  
+  hero: { ...surfaces.card, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 16, padding: 24, borderRadius: 16, backgroundColor: '#FFFFFF', flexWrap: 'wrap' },
+  
+  eyebrow: { fontWeight: '800', fontSize: 10, letterSpacing: 1.4, color: colors.blue },
+  
+  title: { fontSize: 28, color: colors.ink, fontWeight: '700' },
+  
+  sub: { marginTop: 5, lineHeight: 21, color: colors.muted },
+  
+  primary: { borderRadius: 11, paddingHorizontal: 16, paddingVertical: 12, justifyContent: 'center', backgroundColor: colors.blue, minHeight: 44 },
+  
+  primaryText: { fontWeight: '800', color: '#FFFFFF' },
+  
+  form: { ...surfaces.card, backgroundColor: '#fff', padding: 20, gap: 10, borderRadius: 14 },
+  
+  detail: { backgroundColor: '#fff', padding: 22, gap: 11 },
+  
+  detailHeader: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 },
+  
+  formTitle: { fontSize: 22, fontWeight: '700', color: colors.ink },
+  
+  field: { gap: 5, flex: 1, minWidth: 0, flexShrink: 1 },
+  
+  label: { color: '#506176', fontSize: 12, fontWeight: '700' },
+  
+  input: { ...surfaces.input, borderWidth: 1, borderColor: '#dbe1e8', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, color: '#172b42', backgroundColor: '#fbfcfd', fontSize: 14 },
+  
+  readonly: { backgroundColor: '#edf1f5' },
+  
+  multiline: { minHeight: 70, textAlignVertical: 'top' },
+  
+  choices: { flexDirection: 'row', gap: 7, flexWrap: 'wrap' },
+  
+  choice: { borderWidth: 1, borderColor: '#dbe1e8', borderRadius: 9, paddingHorizontal: 11, paddingVertical: 9 },
+  
+  choiceOn: { borderColor: colors.blue, backgroundColor: colors.blue },
+  
+  choiceText: { color: '#506176', fontSize: 12 },
+  
+  choiceTextOn: { color: '#fff', fontWeight: '700', fontSize: 12 },
+  
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  
+  half: { flex: 1 },
+  
+  toggle: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 4 },
+  
+  check: { width: 22, height: 22, borderRadius: 6, borderWidth: 1, borderColor: '#c9d1dc', alignItems: 'center', justifyContent: 'center' },
+  
+  checkOn: { backgroundColor: '#18734a', borderColor: '#18734a' },
+  
+  checkText: { color: '#fff', fontWeight: '800' },
+  
+  toggleText: { color: '#34475e' },
+  
+  save: { borderRadius: 11, padding: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.blue, minHeight: 44 },
+  
+  saveText: { fontWeight: '800', color: '#FFFFFF' },
+  
+  secondary: { alignSelf: 'flex-start', backgroundColor: '#203451', borderRadius: 9, padding: 11 },
+  
+  secondaryText: { color: '#fff', fontWeight: '800' },
+  
+  security: { backgroundColor: '#fff7e8', borderRadius: 12, padding: 14, gap: 6 },
+  
+  securityTitle: { color: '#744b0d', fontWeight: '800' },
+  
+  securityText: { color: '#715b39', lineHeight: 19 },
+  
+  close: { backgroundColor: '#edf1f5', borderRadius: 9, padding: 10 },
+  
+  closeText: { color: '#243a52', fontWeight: '700' },
+  
+  overlay: { flex: 1, backgroundColor: 'rgba(4,17,30,.72)', alignItems: 'center', justifyContent: 'center', padding: 18 },
+  
+  modalShell: { width: '92%', maxWidth: 780, maxHeight: '90%', backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden' },
+  
+  modalContent: { padding: 0 },
+  
+  card: { ...surfaces.card, backgroundColor: '#fff', padding: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minWidth: 0, borderWidth: 1, borderRadius: 14, borderColor: colors.border },
+  
+  cardSelected: { borderColor: '#3563E9' },
+  
+  cardTitle: { color: '#203451', fontSize: 17, fontWeight: '800' },
+  
+  meta: { color: '#6c7b8d', marginTop: 5 },
+  
+  tap: { color: '#3563E9', fontSize: 11, fontWeight: '700', marginTop: 7 },
+  
+  badge: { color: '#18734a', fontWeight: '800', fontSize: 11 },
+  
+  empty: { color: '#607187', textAlign: 'center', padding: 30 },
+  
+  error: { color: '#b42318' },
+  
+  danger: { backgroundColor: '#fff0f0', borderRadius: 12, padding: 14, gap: 7 },
+  
+  dangerTitle: { color: '#9e2b25', fontWeight: '800' },
+  
+  dangerText: { color: '#7e4b48' },
+  
+  dangerButton: { backgroundColor: '#b42318', borderRadius: 9, padding: 12, alignItems: 'center' },
+  
+  dangerButtonText: { color: '#fff', fontWeight: '800' } });

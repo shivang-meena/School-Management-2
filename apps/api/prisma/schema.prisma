@@ -295,6 +295,7 @@ model AcademicYear {
   classTeacherAssignments ClassTeacherAssignment[]
   calendarDays            SchoolCalendar[]
   timetableEntries        LectureTimetableEntry[]
+  examTimetables          ExamTimetable[]
   assessments             Assessment[]
 
   @@map("academic_years")
@@ -306,6 +307,7 @@ model SchoolClass {
   sortOrder     Int                 @unique
   sections      Section[]
   feeStructures ClassFeeStructure[]
+  examTimetables ExamTimetable[]
 
   @@map("classes")
 }
@@ -319,6 +321,7 @@ model Section {
   enrollments             StudentEnrollment[]
   teacherAssignments      TeacherAssignment[]
   classTeacherAssignments ClassTeacherAssignment[]
+  examTimetables         ExamTimetable[]
   timetableEntries        LectureTimetableEntry[]
   assessments             Assessment[]
   noticeAudiences         NoticeAudience[]
@@ -333,6 +336,7 @@ model Subject {
   name               String                  @unique
   teacherAssignments TeacherAssignment[]
   timetableEntries   LectureTimetableEntry[]
+  examTimetableEntries ExamTimetableEntry[]
   assessments        Assessment[]
   primaryTeachers    Employee[]              @relation("EmployeePrimarySubject")
 
@@ -635,6 +639,45 @@ model LectureTimetableEntry {
 
   @@unique([academicYearId, sectionId, dayOfWeek, periodNumber, effectiveFrom])
   @@map("lecture_timetable_entries")
+}
+
+model ExamTimetable {
+  id             String              @id @default(uuid())
+  academicYearId String
+  classId        String
+  sectionId      String?
+  type           AssessmentType
+  title          String
+  startDate      DateTime            @db.Date
+  endDate        DateTime            @db.Date
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  academicYear   AcademicYear        @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  schoolClass    SchoolClass         @relation(fields: [classId], references: [id], onDelete: Restrict)
+  section        Section?            @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  entries        ExamTimetableEntry[]
+
+  @@index([classId, startDate, endDate])
+  @@index([sectionId, startDate, endDate])
+  @@map("exam_timetables")
+}
+
+model ExamTimetableEntry {
+  id           String        @id @default(uuid())
+  timetableId  String
+  subjectId    String?
+  date         DateTime      @db.Date
+  startTime    DateTime?     @db.Time(0)
+  endTime      DateTime?     @db.Time(0)
+  isHoliday    Boolean       @default(false)
+  holidayTitle String?
+  maximumMarks Decimal?      @db.Decimal(7, 2)
+  passMarks    Decimal?      @db.Decimal(7, 2)
+  timetable    ExamTimetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+  subject      Subject?      @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+
+  @@index([subjectId])
+  @@map("exam_timetable_entries")
 }
 
 model Assessment {

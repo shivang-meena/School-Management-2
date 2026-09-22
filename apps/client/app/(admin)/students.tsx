@@ -1,10 +1,8 @@
+import { colors, surfaces } from '../../src/theme';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../src/services/api';
-import { Header } from '../../src/components/Header';
-import { AdminNav } from '../../src/components/AdminNav';
-
 const today = new Date().toISOString().slice(0, 10);
 const initial = { name: '', dob: '2012-01-01', gender: 'Male', mobile: '', email: '', address: '', guardianName: '', guardianContact: '', admissionDate: today, rollNumber: '' };
 function dateOnly(value: any) { return value ? String(value).slice(0, 10) : ''; }
@@ -73,8 +71,8 @@ export default function StudentsScreen() {
     try { await api.post('/students/' + selectedId + '/deactivate', { reason: deleteReason.trim() }); Alert.alert('Student deleted', 'The student account is now inactive and all historical records are preserved.'); setDeleteReason(''); setSelectedId(null); await client.invalidateQueries({ queryKey: ['students'] }); } catch (error: any) { Alert.alert('Could not delete student', message(error)); } finally { setSaving(false); }
   };
 
-  return <View style={styles.page}><Header /><AdminNav /><ScrollView contentContainerStyle={styles.content}>
-    <View style={styles.hero}><View><Text style={styles.eyebrow}>STUDENT DIRECTORY</Text><Text style={styles.title}>Students</Text><Text style={styles.sub}>Tap any student to view and edit the complete profile.</Text></View><TouchableOpacity accessibilityRole="button" style={styles.primary} onPress={() => setOpen(!open)}><Text style={styles.primaryText}>{open ? 'Close form' : '+ Add student'}</Text></TouchableOpacity></View>
+  return <View style={styles.page}><ScrollView contentContainerStyle={styles.content}>
+    <View style={styles.hero}><View style={styles.heroCopy}><Text style={styles.eyebrow}>STUDENT DIRECTORY</Text><Text style={styles.title}>Students</Text><Text style={styles.sub}>Tap any student to view and edit the complete profile.</Text></View><TouchableOpacity accessibilityRole="button" style={styles.primary} onPress={() => setOpen(!open)}><Text style={styles.primaryText}>{open ? 'Close form' : '+ Add student'}</Text></TouchableOpacity></View>
     {open ? <View style={styles.form}><Text style={styles.formTitle}>New student</Text><Field label="Full name *" value={form.name} onChangeText={(value: string) => setCreate('name', value)} placeholder="Aarav Sharma" /><View style={styles.row}><View style={styles.half}><Field label="Date of birth *" value={form.dob} onChangeText={(value: string) => setCreate('dob', value)} placeholder="YYYY-MM-DD" /></View><View style={styles.half}><Field label="Admission date *" value={form.admissionDate} onChangeText={(value: string) => setCreate('admissionDate', value)} placeholder="YYYY-MM-DD" /></View></View><Choices label="Gender" value={form.gender} values={['Male', 'Female', 'Other']} onChange={(value: string) => setCreate('gender', value)} /><Field label="Guardian name *" value={form.guardianName} onChangeText={(value: string) => setCreate('guardianName', value)} placeholder="Parent / guardian" /><Field label="Guardian contact *" value={form.guardianContact} onChangeText={(value: string) => setCreate('guardianContact', value)} placeholder="Phone number" /><Field label="Mobile" value={form.mobile} onChangeText={(value: string) => setCreate('mobile', value)} placeholder="Optional, minimum 10 digits" /><Field label="Email" value={form.email} onChangeText={(value: string) => setCreate('email', value)} placeholder="student@example.com" /><Field label="Roll number *" value={form.rollNumber} onChangeText={(value: string) => setCreate('rollNumber', value)} placeholder="e.g. 12" /><Field label="Address *" value={form.address} onChangeText={(value: string) => setCreate('address', value)} placeholder="Full address" multiline /><Text style={styles.setup}>Admission: {defaultYear?.name || 'current year'} · {defaultSection?.className || 'Class 1'} / Section {defaultSection?.name || 'A'}</Text><TouchableOpacity accessibilityRole="button" style={styles.save} onPress={create} disabled={saving}>{saving ? <ActivityIndicator color="#071d33" /> : <Text style={styles.saveText}>Create student</Text>}</TouchableOpacity></View> : null}
 
     <Modal visible={!!selectedId} transparent animationType="fade" onRequestClose={() => setSelectedId(null)}>
@@ -92,5 +90,104 @@ export default function StudentsScreen() {
   </ScrollView></View>;
 }
 
-const styles = StyleSheet.create({ page: { flex: 1, backgroundColor: '#f4f1ea' }, content: { padding: 24, maxWidth: 1100, width: '100%', alignSelf: 'center', gap: 16 }, hero: { backgroundColor: '#08233d', borderRadius: 22, padding: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 16 }, eyebrow: { color: '#e8aa43', fontSize: 11, fontWeight: '800', letterSpacing: 2 }, title: { color: '#fff', fontSize: 32, fontWeight: '800', marginTop: 6 }, sub: { color: '#c8d3df', marginTop: 4 }, primary: { backgroundColor: '#e8aa43', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12 }, primaryText: { color: '#071d33', fontWeight: '800' }, form: { backgroundColor: '#fff', borderRadius: 18, padding: 20, gap: 10 }, overlay: { flex: 1, backgroundColor: 'rgba(4, 17, 30, 0.72)', alignItems: 'center', justifyContent: 'center', padding: 18 }, modalShell: { width: '92%', maxWidth: 780, maxHeight: '90%', backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 16 }, modalContent: { padding: 0 }, detailPanel: { backgroundColor: '#fff', padding: 22, gap: 11 }, detailHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }, formTitle: { color: '#08233d', fontSize: 22, fontWeight: '800', marginBottom: 4 }, field: { gap: 5, flex: 1 }, label: { color: '#506176', fontSize: 12, fontWeight: '700' }, input: { borderWidth: 1, borderColor: '#dbe1e8', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, color: '#172b42', backgroundColor: '#fbfcfd' }, readonly: { backgroundColor: '#edf1f5', color: '#66768a' }, multiline: { minHeight: 70, textAlignVertical: 'top' }, row: { flexDirection: 'row', gap: 10 }, half: { flex: 1 }, choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 }, choice: { borderWidth: 1, borderColor: '#dbe1e8', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 9 }, choiceActive: { backgroundColor: '#08233d', borderColor: '#08233d' }, choiceText: { color: '#506176' }, choiceTextActive: { color: '#fff', fontWeight: '700' }, setup: { color: '#607187', fontSize: 12, marginTop: 4 }, save: { backgroundColor: '#e8aa43', borderRadius: 11, padding: 14, alignItems: 'center', marginTop: 4 }, saveText: { color: '#071d33', fontWeight: '800' }, secondary: { alignSelf: 'flex-start', backgroundColor: '#08233d', borderRadius: 9, paddingHorizontal: 13, paddingVertical: 10, marginTop: 5 }, secondaryText: { color: '#fff', fontWeight: '800' }, close: { backgroundColor: '#edf1f5', borderRadius: 9, paddingHorizontal: 13, paddingVertical: 9 }, closeText: { color: '#243a52', fontWeight: '700' }, security: { backgroundColor: '#fff7e8', borderRadius: 12, padding: 14, gap: 5 }, securityTitle: { color: '#744b0d', fontWeight: '800' }, securityText: { color: '#715b39', lineHeight: 19 }, card: { backgroundColor: '#fff', borderRadius: 16, padding: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 2, borderColor: 'transparent' }, cardSelected: { borderColor: '#e8aa43' }, cardTitle: { color: '#08233d', fontSize: 17, fontWeight: '800' }, meta: { color: '#6c7b8d', marginTop: 5 }, tap: { color: '#a46c17', fontSize: 11, fontWeight: '700', marginTop: 7 }, badge: { color: '#18734a', fontWeight: '800', fontSize: 11 }, empty: { color: '#607187', textAlign: 'center', padding: 30 }, error: { color: '#b42318' } });
-Object.assign(styles, { dangerZone: { backgroundColor: '#fff0f0', borderRadius: 12, padding: 14, gap: 7 }, dangerTitle: { color: '#9e2b25', fontWeight: '800' }, dangerText: { color: '#7e4b48' }, dangerButton: { backgroundColor: '#b42318', borderRadius: 9, padding: 12, alignItems: 'center' }, dangerButtonText: { color: '#fff', fontWeight: '800' } });
+const styles = StyleSheet.create({ page: { flex: 1, backgroundColor: colors.background },
+  
+  content: { ...surfaces.content, gap: 16 },
+  
+  hero: { ...surfaces.card, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 16, padding: 24, borderRadius: 16, backgroundColor: '#FFFFFF', flexWrap: 'wrap' },
+  heroCopy: { flex: 1, minWidth: 0, flexShrink: 1 },
+  
+  eyebrow: { fontWeight: '800', fontSize: 10, letterSpacing: 1.4, color: colors.blue },
+  
+  title: { marginTop: 6, fontSize: 28, color: colors.ink, fontWeight: '700' },
+  
+  sub: { marginTop: 4, lineHeight: 21, color: colors.muted },
+  
+  primary: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, justifyContent: 'center', backgroundColor: colors.blue, minHeight: 44 },
+  
+  primaryText: { fontWeight: '800', color: '#FFFFFF' },
+  
+  form: { ...surfaces.card, backgroundColor: '#fff', padding: 20, gap: 10, borderRadius: 14 },
+  
+  overlay: { flex: 1, backgroundColor: 'rgba(4, 17, 30, 0.72)', alignItems: 'center', justifyContent: 'center', padding: 18 },
+  
+  modalShell: { width: '92%', maxWidth: 780, maxHeight: '90%', backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 24, shadowOffset: { width: 0, height: 12 },
+  
+  elevation: 16 },
+  
+  modalContent: { padding: 0 },
+  
+  detailPanel: { backgroundColor: '#fff', padding: 22, gap: 11 },
+  
+  detailHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 },
+  
+  formTitle: { fontSize: 22, marginBottom: 4, fontWeight: '700', color: colors.ink },
+  
+  field: { gap: 5, minWidth: 0, flexShrink: 0 },
+  
+  label: { color: '#506176', fontSize: 12, fontWeight: '700' },
+  
+  input: { ...surfaces.input, borderWidth: 1, borderColor: '#dbe1e8', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, color: '#172b42', backgroundColor: '#fbfcfd', fontSize: 14 },
+  
+  readonly: { backgroundColor: '#edf1f5', color: '#66768a' },
+  
+  multiline: { minHeight: 70, textAlignVertical: 'top' },
+  
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  
+  half: { flex: 1 },
+  
+  choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+  
+  choice: { borderWidth: 1, borderColor: '#dbe1e8', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 9 },
+  
+  choiceActive: { backgroundColor: '#203451', borderColor: '#203451' },
+  
+  choiceText: { color: '#506176' },
+  
+  choiceTextActive: { color: '#fff', fontWeight: '700' },
+  
+  setup: { color: '#607187', fontSize: 12, marginTop: 4 },
+  
+  save: { borderRadius: 11, padding: 14, alignItems: 'center', marginTop: 4, justifyContent: 'center', backgroundColor: colors.blue, minHeight: 44 },
+  
+  saveText: { fontWeight: '800', color: '#FFFFFF' },
+  
+  secondary: { alignSelf: 'flex-start', backgroundColor: '#203451', borderRadius: 9, paddingHorizontal: 13, paddingVertical: 10, marginTop: 5 },
+  
+  secondaryText: { color: '#fff', fontWeight: '800' },
+  
+  close: { backgroundColor: '#edf1f5', borderRadius: 9, paddingHorizontal: 13, paddingVertical: 9 },
+  
+  closeText: { color: '#243a52', fontWeight: '700' },
+  
+  security: { backgroundColor: '#fff7e8', borderRadius: 12, padding: 14, gap: 5 },
+  
+  securityTitle: { color: '#744b0d', fontWeight: '800' },
+  
+  securityText: { color: '#715b39', lineHeight: 19 },
+  
+  card: { ...surfaces.card, backgroundColor: '#fff', padding: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minWidth: 0, borderWidth: 1, borderRadius: 14, borderColor: colors.border },
+  
+  cardSelected: { borderColor: '#3563E9' },
+  
+  cardTitle: { color: '#203451', fontSize: 17, fontWeight: '800' },
+  
+  meta: { color: '#6c7b8d', marginTop: 5 },
+  
+  tap: { color: '#3563E9', fontSize: 11, fontWeight: '700', marginTop: 7 },
+  
+  badge: { color: '#18734a', fontWeight: '800', fontSize: 11 },
+  
+  empty: { color: '#607187', textAlign: 'center', padding: 30 },
+  
+  error: { color: '#b42318' } });
+Object.assign(styles, { dangerZone: { backgroundColor: '#fff0f0', borderRadius: 12, padding: 14, gap: 7 },
+  
+  dangerTitle: { color: '#9e2b25', fontWeight: '800' },
+  
+  dangerText: { color: '#7e4b48' },
+  
+  dangerButton: { backgroundColor: '#b42318', borderRadius: 9, padding: 12, alignItems: 'center' },
+  
+  dangerButtonText: { color: '#fff', fontWeight: '800' } });
