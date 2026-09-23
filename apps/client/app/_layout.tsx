@@ -28,9 +28,9 @@ export default function RootLayout() {
           >
             <Stack.Screen name="index" options={{ title: 'Shivora Technologies' }} />
             <Stack.Screen name="(auth)/login" options={{ title: 'Login' }} />
-            <Stack.Screen name="(admin)" options={{ title: 'Administration' }} />
-            <Stack.Screen name="(student)" options={{ title: 'Student Portal' }} />
-            <Stack.Screen name="(staff)" options={{ title: 'Employee Portal' }} />
+            <Stack.Screen name="admin" options={{ title: 'Administration' }} />
+            <Stack.Screen name="student" options={{ title: 'Student Portal' }} />
+            <Stack.Screen name="staff" options={{ title: 'Employee Portal' }} />
           </Stack>
         </AuthProvider>
       </QueryClientProvider>

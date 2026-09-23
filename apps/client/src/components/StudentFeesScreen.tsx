@@ -1,8 +1,53 @@
 import { colors, surfaces } from '../theme';
 import React from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
+
+type RazorpayOptions = {
+  key: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  prefill?: { name?: string; email?: string; contact?: string };
+  theme?: { color?: string };
+  handler: (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => void;
+  modal?: { ondismiss?: () => void };
+};
+
+type RazorpayCheckout = { open: () => void };
+
+declare global {
+  interface Window {
+    Razorpay?: new (options: RazorpayOptions) => RazorpayCheckout;
+  }
+}
+
+function loadRazorpayCheckout() {
+  if (Platform.OS !== 'web') {
+    return Promise.reject(new Error('Razorpay mobile checkout needs a native app build. Please use the web portal for now.'));
+  }
+  if (typeof window === 'undefined') return Promise.reject(new Error('Payment checkout is not available here.'));
+  if (window.Razorpay) return Promise.resolve(window.Razorpay);
+
+  return new Promise<NonNullable<Window['Razorpay']>>((resolve, reject) => {
+    const existing = document.getElementById('razorpay-checkout-script') as HTMLScriptElement | null;
+    if (existing) {
+      existing.addEventListener('load', () => window.Razorpay ? resolve(window.Razorpay) : reject(new Error('Razorpay checkout could not be loaded.')), { once: true });
+      existing.addEventListener('error', () => reject(new Error('Razorpay checkout could not be loaded.')), { once: true });
+      return;
+    }
+    const script = document.createElement('script');
+    script.id = 'razorpay-checkout-script';
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => window.Razorpay ? resolve(window.Razorpay) : reject(new Error('Razorpay checkout could not be loaded.'));
+    script.onerror = () => reject(new Error('Razorpay checkout could not be loaded.'));
+    document.body.appendChild(script);
+  });
+}
 
 function money(value: any) {
   return Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
@@ -15,9 +60,77 @@ function date(value: any) {
 
 export function StudentFeesScreen() {
   const fees = useQuery<any>({ queryKey: ['student-fees-me'], queryFn: async () => (await api.get('/fees/me')).data });
+  const [paymentModalVisible, setPaymentModalVisible] = React.useState(false);
+  const [amountText, setAmountText] = React.useState('');
+  const [paymentError, setPaymentError] = React.useState('');
+  const [paymentStarting, setPaymentStarting] = React.useState(false);
   const account = fees.data;
   const transactions = Array.isArray(account?.transactions) ? account.transactions : [];
   const adjustments = Array.isArray(account?.adjustments) ? account.adjustments : [];
+  const outstanding = Number(account?.outstanding || 0);
+
+  const openPaymentModal = () => {
+    setAmountText('');
+    setPaymentError('');
+    setPaymentModalVisible(true);
+  };
+
+  const closePaymentModal = () => {
+    if (!paymentStarting) setPaymentModalVisible(false);
+  };
+
+  const startOnlinePayment = async () => {
+    const amount = Number(amountText.trim());
+    if (!amountText.trim() || !Number.isFinite(amount) || amount <= 0) {
+      setPaymentError('Please enter a valid amount.');
+      return;
+    }
+    if (Math.round(amount * 100) !== amount * 100) {
+      setPaymentError('Amount can have maximum two decimal places.');
+      return;
+    }
+
+    setPaymentStarting(true);
+    setPaymentError('');
+    try {
+      const orderResponse = await api.post('/fees/online/orders', { feeAccountId: account.id, amount });
+      const order = orderResponse.data;
+      const Razorpay = await loadRazorpayCheckout();
+      const checkout = new Razorpay({
+        key: order.keyId,
+        amount: Math.round(Number(order.amount) * 100),
+        currency: order.currency || 'INR',
+        name: 'School Fee Payment',
+        description: `Fee payment for ${account?.student?.name || 'student'}`,
+        order_id: order.gatewayOrderId,
+        prefill: { name: account?.student?.name, email: account?.student?.email, contact: account?.student?.mobile },
+        theme: { color: colors.blue },
+        handler: async (response) => {
+          try {
+            await api.post('/fees/online/verify', {
+              orderId: order.orderId,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpaySignature: response.razorpay_signature,
+            });
+            setPaymentModalVisible(false);
+            setAmountText('');
+            await fees.refetch();
+            Alert.alert('Payment successful', 'Your fee payment has been registered successfully.');
+          } catch (error: any) {
+            setPaymentError(error?.response?.data?.message || 'Payment was received but verification is pending. Please refresh after some time.');
+          } finally {
+            setPaymentStarting(false);
+          }
+        },
+        modal: { ondismiss: () => setPaymentStarting(false) },
+      });
+      checkout.open();
+    } catch (error: any) {
+      setPaymentStarting(false);
+      setPaymentError(error?.response?.data?.message || error?.message || 'Online payment could not be started.');
+    }
+  };
 
   return <View style={s.page}>
     <ScrollView contentContainerStyle={s.content}>
@@ -44,6 +157,7 @@ export function StudentFeesScreen() {
               <View style={s.summaryCard}><Text style={s.summaryLabel}>Remaining</Text><Text style={[s.summaryValue, s.remaining]}>₹{money(account?.outstanding)}</Text></View>
               <View style={s.summaryCard}><Text style={s.summaryLabel}>Credit</Text><Text style={[s.summaryValue, s.credit]}>₹{money(account?.creditBalance)}</Text></View>
             </View>
+            {outstanding > 0 ? <TouchableOpacity accessibilityRole="button" disabled={paymentStarting} onPress={openPaymentModal} style={[s.payButton, paymentStarting && s.disabled]}><Text style={s.payButtonText}>{paymentStarting ? 'Opening payment…' : 'Pay Online'}</Text></TouchableOpacity> : <Text style={s.paidMessage}>No outstanding fee is due.</Text>}
             {adjustments.length ? <Text style={s.adjustment}>Adjustments included: ₹{money(adjustments.reduce((sum: number, item: any) => sum + Number(item.amount || 0), 0))}</Text> : null}
           </View>
 
@@ -56,6 +170,32 @@ export function StudentFeesScreen() {
           </View>) : <View style={s.state}><Text style={s.stateTitle}>No payment records yet</Text><Text style={s.muted}>Your fee payment receipts will appear here after a successful payment.</Text></View>}
         </>}
     </ScrollView>
+
+    <Modal visible={paymentModalVisible} transparent animationType="fade" onRequestClose={closePaymentModal}>
+      <View style={s.overlay}>
+        <View style={s.modalCard}>
+          <Text style={s.eyebrow}>RAZORPAY PAYMENT</Text>
+          <Text style={s.modalTitle}>Enter payment amount</Text>
+          <Text style={s.muted}>Enter the amount you want to pay. Any extra amount will be added to your credit balance.</Text>
+          <Text style={s.dueText}>Remaining fee: ₹{money(outstanding)}</Text>
+          <TextInput
+            autoFocus
+            keyboardType="decimal-pad"
+            value={amountText}
+            onChangeText={(value) => { setAmountText(value.replace(/[^0-9.]/g, '')); setPaymentError(''); }}
+            placeholder="Enter amount"
+            placeholderTextColor="#8A98A8"
+            editable={!paymentStarting}
+            style={s.amountInput}
+          />
+          {paymentError ? <Text style={s.error}>{paymentError}</Text> : null}
+          <View style={s.modalActions}>
+            <TouchableOpacity disabled={paymentStarting} onPress={closePaymentModal} style={s.cancelButton}><Text style={s.cancelText}>Cancel</Text></TouchableOpacity>
+            <TouchableOpacity disabled={paymentStarting} onPress={() => { void startOnlinePayment(); }} style={[s.confirmButton, paymentStarting && s.disabled]}><Text style={s.confirmText}>{paymentStarting ? 'Please wait…' : 'Continue to Pay'}</Text></TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
   </View>;
 }
 
@@ -79,6 +219,9 @@ const s = StyleSheet.create({
   paid: { color: '#18734A' },
   remaining: { color: '#B42318' },
   credit: { color: '#A66B1F' },
+  payButton: { backgroundColor: colors.blue, borderRadius: 10, minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 18, paddingHorizontal: 18 },
+  payButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+  paidMessage: { color: '#18734A', fontSize: 13, fontWeight: '700', marginTop: 18 },
   adjustment: { color: colors.muted, fontSize: 12, marginTop: 14 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { color: colors.ink, fontSize: 21, fontWeight: '800' },
@@ -100,4 +243,15 @@ const s = StyleSheet.create({
   muted: { color: colors.muted, fontSize: 13, lineHeight: 20 },
   error: { color: '#B42318', fontWeight: '700', textAlign: 'center' },
   retry: { color: colors.blue, fontWeight: '800', marginTop: 8 },
+  overlay: { flex: 1, backgroundColor: 'rgba(7, 26, 47, 0.58)', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  modalCard: { width: '100%', maxWidth: 480, backgroundColor: colors.surface, borderRadius: 16, padding: 24, gap: 12 },
+  modalTitle: { color: colors.ink, fontSize: 22, fontWeight: '800' },
+  dueText: { color: colors.ink, fontSize: 14, fontWeight: '800', marginTop: 4 },
+  amountInput: { borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 10, color: colors.ink, fontSize: 20, fontWeight: '700', minHeight: 52, paddingHorizontal: 14, marginTop: 4 },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 8 },
+  cancelButton: { minHeight: 44, borderRadius: 9, justifyContent: 'center', paddingHorizontal: 16, backgroundColor: '#EEF2F7' },
+  cancelText: { color: colors.ink, fontWeight: '800' },
+  confirmButton: { minHeight: 44, borderRadius: 9, justifyContent: 'center', paddingHorizontal: 16, backgroundColor: colors.blue },
+  confirmText: { color: '#FFFFFF', fontWeight: '800' },
+  disabled: { opacity: 0.6 },
 });

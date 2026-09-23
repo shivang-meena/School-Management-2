@@ -28,7 +28,7 @@ export default function Screen() {
   const compact = width < 700;
   const columns = width >= 1300 ? 3 : compact ? 1 : 2;
   const noticesList = Array.isArray(notices.data) ? notices.data.slice(0, 3) : [];
-  const open = (path: string) => router.push(`/(admin)/${path}` as any);
+  const open = (path: string) => router.push(`/admin/${path}` as any);
   const value = (query: { isLoading: boolean; isError: boolean }, display: string | number | undefined) => query.isLoading ? '…' : query.isError ? '—' : display ?? '—';
 
   return <ScrollView style={s.page} contentContainerStyle={[s.content, compact && { padding: 16 }]}>

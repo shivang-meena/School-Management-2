@@ -50,11 +50,11 @@ export default function LoginScreen() {
       });
 
       if (role === 'ADMIN') {
-        router.replace('/(admin)/dashboard');
+        router.replace('/admin/dashboard');
       } else if (role === 'EMPLOYEE') {
-        router.replace('/(staff)/dashboard');
+        router.replace('/staff/dashboard');
       } else {
-        router.replace('/(student)/dashboard');
+        router.replace('/student/dashboard');
       }
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Login failed. Please check credentials.';
@@ -66,9 +66,9 @@ export default function LoginScreen() {
   };
 
   const openCurrentPortal = () => {
-    if (user?.role === 'ADMIN') router.replace('/(admin)/dashboard');
-    else if (user?.role === 'EMPLOYEE') router.replace('/(staff)/dashboard');
-    else router.replace('/(student)/dashboard');
+    if (user?.role === 'ADMIN') router.replace('/admin/dashboard');
+    else if (user?.role === 'EMPLOYEE') router.replace('/staff/dashboard');
+    else router.replace('/student/dashboard');
   };
 
   return (

@@ -25,7 +25,7 @@ export function PortalLayout({ role }: { role: PortalRole }) {
           {!desktop ? <Pressable accessibilityRole="button" accessibilityLabel="Open navigation" accessibilityState={{ expanded: menuOpen }} style={s.menuButton} onPress={() => setMenuOpen(true)}><Text style={s.menuIcon}>☰</Text></Pressable> : null}
           <View style={s.heading}><Text style={s.breadcrumb}>SHIVORA TECHNOLOGIES</Text><Text numberOfLines={1} style={s.title}>{title}</Text></View>
           {width >= 720 ? <Text style={s.date}>{new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</Text> : null}
-          <Pressable accessibilityRole="link" accessibilityLabel="Open notice board" onPress={() => router.navigate(`/(${role})/notices` as any)} style={s.noticeButton}><Text style={s.noticeIcon}>◇</Text>{width >= 600 ? <Text style={s.noticeText}>Notices</Text> : null}</Pressable>
+          <Pressable accessibilityRole="link" accessibilityLabel="Open notice board" onPress={() => router.navigate(`/${role}/notices` as any)} style={s.noticeButton}><Text style={s.noticeIcon}>◇</Text>{width >= 600 ? <Text style={s.noticeText}>Notices</Text> : null}</Pressable>
           <View accessibilityLabel={`${name}, ${role === 'admin' ? 'Administrator' : role}`} style={s.avatar}><Text style={s.initial}>{name.charAt(0).toUpperCase()}</Text></View>
         </View>
         <View style={s.workspace}><Slot/></View>

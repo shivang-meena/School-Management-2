@@ -7,24 +7,25 @@ import type { UserProfile } from '@erp/contracts';
 
 export type PortalRole = 'admin' | 'student' | 'staff';
 export const ADMIN_NAV_LINKS = [
-  { href: '/(admin)/dashboard', label: 'Dashboard', icon: '◫', group: 'OVERVIEW' },
-  { href: '/(admin)/students', label: 'Students', icon: '◎', group: 'SCHOOL MANAGEMENT' },
-  { href: '/(admin)/staff', label: 'Employees', icon: '♙', group: 'SCHOOL MANAGEMENT' },
-  { href: '/(admin)/academics', label: 'Academics', icon: '▤', group: 'SCHOOL MANAGEMENT' },
-  { href: '/(admin)/attendance', label: 'Attendance', icon: '✓', group: 'SCHOOL MANAGEMENT' },
-  { href: '/(admin)/timetable', label: 'Timetable', icon: '▦', group: 'SCHOOL MANAGEMENT' },
-  { href: '/(admin)/exams', label: 'Exams & Marks', icon: '▧', group: 'SCHOOL MANAGEMENT' },
-  { href: '/(admin)/fees', label: 'Fee Management', icon: '₹', group: 'FINANCE' },
-  { href: '/(admin)/salary', label: 'Payroll', icon: '▣', group: 'FINANCE' },
-  { href: '/(admin)/accounts', label: 'Accounts', icon: '≡', group: 'FINANCE' },
-  { href: '/(admin)/notices', label: 'Notice Board', icon: '◇', group: 'COMMUNICATION' },
+  { href: '/admin/dashboard', label: 'Dashboard', icon: '◫', group: 'OVERVIEW' },
+  { href: '/admin/students', label: 'Students', icon: '◎', group: 'SCHOOL MANAGEMENT' },
+  { href: '/admin/staff', label: 'Employees', icon: '♙', group: 'SCHOOL MANAGEMENT' },
+  { href: '/admin/academics', label: 'Academics', icon: '▤', group: 'SCHOOL MANAGEMENT' },
+  { href: '/admin/attendance', label: 'Attendance', icon: '✓', group: 'SCHOOL MANAGEMENT' },
+  { href: '/admin/timetable', label: 'Timetable', icon: '▦', group: 'SCHOOL MANAGEMENT' },
+  { href: '/admin/exams', label: 'Exams & Marks', icon: '▧', group: 'SCHOOL MANAGEMENT' },
+  { href: '/admin/fees', label: 'Fee Management', icon: '₹', group: 'FINANCE' },
+  { href: '/admin/salary', label: 'Payroll', icon: '▣', group: 'FINANCE' },
+  { href: '/admin/accounts', label: 'Accounts', icon: '≡', group: 'FINANCE' },
+  { href: '/admin/notices', label: 'Notice Board', icon: '◇', group: 'COMMUNICATION' },
+  { href: '/admin/admission-requests', label: 'Admission Requests', icon: '✦', group: 'COMMUNICATION' },
 ];
 export function getPortalLinks(role: PortalRole, user?: UserProfile | null) {
   if (role === 'admin') return ADMIN_NAV_LINKS;
   const items = role === 'student'
     ? [['dashboard', 'Dashboard', '◫'], ['attendance', 'My Attendance', '✓'], ['timetable', 'Timetable', '▦'], ['calendar', 'Academic Calendar', '▤'], ['results', 'My Results', '▧'], ['fees', 'My Fees', '₹'], ['notices', 'Notice Board', '◇']]
     : [['dashboard', 'Dashboard', '◫'], ['attendance', 'My Attendance', '✓'], ...(user?.canMarkStudentAttendance ? [['student-attendance', 'Student Attendance', '✓']] : []), ...(user?.canMarkEmployeeAttendance ? [['employee-attendance', 'Employee Attendance', '✓']] : []), ['timetable', 'Teaching Timetable', '▦'], ['calendar', 'Academic Calendar', '▤'], ['salary', 'My Salary', '₹'], ['notices', 'Notice Board', '◇']];
-  return items.map(([path, label, icon]) => ({ href: `/(${role})/${path}`, label, icon, group: 'MY WORKSPACE' }));
+  return items.map(([path, label, icon]) => ({ href: `/${role}/${path}`, label, icon, group: 'MY WORKSPACE' }));
 }
 export function AdminNav({ role = 'admin', onNavigate, onClose }: { role?: PortalRole; onNavigate?: () => void; onClose?: () => void }) {
   const router = useRouter();
