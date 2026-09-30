@@ -15,12 +15,9 @@ export class AuthService {
       include: { student: true, employee: true },
     });
     if (!user || user.status !== 'ACTIVE') throw new UnauthorizedException('Invalid credentials or inactive account');
-    if (user.lockedUntil && user.lockedUntil > new Date()) throw new UnauthorizedException('Account temporarily locked');
     if (dto.role && user.role !== dto.role) throw new UnauthorizedException(`Account is not registered as ${dto.role}`);
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) {
-      const attempts = user.loginAttempts + 1;
-      await this.prisma.user.update({ where: { id: user.id }, data: { loginAttempts: attempts, lockedUntil: attempts >= 5 ? new Date(Date.now() + 15 * 60_000) : null } });
       throw new UnauthorizedException('Invalid credentials');
     }
     await this.prisma.user.update({ where: { id: user.id }, data: { loginAttempts: 0, lockedUntil: null, mustChangePassword: false } });
