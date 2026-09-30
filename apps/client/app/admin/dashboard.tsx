@@ -1,69 +1,310 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, Pressable, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useStudents, useStaff, useAccountsOverview, useAcademics, useNotices } from '../../src/hooks/useQueries';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  useStudents,
+  useStaff,
+  useAccountsOverview,
+  useAcademics,
+  useNotices,
+} from '../../src/hooks/useQueries';
 import { useAuth } from '../../src/hooks/useAuth';
-import { colors, surfaces } from '../../src/theme';
+import { colors, radius, shadow, surfaces } from '../../src/theme';
 
-const actions = [
-  { title: 'Students', copy: 'Admissions & student profiles', href: 'students', icon: '◎', tint: '#EDF2FF', color: '#3563E9' },
-  { title: 'Employees', copy: 'People, roles & assignments', href: 'staff', icon: '♙', tint: '#F2EDFF', color: '#8159C6' },
-  { title: 'Attendance', copy: 'Your daily school register', href: 'attendance', icon: '✓', tint: '#E9F7F1', color: '#238565' },
-  { title: 'Fee Management', copy: 'Fees, receipts & collections', href: 'fees', icon: '₹', tint: '#FFF4E5', color: '#AF761F' },
-  { title: 'Timetable', copy: 'Classes, periods & teachers', href: 'timetable', icon: '▦', tint: '#E9F5FC', color: '#327DAD' },
-  { title: 'Exams & Marks', copy: 'Assessments & student results', href: 'exams', icon: '▧', tint: '#FDEEF3', color: '#BB6080' },
+interface ActionItem {
+  title: string;
+  copy: string;
+  href: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  tint: string;
+  color: string;
+  accent: string;
+}
+
+const actions: ActionItem[] = [
+  { title: 'Students',      copy: 'Admissions & student profiles',        href: 'students',   icon: 'people-outline',        tint: 'rgba(99,102,241,0.12)',  color: '#818cf8', accent: 'rgba(99,102,241,0.35)'  },
+  { title: 'Employees',     copy: 'Faculty, roles & assignments',         href: 'staff',      icon: 'briefcase-outline',     tint: 'rgba(167,139,250,0.12)', color: '#c4b5fd', accent: 'rgba(167,139,250,0.35)' },
+  { title: 'Attendance',    copy: 'Daily student & staff register',       href: 'attendance', icon: 'checkbox-outline',      tint: 'rgba(52,211,153,0.12)',  color: '#34d399', accent: 'rgba(52,211,153,0.35)'  },
+  { title: 'Fee Management',copy: 'Structures, dues & receipts',         href: 'fees',       icon: 'card-outline',          tint: 'rgba(251,191,36,0.12)',  color: '#fbbf24', accent: 'rgba(251,191,36,0.35)'  },
+  { title: 'Timetable',     copy: 'Classes, periods & schedules',         href: 'timetable',  icon: 'time-outline',          tint: 'rgba(56,189,248,0.12)',  color: '#38bdf8', accent: 'rgba(56,189,248,0.35)'  },
+  { title: 'Exams & Marks', copy: 'Assessments & student results',       href: 'exams',      icon: 'document-text-outline', tint: 'rgba(248,113,113,0.12)', color: '#f87171', accent: 'rgba(248,113,113,0.35)' },
 ];
+
 const money = (value: unknown) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
 
 export default function Screen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { user } = useAuth();
-  const students = useStudents();
+  const students  = useStudents();
   const employees = useStaff();
-  const accounts = useAccountsOverview();
+  const accounts  = useAccountsOverview();
   const academics = useAcademics();
-  const notices = useNotices();
-  const current = academics.data?.academicYears?.find((year: any) => year.isCurrent);
-  const compact = width < 700;
-  const columns = width >= 1300 ? 3 : compact ? 1 : 2;
+  const notices   = useNotices();
+
+  const current  = academics.data?.academicYears?.find((y: any) => y.isCurrent);
+  const compact  = width < 700;
+  const columns  = width >= 1300 ? 3 : compact ? 1 : 2;
   const noticesList = Array.isArray(notices.data) ? notices.data.slice(0, 3) : [];
   const open = (path: string) => router.push(`/admin/${path}` as any);
-  const value = (query: { isLoading: boolean; isError: boolean }, display: string | number | undefined) => query.isLoading ? '…' : query.isError ? '—' : display ?? '—';
+  const val  = (q: { isLoading: boolean; isError: boolean }, d: string | number | undefined) =>
+    q.isLoading ? '…' : q.isError ? '—' : d ?? '—';
 
-  return <ScrollView style={s.page} contentContainerStyle={[s.content, compact && { padding: 16 }]}>
-    <View style={s.pageHeading}><View><Text style={s.pageTitle}>School overview</Text><Text style={s.subtitle}>A little clarity for a great school day.</Text></View><View style={s.yearBadge}><View style={s.yearDot}/><Text style={s.yearText}>{current?.name || 'Academic workspace'}</Text></View></View>
-    <View style={[s.hero, compact && { padding: 24 }]}>
-      <View style={s.heroCopy}><Text style={s.eyebrow}>YOUR CAMPUS, CONNECTED</Text><Text style={[s.welcome, compact && { fontSize: 27, lineHeight: 35 }]}>Welcome back, {user?.name?.split(' ')[0] || 'Admin'}.</Text><Text style={s.heroDescription}>Everything you need to keep your school moving forward, together in one place.</Text><Pressable accessibilityRole="link" onPress={() => open('attendance')} style={s.heroButton}><Text style={s.heroButtonText}>Open daily attendance  →</Text></Pressable></View>
-      {!compact ? <View style={s.heroArt} accessible={false}><View style={s.artCircle}/><View style={s.artCard}><Text style={s.artIcon}>▤</Text><Text style={s.artHeading}>Every student.</Text><Text style={s.artHeading}>Every possibility.</Text><View style={s.artLine}/><View style={[s.artLine, { width: 65, opacity: 0.5 }]}/></View><View style={s.artBadge}><Text style={s.artBadgeText}>✓  Ready for a new day</Text></View></View> : null}
-    </View>
-    <View style={s.metrics}>
-      <Metric label="Students" value={value(students, students.data?.length)} note={students.isError ? 'Unable to load students' : 'Student directory'} icon="◎" color="#3563E9" tint="#EDF2FF" onPress={() => open('students')} compact={compact}/>
-      <Metric label="Employees" value={value(employees, employees.data?.length)} note={employees.isError ? 'Unable to load employees' : 'Our school team'} icon="♙" color="#8159C6" tint="#F2EDFF" onPress={() => open('staff')} compact={compact}/>
-      <Metric label="Recorded income" value={value(accounts, accounts.data ? money(accounts.data.income) : undefined)} note={accounts.isError ? 'Unable to load accounts' : 'School accounts'} icon="₹" color="#238565" tint="#E9F7F1" onPress={() => open('accounts')} compact={compact}/>
-      <Metric label="Ledger balance" value={value(accounts, accounts.data ? money(accounts.data.balance) : undefined)} note={accounts.isError ? 'Unable to load accounts' : 'Income less expenses'} icon="▣" color="#AF761F" tint="#FFF4E5" onPress={() => open('accounts')} compact={compact}/>
-    </View>
-    <View style={[s.lower, width < 1200 && { flexDirection: 'column' }]}>
-      <View style={s.modules}><View style={s.sectionHeading}><View><Text style={s.sectionTitle}>School management</Text><Text style={s.subtitle}>Your everyday essentials, a click away.</Text></View></View>
-        <View style={s.grid}>{actions.map(action => <View key={action.href} style={{ width: columns === 3 ? '33.333%' : columns === 2 ? '50%' : '100%', padding: 6 }}><Pressable accessibilityRole="link" accessibilityLabel={`Open ${action.title}`} onPress={() => open(action.href)} style={({ pressed }) => [s.moduleCard, pressed && { opacity: 0.75, borderColor: action.color }]}><View style={s.cardTop}><View style={[s.moduleIcon, { backgroundColor: action.tint }]}><Text style={[s.symbol, { color: action.color }]}>{action.icon}</Text></View><Text style={s.arrow}>↗</Text></View><Text style={s.cardTitle}>{action.title}</Text><Text style={s.cardCopy}>{action.copy}</Text></Pressable></View>)}</View>
-        <View style={s.shortcuts}>{[['Academic setup', 'academics'], ['Payroll', 'salary'], ['Accounts', 'accounts']].map(([label, path]) => <Pressable key={path} accessibilityRole="link" onPress={() => open(path)} style={s.shortcut}><Text style={s.shortcutText}>{label}  →</Text></Pressable>)}</View>
+  return (
+    <ScrollView
+      style={s.page}
+      contentContainerStyle={[s.content, compact && { padding: 16 }]}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* ── Ambient glow ── */}
+      <View style={s.glowOrb} pointerEvents="none" />
+
+      {/* ── Page Heading ── */}
+      <View style={s.pageHeading}>
+        <View>
+          <Text style={s.pageTitle}>Institutional Overview</Text>
+          <Text style={s.subtitle}>Arihant Public School administration center.</Text>
+        </View>
+        <View style={s.yearBadge}>
+          <View style={s.yearDot} />
+          <Text style={s.yearText}>{current?.name || 'Academic Session 2026–27'}</Text>
+        </View>
       </View>
-      <View style={[s.noticePanel, width < 1200 && { width: '100%' }]}><View style={s.noticeHeading}><View style={s.smallIcon}><Text style={s.noticeSymbol}>◇</Text></View><Text style={s.sectionTitle}>Notice board</Text></View><Text style={s.subtitle}>The latest from your school.</Text>
-        {notices.isLoading ? <Text style={s.empty}>Loading school notices…</Text> : notices.isError ? <View style={s.emptyState}><Text style={s.emptyTitle}>Notices couldn't be loaded</Text><Pressable accessibilityRole="button" onPress={() => notices.refetch()}><Text style={s.textLink}>Try again →</Text></Pressable></View> : noticesList.length ? noticesList.map((notice: any, index: number) => <Pressable accessibilityRole="link" key={notice.id || index} onPress={() => open('notices')} style={s.notice}><Text style={s.noticeAudience}>{notice.audience ? String(notice.audience).replace(/_/g, ' ') : 'SCHOOL UPDATE'}</Text><Text style={s.noticeTitle}>{notice.title || 'School announcement'}</Text><Text numberOfLines={2} style={s.noticeCopy}>{notice.message || notice.content || notice.description || 'Open the notice board for details.'}</Text></Pressable>) : <View style={s.emptyState}><Text style={s.emptySymbol}>▤</Text><Text style={s.emptyTitle}>A fresh notice board</Text><Text style={s.empty}>Publish an announcement to keep your school community informed.</Text></View>}
-        <Pressable accessibilityRole="link" onPress={() => open('notices')} style={s.noticeFooter}><Text style={s.textLink}>View notice board  →</Text></Pressable>
+
+      {/* ── Hero Banner ── */}
+      <View style={[s.hero, compact && { padding: 22 }]}>
+        <View style={s.heroGlow} pointerEvents="none" />
+        <View style={s.heroCopy}>
+          <View style={s.heroPill}>
+            <Ionicons name="sparkles" size={11} color={colors.blueLight} />
+            <Text style={s.eyebrow}>CAMPUS CONTROL CENTER</Text>
+          </View>
+          <Text style={[s.welcome, compact && { fontSize: 24, lineHeight: 32 }]}>
+            Welcome back, {user?.name?.split(' ')[0] || 'Admin'}.
+          </Text>
+          <Text style={s.heroDesc}>
+            Manage student registrations, employee rosters, automated fees, and daily attendance in one place.
+          </Text>
+          <Pressable accessibilityRole="link" onPress={() => open('attendance')} style={s.heroBtn}>
+            <Text style={s.heroBtnText}>Mark Daily Attendance</Text>
+            <Ionicons name="arrow-forward" size={14} color="#ffffff" />
+          </Pressable>
+        </View>
+        {!compact ? (
+          <View style={s.heroArt} accessible={false}>
+            <View style={s.artCircle} />
+            <View style={s.artCard}>
+              <Ionicons name="school" size={28} color={colors.blueLight} style={{ marginBottom: 8 }} />
+              <Text style={s.artHeading}>Every student.</Text>
+              <Text style={s.artHeading}>Every possibility.</Text>
+              <View style={s.artLine} />
+              <View style={[s.artLine, { width: 50, opacity: 0.4 }]} />
+            </View>
+            <View style={s.artBadge}>
+              <Ionicons name="checkmark-circle" size={12} color={colors.success} />
+              <Text style={s.artBadgeText}>Campus Online</Text>
+            </View>
+          </View>
+        ) : null}
       </View>
-    </View>
-    <Text style={s.footer}>SHIVORA TECHNOLOGIES  ·  Technology for better workflows.</Text>
-  </ScrollView>;
+
+      {/* ── Metrics Row ── */}
+      <View style={s.metrics}>
+        {[
+          { label: 'Enrolled Students', value: val(students, students.data?.length),      note: 'Active roster',        icon: 'people-outline'    as const, color: '#818cf8', tint: 'rgba(99,102,241,0.15)',  path: 'students'  },
+          { label: 'Faculty & Staff',   value: val(employees, employees.data?.length),    note: 'Teachers & employees', icon: 'briefcase-outline' as const, color: '#c4b5fd', tint: 'rgba(167,139,250,0.15)', path: 'staff'     },
+          { label: 'Recorded Income',   value: val(accounts,  accounts.data ? money(accounts.data.income) : undefined),  note: 'Academic revenue', icon: 'wallet-outline'    as const, color: '#34d399', tint: 'rgba(52,211,153,0.15)',  path: 'accounts'  },
+          { label: 'Ledger Balance',    value: val(accounts,  accounts.data ? money(accounts.data.balance) : undefined), note: 'School balance',   icon: 'pie-chart-outline' as const, color: '#fbbf24', tint: 'rgba(251,191,36,0.15)',  path: 'accounts'  },
+        ].map(m => (
+          <Pressable
+            key={m.label}
+            accessibilityRole="link"
+            onPress={() => open(m.path)}
+            style={[s.metric, compact && { flexBasis: '46%', minWidth: 140 }]}
+          >
+            <View style={s.metricTop}>
+              <View style={[s.metricIcon, { backgroundColor: m.tint }]}>
+                <Ionicons name={m.icon} size={18} color={m.color} />
+              </View>
+              <Ionicons name="chevron-forward" size={13} color="rgba(255,255,255,0.20)" />
+            </View>
+            <Text style={s.metricLabel}>{m.label}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={[s.metricValue, { color: m.color }]}>{m.value}</Text>
+            <Text style={s.metricNote}>{m.note}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* ── Lower: Modules + Notices ── */}
+      <View style={[s.lower, width < 1200 && { flexDirection: 'column' }]}>
+        <View style={s.modules}>
+          <View style={s.sectionHead}>
+            <Text style={s.sectionTitle}>School Management Modules</Text>
+            <Text style={s.subtitle}>Quick access to your core operations.</Text>
+          </View>
+
+          <View style={s.grid}>
+            {actions.map(action => (
+              <View
+                key={action.href}
+                style={{ width: columns === 3 ? '33.333%' : columns === 2 ? '50%' : '100%', padding: 6 }}
+              >
+                <Pressable
+                  accessibilityRole="link"
+                  accessibilityLabel={`Open ${action.title}`}
+                  onPress={() => open(action.href)}
+                  style={({ pressed }) => [s.moduleCard, pressed && { opacity: 0.75, borderColor: action.accent }]}
+                >
+                  {/* Accent left border */}
+                  <View style={[s.moduleAccent, { backgroundColor: action.color }]} />
+                  <View style={s.moduleTop}>
+                    <View style={[s.moduleIconWrap, { backgroundColor: action.tint }]}>
+                      <Ionicons name={action.icon} size={20} color={action.color} />
+                    </View>
+                    <Ionicons name="arrow-forward" size={14} color="rgba(255,255,255,0.20)" />
+                  </View>
+                  <Text style={s.moduleTitle}>{action.title}</Text>
+                  <Text style={s.moduleCopy}>{action.copy}</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+
+          {/* Shortcuts */}
+          <View style={s.shortcuts}>
+            {[['Academic Setup', 'academics'], ['Salary Payroll', 'salary'], ['Accounts Ledger', 'accounts']].map(([label, path]) => (
+              <Pressable key={path} accessibilityRole="link" onPress={() => open(path)} style={s.shortcut}>
+                <Text style={s.shortcutText}>{label} →</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        {/* ── Notice Panel ── */}
+        <View style={[s.noticePanel, width < 1200 && { width: '100%' }]}>
+          <View style={s.noticeHead}>
+            <View style={s.noticeIcon}>
+              <Ionicons name="megaphone-outline" size={15} color={colors.blueLight} />
+            </View>
+            <Text style={s.sectionTitle}>Notice Board</Text>
+          </View>
+          <Text style={s.subtitle}>Latest updates from the school community.</Text>
+
+          {notices.isLoading ? (
+            <Text style={s.empty}>Loading announcements…</Text>
+          ) : notices.isError ? (
+            <View style={s.emptyState}>
+              <Text style={s.emptyTitle}>Unable to load notices</Text>
+              <Pressable accessibilityRole="button" onPress={() => notices.refetch()}>
+                <Text style={s.textLink}>Try again →</Text>
+              </Pressable>
+            </View>
+          ) : noticesList.length ? (
+            noticesList.map((notice: any, i: number) => (
+              <Pressable key={notice.id || i} accessibilityRole="link" onPress={() => open('notices')} style={s.notice}>
+                <Text style={s.noticeAudience}>{notice.audience ? String(notice.audience).replace(/_/g, ' ') : 'ALL COMMUNITY'}</Text>
+                <Text style={s.noticeTitle}>{notice.title || 'Announcement'}</Text>
+                <Text numberOfLines={2} style={s.noticeCopy}>{notice.message || notice.content || 'Open notice board.'}</Text>
+              </Pressable>
+            ))
+          ) : (
+            <View style={s.emptyState}>
+              <Ionicons name="notifications-off-outline" size={32} color="rgba(255,255,255,0.15)" style={{ marginBottom: 8 }} />
+              <Text style={s.emptyTitle}>Notice board is clear</Text>
+              <Text style={s.empty}>Publish announcements to broadcast to staff or students.</Text>
+            </View>
+          )}
+
+          <Pressable accessibilityRole="link" onPress={() => open('notices')} style={s.noticeFooter}>
+            <Text style={s.textLink}>Open Full Notice Board →</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <Text style={s.footer}>ARIHANT PUBLIC SCHOOL · Unified ERP System</Text>
+    </ScrollView>
+  );
 }
-function Metric({ label, value, note, icon, color, tint, onPress, compact }: { label: string; value: string | number; note: string; icon: string; color: string; tint: string; onPress: () => void; compact: boolean }) {
-  return <Pressable accessibilityRole="link" accessibilityLabel={`${label}: ${value}. ${note}`} onPress={onPress} style={[s.metric, compact && { flexBasis: '45%', minWidth: 130 }]}><View style={s.cardTop}><View style={[s.metricIcon, { backgroundColor: tint }]}><Text style={[s.symbol, { color }]}>{icon}</Text></View><Text style={s.arrow}>↗</Text></View><Text style={s.metricLabel}>{label}</Text><Text adjustsFontSizeToFit numberOfLines={1} style={s.metricValue}>{value}</Text><Text style={s.metricNote}>{note}</Text></Pressable>;
-}
+
 const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.background }, content: { ...surfaces.content, padding: 28, gap: 24 }, pageHeading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }, pageTitle: { fontSize: 25, fontWeight: '800', color: colors.ink }, subtitle: { color: colors.muted, fontSize: 12, lineHeight: 19, marginTop: 5 }, yearBadge: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 9, paddingHorizontal: 13, backgroundColor: '#fff', borderWidth: 1, borderColor: colors.border, borderRadius: 8 }, yearDot: { width: 6, height: 6, borderRadius: 4, backgroundColor: '#309A79' }, yearText: { fontSize: 11, color: colors.ink, fontWeight: '600' },
-  hero: { backgroundColor: '#E7EEFF', borderWidth: 1, borderColor: '#DBE5FE', borderRadius: 20, padding: 32, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', gap: 12 }, heroCopy: { flex: 1 }, eyebrow: { fontSize: 9, color: colors.blue, letterSpacing: 1.8, fontWeight: '800' }, welcome: { color: '#233F76', fontSize: 32, lineHeight: 40, fontWeight: '800', marginTop: 14 }, heroDescription: { color: '#647CA4', fontSize: 13, lineHeight: 22, maxWidth: 440, marginTop: 10 }, heroButton: { backgroundColor: colors.blue, alignSelf: 'flex-start', borderRadius: 9, paddingHorizontal: 16, paddingVertical: 13, marginTop: 23 }, heroButtonText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  heroArt: { width: 220, height: 180, alignItems: 'center', justifyContent: 'center' }, artCircle: { position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: '#D6E2FF' }, artCard: { backgroundColor: '#fff', width: 154, padding: 20, borderRadius: 14, transform: [{ rotate: '-7deg' }] }, artIcon: { color: colors.blue, fontSize: 29, marginBottom: 9 }, artHeading: { color: '#345387', fontSize: 12, fontWeight: '700', lineHeight: 18 }, artLine: { width: 90, height: 5, borderRadius: 4, backgroundColor: '#DCE6FF', marginTop: 8 }, artBadge: { position: 'absolute', bottom: 2, right: -4, backgroundColor: '#fff', borderRadius: 9, padding: 11, borderWidth: 1, borderColor: '#DCE6FF' }, artBadgeText: { color: '#238565', fontSize: 10, fontWeight: '700' },
-  metrics: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 }, metric: { ...surfaces.card, backgroundColor: '#fff', borderRadius: 15, padding: 18, flex: 1, minWidth: 180 }, cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, metricIcon: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center' }, symbol: { fontSize: 23 }, arrow: { color: '#96A5BE', fontSize: 19 }, metricLabel: { color: colors.muted, fontSize: 11, marginTop: 17, fontWeight: '600' }, metricValue: { color: colors.ink, fontSize: 27, fontWeight: '800', marginTop: 6 }, metricNote: { color: '#94A0B5', fontSize: 10, marginTop: 8 },
-  lower: { flexDirection: 'row', gap: 24 }, modules: { flex: 1, minWidth: 0 }, sectionHeading: { marginBottom: 12 }, sectionTitle: { color: colors.ink, fontSize: 16, fontWeight: '700' }, grid: { flexDirection: 'row', flexWrap: 'wrap', margin: -6 }, moduleCard: { ...surfaces.card, flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 18 }, moduleIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, cardTitle: { color: colors.ink, fontSize: 13, fontWeight: '700', marginTop: 18 }, cardCopy: { color: colors.muted, fontSize: 11, lineHeight: 18, marginTop: 5 }, shortcuts: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 16 }, shortcut: { backgroundColor: '#E9EEF7', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8 }, shortcutText: { color: '#5C7093', fontSize: 11, fontWeight: '600' },
-  noticePanel: { ...surfaces.card, width: 290, backgroundColor: '#fff', borderRadius: 16, padding: 22, alignSelf: 'flex-start' }, noticeHeading: { flexDirection: 'row', alignItems: 'center', gap: 10 }, smallIcon: { backgroundColor: colors.paleBlue, width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center' }, noticeSymbol: { color: colors.blue, fontSize: 22 }, notice: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 18, marginTop: 18 }, noticeAudience: { fontSize: 8, letterSpacing: 1.2, color: colors.blue, fontWeight: '700' }, noticeTitle: { color: colors.ink, fontSize: 13, fontWeight: '700', marginTop: 7 }, noticeCopy: { fontSize: 11, color: colors.muted, lineHeight: 18, marginTop: 5 }, emptyState: { alignItems: 'center', paddingVertical: 32 }, emptySymbol: { fontSize: 40, color: '#BCCBE5', marginBottom: 12 }, emptyTitle: { color: colors.ink, fontSize: 13, fontWeight: '600' }, empty: { color: colors.muted, fontSize: 12, lineHeight: 20, textAlign: 'center', marginTop: 10 }, noticeFooter: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 16, marginTop: 16 }, textLink: { fontSize: 12, fontWeight: '700', color: colors.blue, marginTop: 4 }, footer: { textAlign: 'center', color: '#8C9BB2', fontSize: 9, letterSpacing: 0.8, paddingTop: 8 },
+  page: { flex: 1, backgroundColor: colors.canvas },
+  content: { ...surfaces.content, padding: 26, gap: 24 },
+
+  // ── Orb ──────────────────────────────────────────────────────
+  glowOrb: {
+    position: 'absolute',
+    width: 600,
+    height: 600,
+    borderRadius: 300,
+    top: -200,
+    right: -150,
+    backgroundColor: 'rgba(99,102,241,0.08)',
+  },
+
+  // ── Page Heading ─────────────────────────────────────────────
+  pageHeading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
+  pageTitle: { fontSize: 24, fontWeight: '900', color: '#f0f6ff', letterSpacing: -0.4 },
+  subtitle: { color: 'rgba(255,255,255,0.40)', fontSize: 13, marginTop: 3 },
+  yearBadge: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 7, paddingHorizontal: 12, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', borderRadius: radius.full, ...shadow.sm },
+  yearDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success },
+  yearText: { fontSize: 12, color: '#f0f6ff', fontWeight: '700' },
+
+  // ── Hero ─────────────────────────────────────────────────────
+  hero: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: radius.xl, padding: 32, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', gap: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', ...shadow.lg },
+  heroGlow: { position: 'absolute', width: 400, height: 400, borderRadius: 200, right: -80, top: -120, backgroundColor: 'rgba(99,102,241,0.15)' },
+  heroCopy: { flex: 1 },
+  heroPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(99,102,241,0.15)', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.full, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(99,102,241,0.30)' },
+  eyebrow: { fontSize: 10, color: colors.blueLight, letterSpacing: 1.5, fontWeight: '800' },
+  welcome: { color: '#f0f6ff', fontSize: 28, lineHeight: 36, fontWeight: '900', letterSpacing: -0.5 },
+  heroDesc: { color: 'rgba(255,255,255,0.50)', fontSize: 13, lineHeight: 21, maxWidth: 460, marginTop: 8 },
+  heroBtn: { backgroundColor: colors.primary, alignSelf: 'flex-start', borderRadius: radius.md, paddingHorizontal: 16, paddingVertical: 11, marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 8, ...shadow.sm },
+  heroBtnText: { color: '#ffffff', fontSize: 12, fontWeight: '800' },
+  heroArt: { width: 180, height: 150, alignItems: 'center', justifyContent: 'center' },
+  artCircle: { position: 'absolute', width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(99,102,241,0.18)' },
+  artCard: { backgroundColor: 'rgba(255,255,255,0.08)', width: 140, padding: 16, borderRadius: radius.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', transform: [{ rotate: '-5deg' }], ...shadow.md },
+  artHeading: { color: '#f0f6ff', fontSize: 11, fontWeight: '800', lineHeight: 16 },
+  artLine: { width: 80, height: 3, borderRadius: 2, backgroundColor: colors.blueLight, marginTop: 8 },
+  artBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', ...shadow.sm },
+  artBadgeText: { color: colors.success, fontSize: 10, fontWeight: '800' },
+
+  // ── Metrics ───────────────────────────────────────────────────
+  metrics: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
+  metric: { ...surfaces.card, padding: 18, flex: 1, minWidth: 180 },
+  metricTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  metricIcon: { width: 38, height: 38, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  metricLabel: { color: 'rgba(255,255,255,0.40)', fontSize: 11, marginTop: 14, fontWeight: '700' },
+  metricValue: { fontSize: 26, fontWeight: '900', marginTop: 4, letterSpacing: -0.5 },
+  metricNote: { color: 'rgba(255,255,255,0.25)', fontSize: 10, marginTop: 4 },
+
+  // ── Lower ────────────────────────────────────────────────────
+  lower: { flexDirection: 'row', gap: 24 },
+  modules: { flex: 1, minWidth: 0 },
+  sectionHead: { marginBottom: 12 },
+  sectionTitle: { color: '#f0f6ff', fontSize: 16, fontWeight: '800', letterSpacing: -0.2 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', margin: -6 },
+  moduleCard: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: radius.lg, padding: 18, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', overflow: 'hidden', ...shadow.sm },
+  moduleAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, borderRadius: 2 },
+  moduleTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  moduleIconWrap: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  moduleTitle: { color: '#f0f6ff', fontSize: 14, fontWeight: '800', marginTop: 14 },
+  moduleCopy: { color: 'rgba(255,255,255,0.40)', fontSize: 11, lineHeight: 17, marginTop: 4 },
+  shortcuts: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 16 },
+  shortcut: { backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 14, paddingVertical: 9, borderRadius: radius.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  shortcutText: { color: colors.blueLight, fontSize: 12, fontWeight: '700' },
+
+  // ── Notice Panel ─────────────────────────────────────────────
+  noticePanel: { ...surfaces.card, padding: 22, width: 300, alignSelf: 'flex-start' },
+  noticeHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  noticeIcon: { backgroundColor: 'rgba(99,102,241,0.15)', width: 30, height: 30, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  notice: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)', paddingTop: 14, marginTop: 14 },
+  noticeAudience: { fontSize: 9, letterSpacing: 1.2, color: colors.blueLight, fontWeight: '800' },
+  noticeTitle: { color: '#f0f6ff', fontSize: 13, fontWeight: '800', marginTop: 4 },
+  noticeCopy: { fontSize: 11, color: 'rgba(255,255,255,0.40)', lineHeight: 17, marginTop: 4 },
+  emptyState: { alignItems: 'center', paddingVertical: 24 },
+  emptyTitle: { color: '#f0f6ff', fontSize: 13, fontWeight: '700' },
+  empty: { color: 'rgba(255,255,255,0.35)', fontSize: 11, lineHeight: 18, textAlign: 'center', marginTop: 6 },
+  noticeFooter: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)', paddingTop: 14, marginTop: 14 },
+  textLink: { fontSize: 12, fontWeight: '800', color: colors.blueLight },
+  footer: { textAlign: 'center', color: 'rgba(255,255,255,0.20)', fontSize: 10, letterSpacing: 0.8, paddingTop: 12 },
 });

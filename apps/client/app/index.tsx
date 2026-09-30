@@ -12,21 +12,94 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../src/components/Header';
 import { useSubmitAdmission, useNotices } from '../src/hooks/useQueries';
+import { colors, radius, shadow } from '../src/theme';
 
-// Illustrative profiles for the public showcase; these are not student records.
 const featuredStudents = [
-  { name: 'Aarav Sharma', initials: 'AS', className: 'Class XII', score: '98.6', achievement: 'Academic excellence', subject: 'Mathematics & Science', color: '#4C61C8', background: '#EDF0FF', rank: '01' },
-  { name: 'Ananya Verma', initials: 'AV', className: 'Class X', score: '98.2', achievement: 'Outstanding achiever', subject: 'Science & English', color: '#2A8278', background: '#E9F5F0', rank: '02' },
-  { name: 'Kabir Mehta', initials: 'KM', className: 'Class XII', score: '97.8', achievement: 'Scholastic distinction', subject: 'Commerce & Economics', color: '#AE753A', background: '#FCF2E5', rank: '03' },
-  { name: 'Diya Patel', initials: 'DP', className: 'Class X', score: '97.4', achievement: 'All-round excellence', subject: 'Languages & Mathematics', color: '#AA6182', background: '#F9EDF3', rank: '04' },
+  {
+    name: 'Aarav Sharma',
+    initials: 'AS',
+    className: 'Class XII',
+    score: '98.6',
+    achievement: 'Academic Excellence',
+    subject: 'Mathematics & Science',
+    color: '#2563eb',
+    background: '#eff6ff',
+    rank: '01',
+  },
+  {
+    name: 'Ananya Verma',
+    initials: 'AV',
+    className: 'Class X',
+    score: '98.2',
+    achievement: 'Outstanding Achiever',
+    subject: 'Science & English',
+    color: '#059669',
+    background: '#ecfdf5',
+    rank: '02',
+  },
+  {
+    name: 'Kabir Mehta',
+    initials: 'KM',
+    className: 'Class XII',
+    score: '97.8',
+    achievement: 'Scholastic Distinction',
+    subject: 'Commerce & Economics',
+    color: '#d97706',
+    background: '#fffbeb',
+    rank: '03',
+  },
+  {
+    name: 'Diya Patel',
+    initials: 'DP',
+    className: 'Class X',
+    score: '97.4',
+    achievement: 'All-round Excellence',
+    subject: 'Languages & Mathematics',
+    color: '#7c3aed',
+    background: '#f5f3ff',
+    rank: '04',
+  },
 ];
+
 const portals = [
-  { role: 'ADMIN', icon: '▦', title: 'Administration', subtitle: 'THE BIG PICTURE', description: 'Bring student records, academics, attendance and school finances together.', features: 'Students · Fees · Accounts', action: 'Admin portal', color: '#5267D5', background: '#EEF1FF' },
-  { role: 'EMPLOYEE', icon: '▤', title: 'Teachers & employees', subtitle: 'MAKE EVERY DAY COUNT', description: 'Access your timetable, attendance and salary, with tools for your assigned role.', features: 'Classes · Attendance · Payroll', action: 'Employee portal', color: '#268378', background: '#EAF6F2' },
-  { role: 'STUDENT', icon: '✧', title: 'Students', subtitle: 'YOUR LEARNING JOURNEY', description: 'Stay on top of your classes, published results, attendance and fee information.', features: 'Timetable · Results · Fees', action: 'Student portal', color: '#AB7538', background: '#FCF3E6' },
+  {
+    role: 'ADMIN',
+    icon: 'shield-checkmark-outline' as const,
+    title: 'Administration',
+    subtitle: 'THE BIG PICTURE',
+    description: 'Manage student records, staff payroll, admissions, and institutional finances.',
+    features: 'Students · Fees · Accounts · HR',
+    action: 'Admin portal',
+    color: '#2563eb',
+    background: '#eff6ff',
+  },
+  {
+    role: 'EMPLOYEE',
+    icon: 'briefcase-outline' as const,
+    title: 'Teachers & Employees',
+    subtitle: 'MAKE EVERY DAY COUNT',
+    description: 'Mark student attendance, review class timetables, and access monthly salary slips.',
+    features: 'Classes · Attendance · Payroll',
+    action: 'Employee portal',
+    color: '#d97706',
+    background: '#fffbeb',
+  },
+  {
+    role: 'STUDENT',
+    icon: 'school-outline' as const,
+    title: 'Students & Parents',
+    subtitle: 'YOUR LEARNING JOURNEY',
+    description: 'View daily timetable, term results, verified fee receipts, and attendance percentage.',
+    features: 'Timetable · Results · Fees',
+    action: 'Student portal',
+    color: '#059669',
+    background: '#ecfdf5',
+  },
 ];
+
 export default function IndexScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -47,17 +120,25 @@ export default function IndexScreen() {
   });
 
   const { mutate: submitAdmission, isPending } = useSubmitAdmission();
-  const { data: publicNotices, isLoading: noticesLoading, isError: noticesError, refetch: refreshNotices } = useNotices('PUBLIC');
+  const {
+    data: publicNotices,
+    isLoading: noticesLoading,
+    isError: noticesError,
+    refetch: refreshNotices,
+  } = useNotices('PUBLIC');
 
   const handleSubmitAdmission = () => {
     if (!formData.name || !formData.mobile || !formData.guardianName) {
-      Alert.alert('Validation Error', 'Please fill all required admission fields.');
+      Alert.alert('Validation Error', 'Please fill all required admission fields (*).');
       return;
     }
 
     submitAdmission(formData, {
       onSuccess: () => {
-        Alert.alert('Success', 'Admission registration submitted successfully! School admin will review it.');
+        Alert.alert(
+          'Application Submitted! 🎉',
+          'Admission registration submitted successfully! School admin will review it.',
+        );
         setAdmissionModal(false);
         setFormData({
           name: '',
@@ -81,88 +162,354 @@ export default function IndexScreen() {
   return (
     <View style={styles.container}>
       <Header />
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={[styles.workspace, compact && styles.workspaceCompact]}>
+          {/* Hero Section */}
           <View style={[styles.hero, stacked && styles.heroStacked, compact && styles.heroCompact]}>
             <View style={styles.heroGlow} pointerEvents="none" />
             <View style={styles.heroCopy}>
-              <View style={styles.heroTag}><View style={styles.tagDot}/><Text style={styles.heroTagText}>WELCOME TO YOUR SCHOOL COMMUNITY</Text></View>
-              <Text accessibilityRole="header" style={[styles.heroTitle, compact && styles.heroTitleCompact]}>Big dreams.{compact ? ' ' : '\n'}Brighter futures.</Text>
-              <Text style={styles.heroSubtitle}>A place to learn, a space to grow. Bringing students, educators and school life together with Shivora.</Text>
+              <View style={styles.heroTag}>
+                <Ionicons name="sparkles" size={13} color="#93c5fd" />
+                <Text style={styles.heroTagText}>WELCOME TO ARIHANT PUBLIC SCHOOL</Text>
+              </View>
+              <Text
+                accessibilityRole="header"
+                style={[styles.heroTitle, compact && styles.heroTitleCompact]}
+              >
+                Big dreams.{compact ? ' ' : '\n'}Brighter futures.
+              </Text>
+              <Text style={styles.heroSubtitle}>
+                A place to learn, a space to grow. Empowering students, educators, and families with
+                our modern integrated school ERP.
+              </Text>
               <View style={styles.heroActions}>
-                <TouchableOpacity accessibilityRole="button" style={styles.primaryBtn} onPress={() => router.push('/(auth)/login')}><Text style={styles.primaryBtnText}>Enter your portal</Text><Text style={styles.buttonArrow}>↗</Text></TouchableOpacity>
-                <TouchableOpacity accessibilityRole="button" style={styles.secondaryBtn} onPress={() => setAdmissionModal(true)}><Text style={styles.secondaryBtnText}>Apply for admission</Text><Text style={styles.secondaryArrow}>→</Text></TouchableOpacity>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  style={styles.primaryBtn}
+                  onPress={() => router.push('/(auth)/login')}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="log-in-outline" size={18} color="#0f172a" />
+                  <Text style={styles.primaryBtnText}>Enter Portal</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  style={styles.secondaryBtn}
+                  onPress={() => setAdmissionModal(true)}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="document-text-outline" size={17} color="#ffffff" />
+                  <Text style={styles.secondaryBtnText}>Apply for Admission</Text>
+                </TouchableOpacity>
               </View>
-              <View style={styles.heroFootnote}><Text style={styles.heroFootnoteSymbol}>✧</Text><Text style={styles.heroFootnoteText}>One connected space. Every step of the school journey.</Text></View>
+              <View style={styles.heroFootnote}>
+                <Ionicons name="shield-checkmark" size={15} color="#60a5fa" />
+                <Text style={styles.heroFootnoteText}>
+                  CBSE Affiliated · Class 6–12 · Unified Cloud Administration
+                </Text>
+              </View>
             </View>
-            {!stacked ? <View style={styles.heroVisual} accessible={false}>
-              <View style={styles.visualOrbit}/><View style={styles.visualOrbitSmall}/>
-              <View style={styles.visualSheet}>
-                <View style={styles.visualSheetTop}><Text style={styles.visualEyebrow}>THE NEXT CHAPTER</Text><Text style={styles.visualStar}>✦</Text></View>
-                <Text style={styles.visualTitle}>Learning{'\n'}without limits.</Text>
-                <View style={styles.bookScene}><View style={[styles.book, styles.bookOne]}><Text style={styles.bookText}>DREAM</Text></View><View style={[styles.book, styles.bookTwo]}><Text style={styles.bookText}>DISCOVER</Text></View><View style={[styles.book, styles.bookThree]}><Text style={styles.bookText}>BECOME</Text></View></View>
-                <View style={styles.visualBottom}><View style={styles.visualDot}/><Text style={styles.visualCaption}>Curiosity is just the beginning.</Text></View>
+
+            {!stacked ? (
+              <View style={styles.heroVisual} accessible={false}>
+                <View style={styles.visualOrbit} />
+                <View style={styles.visualOrbitSmall} />
+                <View style={styles.visualSheet}>
+                  <View style={styles.visualSheetTop}>
+                    <Text style={styles.visualEyebrow}>ACADEMIC EXCELLENCE</Text>
+                    <Ionicons name="star" size={18} color="#d97706" />
+                  </View>
+                  <Text style={styles.visualTitle}>Learning{'\n'}without limits.</Text>
+                  <View style={styles.bookScene}>
+                    <View style={[styles.book, styles.bookOne]}>
+                      <Text style={styles.bookText}>DREAM</Text>
+                    </View>
+                    <View style={[styles.book, styles.bookTwo]}>
+                      <Text style={styles.bookText}>DISCOVER</Text>
+                    </View>
+                    <View style={[styles.book, styles.bookThree]}>
+                      <Text style={styles.bookText}>BECOME</Text>
+                    </View>
+                  </View>
+                  <View style={styles.visualBottom}>
+                    <Ionicons name="school" size={14} color="#059669" />
+                    <Text style={styles.visualCaption}>Knowledge is just the beginning.</Text>
+                  </View>
+                </View>
+                <View style={styles.floatingBadge}>
+                  <View style={styles.floatingIcon}>
+                    <Ionicons name="medal-outline" size={20} color="#d97706" />
+                  </View>
+                  <View>
+                    <Text style={styles.floatingTitle}>100% Board Pass Rate</Text>
+                    <Text style={styles.floatingCopy}>State & National Rankers</Text>
+                  </View>
+                </View>
               </View>
-              <View style={styles.floatingBadge}><View style={styles.floatingIcon}><Text style={styles.floatingStar}>★</Text></View><View><Text style={styles.floatingTitle}>Made for bright minds</Text><Text style={styles.floatingCopy}>And the people who inspire them</Text></View></View>
-              <Text style={styles.sparkle}>✧</Text>
-            </View> : null}
+            ) : null}
           </View>
 
+          {/* Quick Values Strip */}
           <View style={styles.valuesStrip}>
-            {[['01', 'Stay connected', 'School updates in one place'], ['02', 'Learn with purpose', 'Academics at your fingertips'], ['03', 'Move forward', 'A simpler school day']].map(([number, title, copy]) => <View key={number} style={[styles.valueItem, compact && styles.valueItemCompact]}><Text style={styles.valueNumber}>{number}</Text><View><Text style={styles.valueTitle}>{title}</Text><Text style={styles.valueCopy}>{copy}</Text></View></View>)}
+            {[
+              ['01', 'Stay Connected', 'Instant school announcements & notices in one place'],
+              ['02', 'Learn with Purpose', 'Academics, results & class timetables at your fingertips'],
+              ['03', 'Seamless Operations', 'Fast digital fees, payroll & attendance management'],
+            ].map(([number, title, copy]) => (
+              <View key={number} style={[styles.valueItem, compact && styles.valueItemCompact]}>
+                <Text style={styles.valueNumber}>{number}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.valueTitle}>{title}</Text>
+                  <Text style={styles.valueCopy}>{copy}</Text>
+                </View>
+              </View>
+            ))}
           </View>
 
+          {/* Portals Grid */}
           <View style={styles.section}>
-            <View style={styles.sectionHeading}><View style={styles.sectionHeadingCopy}><Text style={styles.eyebrow}>A SPACE FOR EVERYONE</Text><Text accessibilityRole="header" style={styles.sectionTitle}>Your role. Your workspace.</Text></View><Text style={styles.sectionAside}>Choose your portal to get started.</Text></View>
-            <View style={styles.portalGrid}>{portals.map(portal => <TouchableOpacity key={portal.role} accessibilityRole="button" accessibilityLabel={`Sign in to ${portal.title}`} activeOpacity={0.8} style={[styles.portalCard, compact && styles.fullWidth]} onPress={() => router.push({ pathname: '/(auth)/login', params: { role: portal.role } })}>
-              <View style={styles.portalTop}><View style={[styles.portalIcon, { backgroundColor: portal.background }]}><Text style={[styles.portalSymbol, { color: portal.color }]}>{portal.icon}</Text></View><Text style={styles.portalArrow}>↗</Text></View>
-              <Text style={[styles.portalEyebrow, { color: portal.color }]}>{portal.subtitle}</Text><Text style={styles.portalTitle}>{portal.title}</Text><Text style={styles.portalDescription}>{portal.description}</Text>
-              <Text style={styles.portalFeatures}>{portal.features}</Text><View style={styles.portalFooter}><Text style={[styles.portalLink, { color: portal.color }]}>{portal.action}</Text><Text style={[styles.portalLink, { color: portal.color }]}>→</Text></View>
-            </TouchableOpacity>)}</View>
+            <View style={styles.sectionHeading}>
+              <View style={styles.sectionHeadingCopy}>
+                <Text style={styles.eyebrow}>ROLE-BASED WORKSPACES</Text>
+                <Text accessibilityRole="header" style={styles.sectionTitle}>
+                  Select Your Portal
+                </Text>
+              </View>
+              <Text style={styles.sectionAside}>Direct role navigation</Text>
+            </View>
+            <View style={styles.portalGrid}>
+              {portals.map((portal) => (
+                <TouchableOpacity
+                  key={portal.role}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Sign in to ${portal.title}`}
+                  activeOpacity={0.8}
+                  style={[styles.portalCard, compact && styles.fullWidth]}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/(auth)/login',
+                      params: { role: portal.role },
+                    })
+                  }
+                >
+                  <View style={styles.portalTop}>
+                    <View style={[styles.portalIcon, { backgroundColor: portal.background }]}>
+                      <Ionicons name={portal.icon} size={24} color={portal.color} />
+                    </View>
+                    <Ionicons name="arrow-forward" size={18} color={portal.color} />
+                  </View>
+                  <Text style={[styles.portalEyebrow, { color: portal.color }]}>
+                    {portal.subtitle}
+                  </Text>
+                  <Text style={styles.portalTitle}>{portal.title}</Text>
+                  <Text style={styles.portalDescription}>{portal.description}</Text>
+                  <Text style={styles.portalFeatures}>{portal.features}</Text>
+                  <View style={styles.portalFooter}>
+                    <Text style={[styles.portalLink, { color: portal.color }]}>
+                      {portal.action}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={14} color={portal.color} />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
+          {/* Student Achievers Section */}
           <View style={[styles.achieversSection, compact && styles.achieversCompact]}>
-            <View style={styles.sectionHeading}><View style={styles.sectionHeadingCopy}><View style={styles.eyebrowRow}><Text style={styles.goldEyebrow}>STUDENT TOPPERS</Text><Text style={styles.sampleBadge}>SAMPLE PROFILES</Text></View><Text accessibilityRole="header" style={styles.sectionTitle}>Our students. Our pride.</Text><Text style={styles.sectionDescription}>Celebrating the dedication, curiosity and effort behind every milestone.</Text></View><View style={styles.achievementSeal}><Text style={styles.sealStar}>✦</Text><Text style={styles.sealText}>WALL OF{'\n'}EXCELLENCE</Text></View></View>
-            <View style={styles.achieversGrid}>{featuredStudents.map(student => <View key={student.name} style={[styles.studentCard, { borderTopColor: student.color, flexBasis: width >= 1120 ? '21%' : '44%' }, compact && styles.fullWidth]}>
-              <View style={styles.studentTop}><Text style={styles.studentClass}>{student.className}</Text><View style={[styles.rankBadge, { backgroundColor: student.background }]}><Text style={[styles.rankText, { color: student.color }]}>★ {student.rank}</Text></View></View>
-              <View style={[styles.studentAvatar, { backgroundColor: student.background }]}><Text style={[styles.studentInitials, { color: student.color }]}>{student.initials}</Text><View style={[styles.avatarStar, { backgroundColor: student.color }]}><Text style={styles.avatarStarText}>✦</Text></View></View>
-              <Text style={styles.studentName}>{student.name}</Text><Text style={styles.studentSubject}>{student.subject}</Text>
-              <View style={styles.scoreRow}><Text style={[styles.score, { color: student.color }]}>{student.score}<Text style={styles.percent}>%</Text></Text><Text style={styles.scoreLabel}>OVERALL SCORE</Text></View>
-              <View style={[styles.studentAchievement, { backgroundColor: student.background }]}><Text style={[styles.achievementText, { color: student.color }]}>{student.achievement}</Text></View>
-            </View>)}</View>
-            <Text style={styles.sampleNote}>Illustrative student names and scores shown for this showcase.</Text>
+            <View style={styles.sectionHeading}>
+              <View style={styles.sectionHeadingCopy}>
+                <View style={styles.eyebrowRow}>
+                  <Text style={styles.goldEyebrow}>STUDENT TOPPERS</Text>
+                  <Text style={styles.sampleBadge}>EXCELLENCE ROLL</Text>
+                </View>
+                <Text accessibilityRole="header" style={styles.sectionTitle}>
+                  Our Students · Our Pride
+                </Text>
+                <Text style={styles.sectionDescription}>
+                  Celebrating the dedication, curiosity, and effort behind every academic milestone.
+                </Text>
+              </View>
+              <View style={styles.achievementSeal}>
+                <Ionicons name="trophy-outline" size={28} color="#d97706" />
+                <Text style={styles.sealText}>WALL OF{'\n'}EXCELLENCE</Text>
+              </View>
+            </View>
+            <View style={styles.achieversGrid}>
+              {featuredStudents.map((student) => (
+                <View
+                  key={student.name}
+                  style={[
+                    styles.studentCard,
+                    { borderTopColor: student.color, flexBasis: width >= 1120 ? '22%' : '45%' },
+                    compact && styles.fullWidth,
+                  ]}
+                >
+                  <View style={styles.studentTop}>
+                    <Text style={styles.studentClass}>{student.className}</Text>
+                    <View style={[styles.rankBadge, { backgroundColor: student.background }]}>
+                      <Text style={[styles.rankText, { color: student.color }]}>
+                        ★ Rank {student.rank}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={[styles.studentAvatar, { backgroundColor: student.background }]}>
+                    <Text style={[styles.studentInitials, { color: student.color }]}>
+                      {student.initials}
+                    </Text>
+                  </View>
+                  <Text style={styles.studentName}>{student.name}</Text>
+                  <Text style={styles.studentSubject}>{student.subject}</Text>
+                  <View style={styles.scoreRow}>
+                    <Text style={[styles.score, { color: student.color }]}>
+                      {student.score}
+                      <Text style={styles.percent}>%</Text>
+                    </Text>
+                    <Text style={styles.scoreLabel}>OVERALL SCORE</Text>
+                  </View>
+                  <View
+                    style={[styles.studentAchievement, { backgroundColor: student.background }]}
+                  >
+                    <Text style={[styles.achievementText, { color: student.color }]}>
+                      {student.achievement}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
           </View>
 
+          {/* Bottom Grid: Notice Board + Admission Inquiry */}
           <View style={[styles.bottomGrid, stacked && styles.bottomGridStacked]}>
             <View style={styles.noticePanel}>
-              <View style={styles.noticeHeading}><View style={styles.sectionHeadingCopy}><Text style={styles.eyebrow}>IN THE LOOP</Text><Text accessibilityRole="header" style={styles.sectionTitle}>School notice board</Text></View><View style={styles.publicBadge}><View style={styles.publicDot}/><Text style={styles.publicBadgeText}>PUBLIC UPDATES</Text></View></View>
-              {noticesLoading ? <View style={styles.noticeEmpty}><ActivityIndicator color="#5267D5"/><Text style={styles.emptyText}>Loading school announcements…</Text></View> : noticesError ? <View style={styles.noticeEmpty}><Text style={styles.emptyTitle}>Updates are unavailable right now</Text><Text style={styles.emptyText}>Please try loading the notice board again.</Text><TouchableOpacity accessibilityRole="button" onPress={() => refreshNotices()} style={styles.retryButton}><Text style={styles.retryText}>Refresh notices ↻</Text></TouchableOpacity></View> : publicNotices && publicNotices.length > 0 ? <View style={styles.noticeList}>{publicNotices.slice(0, 3).map((notice: any, index: number) => <View key={notice.id} style={styles.noticeCard}>
-                <View style={styles.noticeNumber}><Text style={styles.noticeNumberText}>0{index + 1}</Text></View><View style={styles.noticeBody}><View style={styles.noticeHeader}><Text style={styles.noticeTitle}>{notice.title}</Text>{notice.date ? <Text style={styles.noticeDate}>{notice.date}</Text> : null}</View><Text style={styles.noticeMsg}>{notice.message}</Text></View>
-              </View>)}</View> : <View style={styles.noticeEmpty}><View style={styles.emptyIcon}><Text style={styles.emptyIconText}>▤</Text></View><Text style={styles.emptyTitle}>You're all caught up.</Text><Text style={styles.emptyText}>New public announcements will appear here.{'\n'}Check back for the latest from your school.</Text></View>}
+              <View style={styles.noticeHeading}>
+                <View style={styles.sectionHeadingCopy}>
+                  <Text style={styles.eyebrow}>COMMUNITY BOARD</Text>
+                  <Text accessibilityRole="header" style={styles.sectionTitle}>
+                    School Notice Board
+                  </Text>
+                </View>
+                <View style={styles.publicBadge}>
+                  <View style={styles.publicDot} />
+                  <Text style={styles.publicBadgeText}>LIVE UPDATES</Text>
+                </View>
+              </View>
+
+              {noticesLoading ? (
+                <View style={styles.noticeEmpty}>
+                  <ActivityIndicator color={colors.blue} />
+                  <Text style={styles.emptyText}>Loading school announcements…</Text>
+                </View>
+              ) : noticesError ? (
+                <View style={styles.noticeEmpty}>
+                  <Text style={styles.emptyTitle}>Updates are unavailable right now</Text>
+                  <Text style={styles.emptyText}>Please try loading the notice board again.</Text>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    onPress={() => refreshNotices()}
+                    style={styles.retryButton}
+                  >
+                    <Text style={styles.retryText}>Refresh notices ↻</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : publicNotices && publicNotices.length > 0 ? (
+                <View style={styles.noticeList}>
+                  {publicNotices.slice(0, 3).map((notice: any, index: number) => (
+                    <View key={notice.id || index} style={styles.noticeCard}>
+                      <View style={styles.noticeNumber}>
+                        <Ionicons name="megaphone-outline" size={16} color={colors.blue} />
+                      </View>
+                      <View style={styles.noticeBody}>
+                        <View style={styles.noticeHeader}>
+                          <Text style={styles.noticeTitle}>{notice.title}</Text>
+                          {notice.date ? (
+                            <Text style={styles.noticeDate}>{notice.date}</Text>
+                          ) : null}
+                        </View>
+                        <Text style={styles.noticeMsg}>{notice.message}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.noticeEmpty}>
+                  <Ionicons name="notifications-off-outline" size={32} color={colors.muted} />
+                  <Text style={styles.emptyTitle}>All caught up!</Text>
+                  <Text style={styles.emptyText}>No public announcements posted today.</Text>
+                </View>
+              )}
             </View>
+
             <View style={[styles.admissionsPanel, stacked && styles.admissionsPanelStacked]}>
-              <View style={styles.admissionDecor} pointerEvents="none"/><Text style={styles.admissionEyebrow}>THE JOURNEY STARTS HERE</Text><Text accessibilityRole="header" style={styles.admissionTitle}>A new chapter{'\n'}for a bright mind.</Text><Text style={styles.admissionCopy}>Interested in joining our school community? Send an admission inquiry and take the first step.</Text>
-              <View style={styles.admissionSteps}><Text style={styles.admissionStep}>01   Share student details</Text><Text style={styles.admissionStep}>02   Submit your inquiry</Text><Text style={styles.admissionStep}>03   School reviews your application</Text></View>
-              <TouchableOpacity accessibilityRole="button" style={styles.admissionButton} onPress={() => setAdmissionModal(true)}><Text style={styles.admissionButtonText}>Start an application</Text><Text style={styles.admissionButtonText}>↗</Text></TouchableOpacity>
+              <Text style={styles.admissionEyebrow}>ADMISSIONS OPEN 2026–27</Text>
+              <Text accessibilityRole="header" style={styles.admissionTitle}>
+                A new chapter{'\n'}starts here.
+              </Text>
+              <Text style={styles.admissionCopy}>
+                Interested in enrolling your child at Arihant Public School? Send an admission inquiry
+                and our administrative office will contact you.
+              </Text>
+              <View style={styles.admissionSteps}>
+                <Text style={styles.admissionStep}>01  ·  Submit online inquiry</Text>
+                <Text style={styles.admissionStep}>02  ·  Verification & campus visit</Text>
+                <Text style={styles.admissionStep}>03  ·  Document submission & enrollment</Text>
+              </View>
+              <TouchableOpacity
+                accessibilityRole="button"
+                style={styles.admissionButton}
+                onPress={() => setAdmissionModal(true)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.admissionButtonText}>Start Application</Text>
+                <Ionicons name="arrow-forward" size={16} color="#15803d" />
+              </TouchableOpacity>
             </View>
           </View>
-          <View style={styles.footer}><Text style={styles.footerBrand}>SHIVORA<Text style={styles.footerBrandLight}>  /  SCHOOL CONNECT</Text></Text><Text style={styles.footerText}>A little more connected. A lot more possible.</Text></View>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text style={styles.footerBrand}>
+              ARIHANT PUBLIC SCHOOL · <Text style={styles.footerBrandLight}>ERP PLATFORM</Text>
+            </Text>
+            <Text style={styles.footerText}>
+              © 2026 Arihant Public School. All rights reserved.
+            </Text>
+          </View>
         </View>
       </ScrollView>
+
       {/* Admission Application Modal */}
-      <Modal visible={admissionModal} animationType="slide" transparent onRequestClose={() => setAdmissionModal(false)}>
+      <Modal
+        visible={admissionModal}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setAdmissionModal(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <ScrollView keyboardShouldPersistTaps="handled">
-              <Text style={styles.modalTitle}>Student Admission Application</Text>
-              <Text style={styles.modalSubtitle}>Fill the details to register an admission inquiry.</Text>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Admission Inquiry Application</Text>
+                <Text style={styles.modalSubtitle}>
+                  Please fill in the student details to register your inquiry.
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setAdmissionModal(false)}
+                style={styles.modalCloseBtn}
+              >
+                <Ionicons name="close" size={20} color="#475569" />
+              </TouchableOpacity>
+            </View>
 
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <Text style={styles.label}>Student Full Name *</Text>
               <TextInput
                 style={styles.input}
                 value={formData.name}
                 onChangeText={(t) => setFormData({ ...formData, name: t })}
-                placeholder="e.g. Kabir Malhotra"
+                placeholder="e.g. Aarav Sharma"
+                placeholderTextColor={colors.muted}
               />
 
               <Text style={styles.label}>Email Address *</Text>
@@ -172,15 +519,17 @@ export default function IndexScreen() {
                 value={formData.email}
                 onChangeText={(t) => setFormData({ ...formData, email: t })}
                 placeholder="student@example.com"
+                placeholderTextColor={colors.muted}
               />
 
-              <Text style={styles.label}>Mobile Number *</Text>
+              <Text style={styles.label}>Student Contact Number *</Text>
               <TextInput
                 style={styles.input}
                 keyboardType="phone-pad"
                 value={formData.mobile}
                 onChangeText={(t) => setFormData({ ...formData, mobile: t })}
-                placeholder="9876543210"
+                placeholder="10-digit mobile number"
+                placeholderTextColor={colors.muted}
               />
 
               <Text style={styles.label}>Applying for Class *</Text>
@@ -188,33 +537,37 @@ export default function IndexScreen() {
                 style={styles.input}
                 value={formData.applyingClass}
                 onChangeText={(t) => setFormData({ ...formData, applyingClass: t })}
-                placeholder="Class 6 / 7 / 8 / 9 / 10"
+                placeholder="e.g. Class 6 / Class 9"
+                placeholderTextColor={colors.muted}
               />
 
-              <Text style={styles.label}>Parent / Guardian Name *</Text>
+              <Text style={styles.label}>Parent / Guardian Full Name *</Text>
               <TextInput
                 style={styles.input}
                 value={formData.guardianName}
                 onChangeText={(t) => setFormData({ ...formData, guardianName: t })}
-                placeholder="Parent Full Name"
+                placeholder="Parent full name"
+                placeholderTextColor={colors.muted}
               />
 
-              <Text style={styles.label}>Parent Mobile *</Text>
+              <Text style={styles.label}>Parent Contact Number *</Text>
               <TextInput
                 style={styles.input}
                 keyboardType="phone-pad"
                 value={formData.guardianContact}
                 onChangeText={(t) => setFormData({ ...formData, guardianContact: t })}
-                placeholder="Parent Mobile Number"
+                placeholder="Parent mobile number"
+                placeholderTextColor={colors.muted}
               />
 
-              <Text style={styles.label}>Residential Address *</Text>
+              <Text style={styles.label}>Residential Address</Text>
               <TextInput
                 style={[styles.input, { height: 60 }]}
                 multiline
                 value={formData.address}
                 onChangeText={(t) => setFormData({ ...formData, address: t })}
-                placeholder="Full address..."
+                placeholder="Complete postal address..."
+                placeholderTextColor={colors.muted}
               />
 
               <View style={styles.modalButtons}>
@@ -231,7 +584,7 @@ export default function IndexScreen() {
                   disabled={isPending}
                 >
                   <Text style={styles.submitBtnText}>
-                    {isPending ? 'Submitting...' : 'Submit Application'}
+                    {isPending ? 'Submitting...' : 'Submit Inquiry'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -244,35 +597,563 @@ export default function IndexScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F6F7FB' },
-  scroll: { paddingBottom: 18 },
-  workspace: { width: '100%', maxWidth: 1320, alignSelf: 'center', paddingHorizontal: 36, paddingTop: 28, gap: 36 },
-  workspaceCompact: { paddingHorizontal: 18, paddingTop: 18, gap: 28 },
-  hero: { backgroundColor: '#172B46', borderRadius: 24, padding: 46, flexDirection: 'row', alignItems: 'center', gap: 32, overflow: 'hidden', minHeight: 370 },
-  heroStacked: { minHeight: 0 }, heroCompact: { padding: 26, borderRadius: 20 },
-  heroGlow: { position: 'absolute', width: 520, height: 520, borderRadius: 260, right: -150, top: -170, backgroundColor: '#203957', opacity: 0.7 },
+  container: { flex: 1, backgroundColor: '#080c14' },
+  scroll: { paddingBottom: 24 },
+  workspace: {
+    width: '100%',
+    maxWidth: 1320,
+    alignSelf: 'center',
+    paddingHorizontal: 28,
+    paddingTop: 24,
+    gap: 32,
+  },
+  workspaceCompact: { paddingHorizontal: 16, paddingTop: 16, gap: 24 },
+  hero: {
+    backgroundColor: '#0f172a',
+    borderRadius: radius.xl,
+    padding: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 32,
+    overflow: 'hidden',
+    minHeight: 360,
+    ...shadow.lg,
+  },
+  heroStacked: { minHeight: 0 },
+  heroCompact: { padding: 24, borderRadius: radius.lg },
+  heroGlow: {
+    position: 'absolute',
+    width: 500,
+    height: 500,
+    borderRadius: 250,
+    right: -100,
+    top: -150,
+    backgroundColor: 'rgba(37,99,235,0.2)',
+  },
   heroCopy: { flex: 1, minWidth: 0 },
-  heroTag: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, paddingHorizontal: 11, borderRadius: 7, backgroundColor: '#243D58', marginBottom: 21 },
-  tagDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#A9C9BA' },
-  heroTagText: { color: '#CEDDEB', fontSize: 9, fontWeight: '700', letterSpacing: 1.4, flexShrink: 1 },
-  heroTitle: { color: '#FFFFFF', fontSize: 49, fontWeight: '800', lineHeight: 57, letterSpacing: -1.7 },
-  heroTitleCompact: { fontSize: 35, lineHeight: 43, letterSpacing: -1 },
-  heroSubtitle: { color: '#B5C5D8', fontSize: 14, lineHeight: 24, marginTop: 17, maxWidth: 450 },
-  heroActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 25 },
-  primaryBtn: { backgroundColor: '#D5E4B9', paddingHorizontal: 18, minHeight: 47, borderRadius: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 20 },
-  primaryBtnText: { color: '#23392B', fontSize: 12, fontWeight: '700' }, buttonArrow: { color: '#23392B', fontSize: 19 },
-  secondaryBtn: { borderWidth: 1, borderColor: '#52647C', paddingHorizontal: 17, minHeight: 47, borderRadius: 9, flexDirection: 'row', alignItems: 'center', gap: 16 },
-  secondaryBtnText: { color: '#F3F6FB', fontSize: 12, fontWeight: '600' }, secondaryArrow: { color: '#D7E2F0', fontSize: 17 },
-  heroFootnote: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24 }, heroFootnoteSymbol: { color: '#D5E4B9', fontSize: 18 }, heroFootnoteText: { color: '#9FB3CD', fontSize: 10, lineHeight: 16, flexShrink: 1 },
-  heroVisual: { width: 350, height: 330, justifyContent: 'center', alignItems: 'center' }, visualOrbit: { width: 300, height: 300, borderRadius: 150, borderWidth: 1, borderColor: '#496079', position: 'absolute' }, visualOrbitSmall: { width: 246, height: 246, borderRadius: 123, backgroundColor: '#29435E', position: 'absolute' },
-  visualSheet: { backgroundColor: '#F4F2E9', borderRadius: 17, padding: 24, width: 247, height: 288, transform: [{ rotate: '-7deg' }] }, visualSheetTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, visualEyebrow: { fontSize: 8, letterSpacing: 1.5, fontWeight: '700', color: '#6B7769' }, visualStar: { fontSize: 26, color: '#B58A48' }, visualTitle: { fontSize: 27, lineHeight: 33, fontWeight: '800', color: '#253B37', marginTop: 9, letterSpacing: -0.8 }, bookScene: { marginTop: 17, gap: 5 }, book: { height: 21, borderRadius: 4, paddingHorizontal: 15, justifyContent: 'center', borderLeftWidth: 7 }, bookOne: { width: '86%', alignSelf: 'flex-end', backgroundColor: '#ADBCE9', borderLeftColor: '#879ACF' }, bookTwo: { width: '94%', backgroundColor: '#E7C08F', borderLeftColor: '#CFA677' }, bookThree: { backgroundColor: '#B5CBB3', borderLeftColor: '#8DAF8A' }, bookText: { color: '#33423C', fontSize: 7, fontWeight: '800', letterSpacing: 2 }, visualBottom: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16 }, visualDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#75956B' }, visualCaption: { color: '#73806F', fontSize: 8 },
-  floatingBadge: { position: 'absolute', bottom: 5, right: 0, backgroundColor: '#FFFFFF', padding: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: '#05142C', shadowOpacity: 0.16, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 3 }, floatingIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#FAF0DF', justifyContent: 'center', alignItems: 'center' }, floatingStar: { color: '#BC9251', fontSize: 20 }, floatingTitle: { color: '#263A54', fontSize: 10, fontWeight: '700' }, floatingCopy: { color: '#7B889A', fontSize: 8, marginTop: 4 }, sparkle: { position: 'absolute', top: 4, right: 15, color: '#D5E4B9', fontSize: 43 },
-  valuesStrip: { flexDirection: 'row', flexWrap: 'wrap', gap: 20, borderBottomWidth: 1, borderBottomColor: '#E4E8F0', paddingBottom: 26, marginTop: -10 }, valueItem: { flex: 1, minWidth: 235, flexDirection: 'row', alignItems: 'center', gap: 14 }, valueItemCompact: { flexBasis: '100%' }, valueNumber: { color: '#8D9CAF', fontSize: 11, borderWidth: 1, borderColor: '#E0E5ED', borderRadius: 12, padding: 12, backgroundColor: '#FFFFFF' }, valueTitle: { color: '#314259', fontSize: 12, fontWeight: '700' }, valueCopy: { color: '#8490A1', fontSize: 11, marginTop: 5 },
-  section: { gap: 20 }, sectionHeading: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 15 }, sectionHeadingCopy: { flex: 1, minWidth: 200 }, eyebrow: { color: '#6476BB', fontSize: 9, fontWeight: '800', letterSpacing: 1.8, marginBottom: 9 }, sectionTitle: { color: '#24354E', fontSize: 24, lineHeight: 31, fontWeight: '700', letterSpacing: -0.65 }, sectionAside: { color: '#8894A7', fontSize: 11 }, sectionDescription: { color: '#777365', fontSize: 12, lineHeight: 20, marginTop: 8 },
-  portalGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 }, portalCard: { flex: 1, minWidth: 260, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, borderWidth: 1, borderColor: '#E5E9F1', shadowColor: '#253B68', shadowOpacity: 0.025, shadowRadius: 12, shadowOffset: { width: 0, height: 5 } }, fullWidth: { flexBasis: '100%', minWidth: 0 }, portalTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, portalIcon: { width: 45, height: 45, borderRadius: 13, alignItems: 'center', justifyContent: 'center' }, portalSymbol: { fontSize: 26 }, portalArrow: { color: '#A3ADBD', fontSize: 22 }, portalEyebrow: { fontSize: 8, fontWeight: '700', letterSpacing: 1.3, marginTop: 23 }, portalTitle: { color: '#27384F', fontSize: 18, fontWeight: '700', marginTop: 8 }, portalDescription: { color: '#6F7C91', fontSize: 12, lineHeight: 21, marginTop: 9, flex: 1 }, portalFeatures: { color: '#97A1B1', fontSize: 10, marginTop: 19, marginBottom: 17 }, portalFooter: { borderTopWidth: 1, borderTopColor: '#EDF0F6', paddingTop: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, portalLink: { fontSize: 12, fontWeight: '700' },
-  achieversSection: { backgroundColor: '#F2F0E9', borderWidth: 1, borderColor: '#EAE6DD', borderRadius: 22, padding: 28, gap: 22 }, achieversCompact: { padding: 18 }, eyebrowRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 9 }, goldEyebrow: { color: '#9D814F', fontSize: 9, fontWeight: '800', letterSpacing: 1.5 }, sampleBadge: { color: '#8D8474', backgroundColor: '#E8E4DA', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 3, fontSize: 7, letterSpacing: 0.8, fontWeight: '600' }, achievementSeal: { flexDirection: 'row', alignItems: 'center', gap: 8 }, sealStar: { color: '#B79B65', fontSize: 37 }, sealText: { color: '#A18A62', fontSize: 8, lineHeight: 13, letterSpacing: 1.2, fontWeight: '700' }, achieversGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 }, studentCard: { flex: 1, minWidth: 210, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E8E5DF', borderTopWidth: 3, borderRadius: 14, padding: 19, alignItems: 'center' }, studentTop: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, studentClass: { color: '#8A92A0', fontSize: 9, fontWeight: '600' }, rankBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 5 }, rankText: { fontSize: 9, fontWeight: '700' }, studentAvatar: { width: 66, height: 66, borderRadius: 23, alignItems: 'center', justifyContent: 'center', marginTop: 14, marginBottom: 16 }, studentInitials: { fontSize: 22, fontWeight: '700' }, avatarStar: { position: 'absolute', right: -5, bottom: -4, width: 24, height: 24, borderRadius: 9, borderWidth: 3, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }, avatarStarText: { color: '#FFFFFF', fontSize: 12 }, studentName: { color: '#293A51', fontSize: 15, fontWeight: '700', textAlign: 'center' }, studentSubject: { color: '#8D97A6', fontSize: 9, lineHeight: 15, marginTop: 5, textAlign: 'center' }, scoreRow: { alignItems: 'center', marginTop: 18, marginBottom: 17 }, score: { fontSize: 29, fontWeight: '800', letterSpacing: -0.8 }, percent: { fontSize: 14, fontWeight: '500' }, scoreLabel: { color: '#9CA4B0', fontSize: 7, letterSpacing: 1.4, marginTop: 4 }, studentAchievement: { width: '100%', borderRadius: 7, paddingVertical: 8, paddingHorizontal: 4 }, achievementText: { textAlign: 'center', fontSize: 9, fontWeight: '600' }, sampleNote: { color: '#9B9385', fontSize: 10, textAlign: 'center', lineHeight: 16, marginTop: -7 },
-  bottomGrid: { flexDirection: 'row', alignItems: 'stretch', gap: 22 }, bottomGridStacked: { flexDirection: 'column' }, noticePanel: { flex: 1, minWidth: 0, borderWidth: 1, borderColor: '#E5E9F1', backgroundColor: '#FFFFFF', borderRadius: 18, padding: 26 }, noticeHeading: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 14, marginBottom: 18 }, publicBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#EDF6F1', paddingVertical: 6, paddingHorizontal: 8, borderRadius: 5 }, publicDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#4F9B80' }, publicBadgeText: { color: '#558574', fontSize: 7, letterSpacing: 0.8, fontWeight: '700' }, noticeEmpty: { flex: 1, minHeight: 210, alignItems: 'center', justifyContent: 'center', paddingVertical: 24 }, emptyIcon: { backgroundColor: '#F2F4FA', width: 54, height: 54, borderRadius: 17, alignItems: 'center', justifyContent: 'center', marginBottom: 17 }, emptyIconText: { color: '#97A5C2', fontSize: 26 }, emptyTitle: { color: '#596980', fontSize: 15, fontWeight: '600', textAlign: 'center' }, emptyText: { color: '#95A0B1', fontSize: 12, lineHeight: 21, textAlign: 'center', marginTop: 8 }, retryButton: { paddingHorizontal: 16, paddingVertical: 12, marginTop: 8 }, retryText: { color: '#5267D5', fontSize: 12, fontWeight: '700' }, noticeList: { gap: 0 }, noticeCard: { flexDirection: 'row', gap: 13, paddingVertical: 19, borderTopWidth: 1, borderTopColor: '#EDF0F5' }, noticeNumber: { width: 35, height: 37, borderRadius: 9, backgroundColor: '#F0F3FC', justifyContent: 'center', alignItems: 'center' }, noticeNumberText: { color: '#7A8AB0', fontSize: 11, fontWeight: '600' }, noticeBody: { flex: 1, minWidth: 0 }, noticeHeader: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'space-between', alignItems: 'center' }, noticeTitle: { color: '#3F5068', fontSize: 13, fontWeight: '700', flexShrink: 1 }, noticeDate: { color: '#9AA5B5', fontSize: 9 }, noticeMsg: { color: '#718098', fontSize: 12, lineHeight: 20, marginTop: 7 },
-  admissionsPanel: { width: 340, backgroundColor: '#EAF0E2', borderRadius: 18, padding: 28, overflow: 'hidden', borderWidth: 1, borderColor: '#E0E7D6' }, admissionsPanelStacked: { width: '100%' }, admissionDecor: { position: 'absolute', right: -55, top: -55, width: 160, height: 160, borderRadius: 80, borderWidth: 23, borderColor: '#E2EAD8' }, admissionEyebrow: { color: '#80916D', fontSize: 8, letterSpacing: 1.4, fontWeight: '700', marginBottom: 15 }, admissionTitle: { color: '#3E5238', fontSize: 27, fontWeight: '700', lineHeight: 34, letterSpacing: -0.6 }, admissionCopy: { color: '#67795C', fontSize: 12, lineHeight: 21, marginTop: 12 }, admissionSteps: { gap: 10, marginVertical: 23 }, admissionStep: { color: '#728268', fontSize: 10, lineHeight: 16 }, admissionButton: { backgroundColor: '#FFFFFF', paddingHorizontal: 15, paddingVertical: 14, borderRadius: 9, flexDirection: 'row', justifyContent: 'space-between', gap: 10, marginTop: 'auto' }, admissionButtonText: { color: '#4D6742', fontSize: 12, fontWeight: '700' },
-  footer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12, paddingTop: 7, paddingBottom: 12 }, footerBrand: { color: '#718099', fontSize: 10, fontWeight: '800', letterSpacing: 1 }, footerBrandLight: { color: '#A2ACBC', fontSize: 8, fontWeight: '500' }, footerText: { color: '#A2ACBC', fontSize: 10 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 29, 49, 0.55)', justifyContent: 'center', alignItems: 'center', padding: 20 }, modalContent: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 26, width: '100%', maxWidth: 520, maxHeight: '90%' }, modalTitle: { fontSize: 21, fontWeight: '700', color: '#24354E', marginBottom: 7 }, modalSubtitle: { fontSize: 12, lineHeight: 20, color: '#8490A1', marginBottom: 22 }, label: { fontSize: 12, fontWeight: '600', color: '#596A80', marginBottom: 7 }, input: { backgroundColor: '#F8FAFD', color: '#24354E', borderWidth: 1, borderColor: '#E0E6EF', borderRadius: 9, paddingHorizontal: 13, paddingVertical: 12, minHeight: 45, fontSize: 13, marginBottom: 16 }, modalButtons: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 12, marginTop: 12 }, cancelBtn: { paddingHorizontal: 16, minHeight: 44, justifyContent: 'center', borderRadius: 9, borderWidth: 1, borderColor: '#E0E6EF' }, cancelBtnText: { color: '#718099', fontWeight: '600', fontSize: 12 }, submitBtn: { backgroundColor: '#5267D5', paddingHorizontal: 18, minHeight: 44, justifyContent: 'center', borderRadius: 9 }, submitBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
+  heroTag: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  heroTagText: {
+    color: '#bfdbfe',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+  },
+  heroTitle: {
+    color: '#ffffff',
+    fontSize: 44,
+    fontWeight: '900',
+    lineHeight: 52,
+    letterSpacing: -1.2,
+  },
+  heroTitleCompact: { fontSize: 32, lineHeight: 40, letterSpacing: -0.8 },
+  heroSubtitle: {
+    color: '#cbd5e1',
+    fontSize: 15,
+    lineHeight: 24,
+    marginTop: 14,
+    maxWidth: 480,
+  },
+  heroActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 24 },
+  primaryBtn: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 20,
+    minHeight: 46,
+    borderRadius: radius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    ...shadow.md,
+  },
+  primaryBtnText: { color: '#0f172a', fontSize: 13, fontWeight: '800' },
+  secondaryBtn: {
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    paddingHorizontal: 18,
+    minHeight: 46,
+    borderRadius: radius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  secondaryBtnText: { color: '#ffffff', fontSize: 13, fontWeight: '700' },
+  heroFootnote: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24 },
+  heroFootnoteText: { color: '#94a3b8', fontSize: 11, fontWeight: '500' },
+  heroVisual: { width: 340, height: 320, justifyContent: 'center', alignItems: 'center' },
+  visualOrbit: {
+    width: 290,
+    height: 290,
+    borderRadius: 145,
+    borderWidth: 1,
+    borderColor: '#334155',
+    position: 'absolute',
+  },
+  visualOrbitSmall: {
+    width: 230,
+    height: 230,
+    borderRadius: 115,
+    backgroundColor: '#1e293b',
+    position: 'absolute',
+  },
+  visualSheet: {
+    backgroundColor: '#ffffff',
+    borderRadius: radius.lg,
+    padding: 22,
+    width: 240,
+    height: 270,
+    transform: [{ rotate: '-6deg' }],
+    ...shadow.lg,
+  },
+  visualSheetTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  visualEyebrow: { fontSize: 8, letterSpacing: 1.2, fontWeight: '800', color: colors.blue },
+  visualTitle: {
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '900',
+    color: '#0f172a',
+    marginTop: 8,
+    letterSpacing: -0.6,
+  },
+  bookScene: { marginTop: 14, gap: 5 },
+  book: {
+    height: 22,
+    borderRadius: 4,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    borderLeftWidth: 6,
+  },
+  bookOne: {
+    width: '90%',
+    alignSelf: 'flex-end',
+    backgroundColor: '#eff6ff',
+    borderLeftColor: '#3b82f6',
+  },
+  bookTwo: {
+    width: '95%',
+    backgroundColor: '#fffbeb',
+    borderLeftColor: '#f59e0b',
+  },
+  bookThree: {
+    backgroundColor: '#ecfdf5',
+    borderLeftColor: '#10b981',
+  },
+  bookText: { color: '#0f172a', fontSize: 8, fontWeight: '800', letterSpacing: 1.5 },
+  visualBottom: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 },
+  visualCaption: { color: '#64748b', fontSize: 9, fontWeight: '500' },
+  floatingBadge: {
+    position: 'absolute',
+    bottom: 5,
+    right: 0,
+    backgroundColor: '#ffffff',
+    padding: 12,
+    borderRadius: radius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    ...shadow.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  floatingIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: '#fef3c7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  floatingTitle: { color: '#0f172a', fontSize: 11, fontWeight: '800' },
+  floatingCopy: { color: '#64748b', fontSize: 9, marginTop: 2 },
+  valuesStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingBottom: 24,
+  },
+  valueItem: { flex: 1, minWidth: 240, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  valueItemCompact: { flexBasis: '100%' },
+  valueNumber: {
+    color: colors.blue,
+    fontSize: 12,
+    fontWeight: '800',
+    borderWidth: 1.5,
+    borderColor: '#bfdbfe',
+    borderRadius: radius.md,
+    padding: 10,
+    backgroundColor: '#ffffff',
+    ...shadow.sm,
+  },
+  valueTitle: { color: '#0f172a', fontSize: 13, fontWeight: '800' },
+  valueCopy: { color: colors.muted, fontSize: 11, marginTop: 3, lineHeight: 16 },
+  section: { gap: 16 },
+  sectionHeading: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 14,
+  },
+  sectionHeadingCopy: { flex: 1, minWidth: 200 },
+  eyebrow: {
+    color: colors.blue,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  sectionTitle: {
+    color: '#0f172a',
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+  },
+  sectionAside: { color: colors.muted, fontSize: 12, fontWeight: '600' },
+  sectionDescription: { color: colors.muted, fontSize: 13, lineHeight: 20, marginTop: 6 },
+  portalGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  portalCard: {
+    flex: 1,
+    minWidth: 270,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: radius.xl,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    ...shadow.sm,
+  },
+  fullWidth: { flexBasis: '100%', minWidth: 0 },
+  portalTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  portalIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  portalEyebrow: { fontSize: 9, fontWeight: '800', letterSpacing: 1.2, marginBottom: 4 },
+  portalTitle: { color: '#f0f6ff', fontSize: 18, fontWeight: '800', marginBottom: 6 },
+  portalDescription: {
+    color: 'rgba(255,255,255,0.50)',
+    fontSize: 12,
+    lineHeight: 19,
+    flex: 1,
+    marginBottom: 14,
+  },
+  portalFeatures: { color: 'rgba(255,255,255,0.35)', fontSize: 11, fontWeight: '600', marginBottom: 14 },
+  portalFooter: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+    paddingTop: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  portalLink: { fontSize: 13, fontWeight: '700' },
+  achieversSection: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.09)',
+    borderRadius: radius.xl,
+    padding: 28,
+    gap: 20,
+    ...shadow.sm,
+  },
+  achieversCompact: { padding: 18 },
+  eyebrowRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 6,
+  },
+  goldEyebrow: { color: '#d97706', fontSize: 10, fontWeight: '800', letterSpacing: 1.5 },
+  sampleBadge: {
+    color: '#059669',
+    backgroundColor: '#ecfdf5',
+    borderRadius: radius.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  achievementSeal: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  sealText: {
+    color: '#d97706',
+    fontSize: 9,
+    lineHeight: 14,
+    letterSpacing: 1.2,
+    fontWeight: '800',
+  },
+  achieversGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
+  studentCard: {
+    flex: 1,
+    minWidth: 220,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.09)',
+    borderTopWidth: 4,
+    borderRadius: radius.lg,
+    padding: 18,
+    alignItems: 'center',
+    ...shadow.sm,
+  },
+  studentTop: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  studentClass: { color: 'rgba(255,255,255,0.40)', fontSize: 10, fontWeight: '700' },
+  rankBadge: { borderRadius: radius.sm, paddingHorizontal: 8, paddingVertical: 4 },
+  rankText: { fontSize: 10, fontWeight: '800' },
+  studentAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  studentInitials: { fontSize: 20, fontWeight: '800' },
+  studentName: { color: '#f0f6ff', fontSize: 15, fontWeight: '800', textAlign: 'center' },
+  studentSubject: { color: 'rgba(255,255,255,0.40)', fontSize: 10, marginTop: 4, textAlign: 'center' },
+  scoreRow: { alignItems: 'center', marginTop: 14, marginBottom: 12 },
+  score: { fontSize: 28, fontWeight: '900', letterSpacing: -0.5 },
+  percent: { fontSize: 14, fontWeight: '600' },
+  scoreLabel: { color: 'rgba(255,255,255,0.30)', fontSize: 8, letterSpacing: 1.4, marginTop: 2 },
+  studentAchievement: {
+    width: '100%',
+    borderRadius: radius.sm,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+  },
+  achievementText: { textAlign: 'center', fontSize: 10, fontWeight: '700' },
+  bottomGrid: { flexDirection: 'row', alignItems: 'stretch', gap: 20 },
+  bottomGridStacked: { flexDirection: 'column' },
+  noticePanel: {
+    flex: 1,
+    minWidth: 0,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.09)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: radius.xl,
+    padding: 24,
+    ...shadow.sm,
+  },
+  noticeHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 18,
+  },
+  publicBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(52,211,153,0.12)',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(52,211,153,0.25)',
+  },
+  publicDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#34d399' },
+  publicBadgeText: { color: '#34d399', fontSize: 9, letterSpacing: 0.8, fontWeight: '800' },
+  noticeEmpty: {
+    flex: 1,
+    minHeight: 180,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  emptyTitle: { color: '#f0f6ff', fontSize: 15, fontWeight: '700', textAlign: 'center' },
+  emptyText: { color: 'rgba(255,255,255,0.35)', fontSize: 12, lineHeight: 18, textAlign: 'center', marginTop: 6 },
+  retryButton: { paddingHorizontal: 16, paddingVertical: 10, marginTop: 8 },
+  retryText: { color: colors.blueLight, fontSize: 12, fontWeight: '700' },
+  noticeList: { gap: 12 },
+  noticeCard: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+  },
+  noticeNumber: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    backgroundColor: colors.paleBlue,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noticeBody: { flex: 1, minWidth: 0 },
+  noticeHeader: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  noticeTitle: { color: '#f0f6ff', fontSize: 14, fontWeight: '800', flexShrink: 1 },
+  noticeDate: { color: 'rgba(255,255,255,0.35)', fontSize: 10 },
+  noticeMsg: { color: 'rgba(255,255,255,0.50)', fontSize: 12, lineHeight: 18, marginTop: 4 },
+  admissionsPanel: {
+    width: 340,
+    backgroundColor: 'rgba(52,211,153,0.08)',
+    borderRadius: radius.xl,
+    padding: 26,
+    borderWidth: 1,
+    borderColor: 'rgba(52,211,153,0.20)',
+    justifyContent: 'space-between',
+    ...shadow.sm,
+  },
+  admissionsPanelStacked: { width: '100%' },
+  admissionEyebrow: {
+    color: '#34d399',
+    fontSize: 10,
+    letterSpacing: 1.5,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  admissionTitle: {
+    color: '#f0f6ff',
+    fontSize: 26,
+    fontWeight: '900',
+    lineHeight: 32,
+    letterSpacing: -0.5,
+  },
+  admissionCopy: { color: 'rgba(255,255,255,0.55)', fontSize: 12, lineHeight: 19, marginTop: 10 },
+  admissionSteps: { gap: 8, marginVertical: 18 },
+  admissionStep: { color: '#34d399', fontSize: 11, fontWeight: '600' },
+  admissionButton: {
+    backgroundColor: 'rgba(52,211,153,0.15)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: radius.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(52,211,153,0.35)',
+  },
+  admissionButtonText: { color: '#34d399', fontSize: 13, fontWeight: '800' },
+  footer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+  },
+  footerBrand: {
+    color: '#f0f6ff',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  footerBrandLight: { color: 'rgba(255,255,255,0.35)', fontSize: 10, fontWeight: '500' },
+  footerText: { color: 'rgba(255,255,255,0.30)', fontSize: 11 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(4,8,18,0.80)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalContent: {
+    backgroundColor: '#0e1525',
+    borderRadius: radius.xl,
+    padding: 26,
+    width: '100%',
+    maxWidth: 520,
+    maxHeight: '90%',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    ...shadow.xl,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: '#f0f6ff', letterSpacing: -0.3 },
+  modalSubtitle: { fontSize: 12, lineHeight: 18, color: 'rgba(255,255,255,0.45)', marginTop: 3 },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  label: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.50)', marginBottom: 6 },
+  input: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    color: '#f0f6ff',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.10)',
+    borderRadius: radius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 44,
+    fontSize: 13,
+    marginBottom: 14,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+    marginTop: 10,
+  },
+  cancelBtn: {
+    paddingHorizontal: 16,
+    minHeight: 42,
+    justifyContent: 'center',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  cancelBtnText: { color: 'rgba(255,255,255,0.50)', fontWeight: '700', fontSize: 12 },
+  submitBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 18,
+    minHeight: 42,
+    justifyContent: 'center',
+    borderRadius: radius.md,
+    ...shadow.sm,
+  },
+  submitBtnText: { color: '#ffffff', fontWeight: '800', fontSize: 12 },
 });
+
+
+

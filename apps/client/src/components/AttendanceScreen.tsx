@@ -11,9 +11,9 @@ type StatusOption = { label: string; short: 'P' | 'A' | 'L'; value: Exclude<Stat
 
 const today = new Date().toISOString().slice(0, 10);
 const statusOptions: StatusOption[] = [
-  { label: 'Present', short: 'P', value: 'PRESENT', color: '#18734A', background: '#D9F3E5', border: '#8CC8A8' },
-  { label: 'Absent', short: 'A', value: 'ABSENT', color: '#B42318', background: '#FFDDE0', border: '#E5A0A7' },
-  { label: 'Late', short: 'L', value: 'LATE', color: '#A66B1F', background: '#FFE6B3', border: '#E0B45C' },
+  { label: 'Present', short: 'P', value: 'PRESENT', color: '#34d399', background: 'rgba(52,211,153,0.18)', border: 'rgba(52,211,153,0.40)' },
+  { label: 'Absent', short: 'A', value: 'ABSENT', color: '#f87171', background: 'rgba(248,113,113,0.18)', border: 'rgba(248,113,113,0.40)' },
+  { label: 'Late', short: 'L', value: 'LATE', color: '#fbbf24', background: 'rgba(251,191,36,0.18)', border: 'rgba(251,191,36,0.40)' },
 ];
 
 function errorText(error: any) {
@@ -60,7 +60,7 @@ function StatusButtons({ value, onChange, personName }: { value: Status; onChang
         accessibilityRole="radio"
         accessibilityLabel={`${option.label} for ${personName}`}
         accessibilityState={{ selected }}
-        style={[styles.statusButton, { borderColor: selected ? option.color : option.border, backgroundColor: selected ? option.background : '#FBFCFD' }]}
+        style={[styles.statusButton, { borderColor: selected ? option.color : 'rgba(255,255,255,0.12)', backgroundColor: selected ? option.background : 'rgba(255,255,255,0.04)' }]}
         onPress={() => onChange(option.value)}
       >
         <Text style={[styles.statusButtonText, { color: option.color }]}>{option.short}</Text>
@@ -70,7 +70,7 @@ function StatusButtons({ value, onChange, personName }: { value: Status; onChang
 }
 
 function DateField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  return <View style={styles.field}><Text style={styles.label}>Attendance date</Text><TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="YYYY-MM-DD" placeholderTextColor="#8a96a5" /></View>;
+  return <View style={styles.field}><Text style={styles.label}>Attendance date</Text><TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="YYYY-MM-DD" placeholderTextColor="rgba(255,255,255,0.25)" /></View>;
 }
 
 type AttendanceScreenProps = { allowedModes?: AttendanceMode[]; defaultMode?: AttendanceMode };
@@ -174,93 +174,197 @@ const styles = StyleSheet.create({
   
   content: { ...surfaces.content, gap: 16 },
   
-  hero: { ...surfaces.card, padding: 24, borderRadius: 16, backgroundColor: '#FFFFFF', flexWrap: 'wrap' },
+  hero: {
+    ...surfaces.card,
+    padding: 24,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    flexWrap: 'wrap',
+  },
   
   heroText: { maxWidth: 800 },
   
-  eyebrow: { fontWeight: '800', fontSize: 10, letterSpacing: 1.4, color: colors.blue },
+  eyebrow: { fontWeight: '800', fontSize: 10, letterSpacing: 1.4, color: colors.blueLight },
   
-  title: { marginTop: 5, fontSize: 28, color: colors.ink, fontWeight: '700' },
+  title: { marginTop: 5, fontSize: 28, color: '#f0f6ff', fontWeight: '800', letterSpacing: -0.3 },
   
-  description: { marginTop: 5, lineHeight: 21, color: colors.muted },
+  description: { marginTop: 5, lineHeight: 21, color: 'rgba(255, 255, 255, 0.45)' },
   
-  modeTabs: { backgroundColor: '#fff', borderRadius: 16, padding: 6, flexDirection: 'row', borderWidth: 1, borderColor: '#e1e6ec', flexWrap: 'wrap', gap: 12 },
+  modeTabs: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 16,
+    padding: 6,
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
   
   modeTab: { flex: 1, minHeight: 52, borderRadius: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 10, minWidth: 120 },
   
-  modeTabActive: { borderColor: colors.blue, backgroundColor: colors.blue },
+  modeTabActive: { borderColor: colors.primary, backgroundColor: colors.primary },
   
   tabIcon: { fontSize: 17 },
   
-  modeTabText: { color: '#607187', fontSize: 13, fontWeight: '700' },
+  modeTabText: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 13, fontWeight: '700' },
   
-  modeTabTextActive: { color: '#fff' },
+  modeTabTextActive: { color: '#fff', fontWeight: '800' },
   
-  filters: { ...surfaces.card, backgroundColor: '#fff', padding: 18, gap: 12, borderRadius: 14 },
+  filters: {
+    ...surfaces.card,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    padding: 18,
+    gap: 12,
+    borderRadius: 14,
+  },
   
   field: { gap: 6, flex: 1, minWidth: 0, flexShrink: 1 },
   
-  label: { color: '#506176', fontSize: 12, fontWeight: '700' },
+  label: { color: 'rgba(255, 255, 255, 0.55)', fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
   
-  input: { ...surfaces.input, borderWidth: 1, borderColor: '#d9e0e8', backgroundColor: '#fbfcfd', color: '#172b42', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, fontSize: 14 },
+  input: {
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    color: '#f0f6ff',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 14,
+  },
   
-  dropdown: { ...surfaces.input, minHeight: 44, borderWidth: 1, borderColor: '#d9e0e8', backgroundColor: '#fbfcfd', color: '#172b42', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', fontSize: 14 },
+  dropdown: {
+    minHeight: 44,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   
-  dropdownText: { color: '#172b42' },
+  dropdownText: { color: '#f0f6ff', fontSize: 14 },
   
-  placeholder: { color: '#8a96a5' },
+  placeholder: { color: 'rgba(255, 255, 255, 0.30)', fontSize: 14 },
   
-  chevron: { color: '#607187', fontSize: 18 },
+  chevron: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 18 },
   
   disabled: { opacity: .55 },
   
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(4, 17, 30, 0.65)', alignItems: 'center', justifyContent: 'center', padding: 18 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(4, 8, 18, 0.80)', alignItems: 'center', justifyContent: 'center', padding: 18 },
   
-  dropdownSheet: { width: '92%', maxWidth: 520, backgroundColor: '#fff', borderRadius: 16, padding: 14, gap: 6, elevation: 16 },
+  dropdownSheet: {
+    width: '92%',
+    maxWidth: 520,
+    backgroundColor: '#0e1525',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderRadius: 16,
+    padding: 14,
+    gap: 6,
+  },
   
-  sheetTitle: { color: '#203451', fontSize: 16, fontWeight: '800', paddingHorizontal: 10, paddingVertical: 8 },
+  sheetTitle: { color: '#f0f6ff', fontSize: 16, fontWeight: '800', paddingHorizontal: 10, paddingVertical: 8 },
   
   dropdownOption: { minHeight: 44, borderRadius: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   
-  dropdownOptionSelected: { backgroundColor: '#edf3f7' },
+  dropdownOptionSelected: { backgroundColor: 'rgba(99, 102, 241, 0.15)' },
   
-  dropdownOptionText: { color: '#506176', fontSize: 14 },
+  dropdownOptionText: { color: 'rgba(255, 255, 255, 0.60)', fontSize: 14 },
   
-  dropdownOptionTextSelected: { color: '#203451', fontWeight: '800' },
+  dropdownOptionTextSelected: { color: '#f0f6ff', fontWeight: '800' },
   
-  check: { color: '#18734a', fontWeight: '800' },
+  check: { color: colors.success, fontWeight: '800' },
   
   listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 },
   
-  listTitle: { color: '#203451', fontSize: 20, fontWeight: '800' },
+  listTitle: { color: '#f0f6ff', fontSize: 20, fontWeight: '800', letterSpacing: -0.2 },
   
-  refresh: { color: '#3563E9', fontWeight: '700' },
+  refresh: { color: colors.blueLight, fontWeight: '700' },
   
-  muted: { color: '#758396', marginTop: 4 },
+  muted: { color: 'rgba(255, 255, 255, 0.40)', marginTop: 4 },
   
-  summary: { ...surfaces.card, backgroundColor: '#fff', padding: 14, flexDirection: 'row', gap: 12, borderRadius: 14, flexWrap: 'wrap' },
+  summary: {
+    ...surfaces.card,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.09)',
+    padding: 14,
+    flexDirection: 'row',
+    gap: 12,
+    borderRadius: 14,
+    flexWrap: 'wrap',
+  },
   
   summaryItem: { minWidth: 75 },
   
-  summaryCount: { color: '#203451', fontSize: 20, fontWeight: '800' },
+  summaryCount: { color: '#f0f6ff', fontSize: 20, fontWeight: '800' },
   
-  summaryLabel: { color: '#758396', fontSize: 11, marginTop: 2 },
+  summaryLabel: { color: 'rgba(255, 255, 255, 0.40)', fontSize: 11, marginTop: 2 },
   
-  error: { color: '#b42318', backgroundColor: '#fff0f0', borderRadius: 10, padding: 12, fontWeight: '700' },
+  error: {
+    color: colors.danger,
+    backgroundColor: 'rgba(248, 113, 113, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(248, 113, 113, 0.25)',
+    borderRadius: 10,
+    padding: 12,
+    fontWeight: '700',
+  },
   
-  errorText: { color: '#b42318', marginTop: 8, textAlign: 'center' },
+  errorText: { color: colors.danger, marginTop: 8, textAlign: 'center' },
   
-  roster: { ...surfaces.card, backgroundColor: '#fff', overflow: 'hidden', borderRadius: 14 },
+  roster: {
+    ...surfaces.card,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.09)',
+    overflow: 'hidden',
+    borderRadius: 14,
+  },
   
-  personRow: { minHeight: 72, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#edf0f3', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 },
+  personRow: {
+    minHeight: 72,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
   
   personInfo: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 160 },
   
-  roll: { minWidth: 82, maxWidth: 100, height: 34, borderRadius: 10, backgroundColor: '#edf3f7', color: '#203451', textAlign: 'center', textAlignVertical: 'center', paddingHorizontal: 8, paddingTop: 8, fontWeight: '800', fontSize: 11, flexShrink: 0 },
+  roll: {
+    minWidth: 82,
+    maxWidth: 100,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    color: colors.blueLight,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    paddingHorizontal: 8,
+    paddingTop: 8,
+    fontWeight: '800',
+    fontSize: 11,
+    flexShrink: 0,
+  },
   
-  personName: { color: '#203451', fontWeight: '800', fontSize: 14 },
+  personName: { color: '#f0f6ff', fontWeight: '800', fontSize: 14 },
   
-  personMeta: { color: '#758396', fontSize: 11, marginTop: 3 },
+  personMeta: { color: 'rgba(255, 255, 255, 0.40)', fontSize: 11, marginTop: 3 },
   
   statusControl: { width: 190 },
   
@@ -270,11 +374,18 @@ const styles = StyleSheet.create({
   
   statusButtonText: { fontSize: 16, fontWeight: '900' },
   
-  empty: { backgroundColor: '#fff', borderRadius: 15, padding: 30, alignItems: 'center' },
+  empty: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderRadius: 15,
+    padding: 30,
+    alignItems: 'center',
+  },
   
-  emptyTitle: { color: '#203451', fontWeight: '800', fontSize: 16 },
+  emptyTitle: { color: '#f0f6ff', fontWeight: '800', fontSize: 16 },
   
-  save: { borderRadius: 11, padding: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.blue, minHeight: 44 },
+  save: { borderRadius: 11, padding: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, minHeight: 44 },
   
   saveText: { fontWeight: '800', color: '#FFFFFF' },
   

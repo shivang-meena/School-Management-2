@@ -11,7 +11,7 @@ const today = new Date().toISOString().slice(0, 10);
 const currentYear = String(new Date().getFullYear());
 
 function Field({ label, value, onChangeText, placeholder, multiline = false }: any) {
-  return <View style={s.field}><Text style={s.label}>{label}</Text><TextInput style={[s.input, multiline && s.multiline]} value={String(value ?? '')} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#8a96a5" multiline={multiline} /></View>;
+  return <View style={s.field}><Text style={s.label}>{label}</Text><TextInput style={[s.input, multiline && s.multiline]} value={String(value ?? '')} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="rgba(255,255,255,0.25)" multiline={multiline} /></View>;
 }
 function Choices({ label, value, values, onChange }: any) {
   return <View style={s.field}><Text style={s.label}>{label}</Text><View style={s.choices}>{values.map((item: any) => { const key = typeof item === 'string' ? item : item.value; const text = typeof item === 'string' ? item : item.label; return <TouchableOpacity accessibilityRole="button" key={key} style={[s.choice, value === key && s.choiceOn]} onPress={() => onChange(key)}><Text style={value === key ? s.choiceTextOn : s.choiceText}>{text}</Text></TouchableOpacity>; })}</View></View>;
@@ -264,8 +264,8 @@ export function AdminOperationsScreen({ mode, title, eyebrow, description }: Pro
     if (mode === 'exams' && examSection === 'TIMETABLE') return examTimetableForm();
     if (mode === 'academics') return <><Choices label="Configuration" value={form.action} values={['YEAR', 'CURRENT', 'CLASS', 'SECTION', 'SUBJECT', 'CALENDAR', 'TEACHER', 'CLASS_TEACHER', 'TRANSFER']} onChange={(v: string) => set('action', v)} />{form.action === 'YEAR' ? <><Field label="Academic year name" value={form.name} onChangeText={(v: string) => set('name', v)} placeholder="2027-28" /><Field label="Start date" value={form.startDate} onChangeText={(v: string) => set('startDate', v)} placeholder="YYYY-MM-DD" /><Field label="End date" value={form.endDate} onChangeText={(v: string) => set('endDate', v)} placeholder="2027-03-31" /><Choices label="Make current" value={!!form.isCurrent} values={[{ value: true, label: 'Yes' }, { value: false, label: 'No' }]} onChange={(v: boolean) => set('isCurrent', v)} /></> : null}{form.action === 'CURRENT' ? <SelectCards label="Set current academic year" value={yearId} items={years} onChange={(v: string) => set('academicYearId', v)} getLabel={(x: any) => x.name} /> : null}{form.action === 'CLASS' ? <><Field label="Class name" value={form.name} onChangeText={(v: string) => set('name', v)} placeholder="Class 13" /><Field label="Sort order" value={form.sortOrder} onChangeText={(v: string) => set('sortOrder', v)} placeholder="13" /></> : null}{form.action === 'SECTION' ? <><SelectCards label="Class" value={classId} items={classes} onChange={(v: string) => set('classId', v)} getLabel={(x: any) => x.name} /><Field label="Section name" value={form.name} onChangeText={(v: string) => set('name', v)} placeholder="B" /><Field label="Capacity" value={form.capacity} onChangeText={(v: string) => set('capacity', v)} placeholder="40" /></> : null}{form.action === 'SUBJECT' ? <><Field label="Subject code" value={form.code} onChangeText={(v: string) => set('code', v)} placeholder="MATH" /><Field label="Subject name" value={form.name} onChangeText={(v: string) => set('name', v)} placeholder="Mathematics" /></> : null}{form.action === 'CALENDAR' ? <><SelectCards label="Academic year" value={yearId} items={years} onChange={(v: string) => set('academicYearId', v)} getLabel={(x: any) => x.name} /><Field label="Date" value={form.date} onChangeText={(v: string) => set('date', v)} placeholder="YYYY-MM-DD" /><Choices label="Day type" value={form.dayType || 'HOLIDAY'} values={['WORKING_DAY', 'HOLIDAY', 'WEEKLY_OFF']} onChange={(v: string) => set('dayType', v)} /><Field label="Title" value={form.name} onChangeText={(v: string) => set('name', v)} placeholder="Diwali holiday" /></> : null}{form.action === 'TEACHER' || form.action === 'CLASS_TEACHER' ? <><CommonSelectors years={years} sections={sections} subjects={form.action === 'TEACHER' ? subjects : []} employees={(employees.data || []).filter((x: any) => x.subRole === 'TEACHER')} values={{ yearId, sectionId, subjectId, employeeId }} set={set} /><Field label="Effective from" value={form.effectiveFrom} onChangeText={(v: string) => set('effectiveFrom', v)} placeholder="YYYY-MM-DD" /></> : null}{form.action === 'TRANSFER' ? <><SelectCards label="Student" value={form.studentId || students.data?.[0]?.id} items={students.data || []} onChange={(v: string) => set('studentId', v)} getLabel={(x: any) => x.studentId + ' · ' + x.name} /><SelectCards label="Academic year" value={yearId} items={years} onChange={(v: string) => set('academicYearId', v)} getLabel={(x: any) => x.name} /><SelectCards label="New section" value={sectionId} items={sections} onChange={(v: string) => set('sectionId', v)} getLabel={(x: any) => x.className + ' ' + x.name} /><Field label="New roll number" value={form.rollNumber} onChangeText={(v: string) => set('rollNumber', v)} placeholder="25" /><Field label="Effective from" value={form.effectiveFrom} onChangeText={(v: string) => set('effectiveFrom', v)} placeholder="YYYY-MM-DD" /></> : null}</>;
     if (mode === 'attendance') { const employeeMode = form.action === 'EMPLOYEE'; return <><Choices label="Register" value={form.action} values={['STUDENT', 'EMPLOYEE']} onChange={(v: string) => { set('action', v); set('status', 'PRESENT'); }} /><Field label="Date" value={form.date} onChangeText={(v: string) => set('date', v)} placeholder="YYYY-MM-DD" />{employeeMode ? <SelectCards label="Employee" value={employeeId} items={employees.data || []} onChange={(v: string) => set('employeeId', v)} getLabel={(x: any) => x.employeeId + ' · ' + x.name} /> : <><SelectCards label="Section" value={sectionId} items={sections} onChange={(v: string) => set('sectionId', v)} getLabel={(x: any) => x.className + ' ' + x.name} /><SelectCards label="Student" value={studentId} items={selectedSectionStudents} onChange={(v: string) => set('studentId', v)} getLabel={(x: any) => x.studentId + ' · ' + x.name} /></>}<Choices label="Status" value={form.status} values={['PRESENT', 'ABSENT', 'LATE']} onChange={(v: string) => set('status', v)} /><Field label="Remarks" value={form.remarks} onChangeText={(v: string) => set('remarks', v)} placeholder="Optional" /><Field label="Correction reason" value={form.reason} onChangeText={(v: string) => set('reason', v)} placeholder="Required for a past date" /></>; }
-    if (mode === 'fees' && feeSection === 'CLASS_FEES') return <><Text style={{ color: '#5d6d80', lineHeight: 19 }}>Set the annual fee amount for one student in the selected class.</Text><SelectCards label="Class" value={classId} items={classes} onChange={selectFeeClass} getLabel={(x: any) => x.name} /><Field label="Per-student class fee" value={form.amount ?? (selectedFeeRow?.hasFee ? String(selectedFeeRow.totalFee) : '')} onChangeText={(v: string) => set('amount', v)} placeholder="500000" /><Choices label="Update existing student accounts too?" value={!!form.updateExistingStudents} values={[{ value: false, label: 'No — keep current student fee' }, { value: true, label: 'Yes — update existing students' }]} onChange={(v: boolean) => set('updateExistingStudents', v)} /></>;
-    if (mode === 'fees' && (feeSection === 'STUDENT_FEES' || feeSection === 'PAYMENTS')) return <><Text style={{ color: '#5d6d80', lineHeight: 19 }}>{feeSection === 'PAYMENTS' ? 'Filter students by class and section, then tap a student to record a payment.' : 'Filter students by the class and section configured in Academics. Tap any student to view the complete fee summary and payment history.'}</Text><SelectCards label="Class filter" value={studentFeeClassId} items={classes} onChange={(id: string) => { setFeeStudentClassId(id); setFeeStudentSectionId(''); }} getLabel={(x: any) => x.name} /><SelectCards label="Section filter" value={studentFeeSectionId} items={studentFeeSections} onChange={(id: string) => setFeeStudentSectionId(id)} getLabel={(x: any) => x.name} /></>;
+    if (mode === 'fees' && feeSection === 'CLASS_FEES') return <><Text style={{ color: 'rgba(255,255,255,0.45)', lineHeight: 19 }}>Set the annual fee amount for one student in the selected class.</Text><SelectCards label="Class" value={classId} items={classes} onChange={selectFeeClass} getLabel={(x: any) => x.name} /><Field label="Per-student class fee" value={form.amount ?? (selectedFeeRow?.hasFee ? String(selectedFeeRow.totalFee) : '')} onChangeText={(v: string) => set('amount', v)} placeholder="500000" /><Choices label="Update existing student accounts too?" value={!!form.updateExistingStudents} values={[{ value: false, label: 'No — keep current student fee' }, { value: true, label: 'Yes — update existing students' }]} onChange={(v: boolean) => set('updateExistingStudents', v)} /></>;
+    if (mode === 'fees' && (feeSection === 'STUDENT_FEES' || feeSection === 'PAYMENTS')) return <><Text style={{ color: 'rgba(255,255,255,0.45)', lineHeight: 19 }}>{feeSection === 'PAYMENTS' ? 'Filter students by class and section, then tap a student to record a payment.' : 'Filter students by the class and section configured in Academics. Tap any student to view the complete fee summary and payment history.'}</Text><SelectCards label="Class filter" value={studentFeeClassId} items={classes} onChange={(id: string) => { setFeeStudentClassId(id); setFeeStudentSectionId(''); }} getLabel={(x: any) => x.name} /><SelectCards label="Section filter" value={studentFeeSectionId} items={studentFeeSections} onChange={(id: string) => setFeeStudentSectionId(id)} getLabel={(x: any) => x.name} /></>;
     if (mode === 'exams') return <>
       <Text style={s.help}>Select a class and section to see its students. Tap a student card to enter marks for completed exam papers.</Text>
       <SelectCards label="Class filter" value={marksSelectedClassId} items={classes} onChange={(id: string) => { setMarksClassId(id); setMarksSectionId(''); setSelectedMarksStudent(null); setSelectedMarksTimetable(null); setSelectedMarksEntry(null); setFormError(''); }} getLabel={(item: any) => item.name} />
@@ -340,7 +340,7 @@ export function AdminOperationsScreen({ mode, title, eyebrow, description }: Pro
       {mode === 'salary' ? <View style={s.panel}><Text style={s.panelTitle}>Filter employees by sub-role</Text><Choices value={salarySubRole} values={salaryFilterChoices} onChange={(v: string) => setSalarySubRole(v)} /></View> : null}
       {mode !== 'academics' && !(mode === 'exams' && examSection === 'TIMETABLE') && open && showSalarySetupForm ? <View style={s.panel}><Text style={s.panelTitle}>{formPanelTitle}</Text>{formContent()}{formError ? <Text style={{ color: '#b42318', fontWeight: '700', marginTop: 8, marginBottom: 8 }}>{String(formError)}</Text> : null}{mode !== 'exams' && (mode !== 'fees' || feeSection === 'CLASS_FEES') && showSalarySetupForm ? <TouchableOpacity accessibilityRole="button" disabled={saving} style={[s.save, saving && s.disabled]} onPress={submit}>{saving ? <ActivityIndicator color="#071d33" /> : <Text style={s.saveText}>{formSaveLabel}</Text>}</TouchableOpacity> : null}</View> : null}
       {mode !== 'exams' ? <View style={s.listHeader}><Text style={s.listTitle}>{mode === 'academics' ? `${academicTab === 'classes' ? 'Classes' : academicTab === 'subjects' ? 'Subjects' : 'Holidays & Calendar'} records` : mode === 'fees' ? (feeSection === 'CLASS_FEES' ? 'Class fee list' : feeSection === 'PAYMENTS' ? 'Students for payment' : 'Student fee list') : mode === 'salary' ? (salarySection === 'SETUP' ? 'Employee salary list' : salarySection === 'HISTORY' ? 'Salary history list' : 'Employees for salary payment') : 'Database records'}</Text><TouchableOpacity accessibilityRole="button" onPress={refresh}><Text style={s.refresh}>↻ Refresh</Text></TouchableOpacity></View> : null}
-      {mode !== 'exams' ? (records.isLoading || feeAccounts.isLoading || academics.isLoading || calendarRecords.isLoading || salaryAccounts.isLoading ? <ActivityIndicator color="#c88728" /> : !hasRecords ? <View style={s.empty}><Text style={s.emptyTitle}>{mode === 'fees' ? (feeSection === 'CLASS_FEES' ? 'No academic classes available' : 'No student fee accounts found') : mode === 'salary' ? 'No active employees found' : 'No records available'}</Text><Text style={s.muted}>{mode === 'fees' && feeSection !== 'CLASS_FEES' ? 'No current student fee accounts are available for the selected filters.' : mode === 'salary' ? 'No active employees match the selected sub-role.' : emptyMessage(mode, form.action)}</Text></View> : <View style={s.grid}>{rows.slice(0, 100).map((row: any, index: number) => { if (row._sectionHeader) return <View key={row._sectionHeader} style={s.sectionHeader}><Text style={s.sectionTitle}>{row._sectionHeader}</Text></View>; const isStudentFee = mode === 'fees' && feeSection !== 'CLASS_FEES'; const isSalaryCard = mode === 'salary'; const cardTitle = isSalaryCard ? row.name : isStudentFee ? row.studentName : mode === 'fees' ? row.name : row.title || row.name || row.student?.name || row.receiptNo || ('Record ' + (index + 1)); const cardBadge = isSalaryCard ? row.subRole || 'SUB-ROLE NOT SET' : isStudentFee ? row.className + ' · ' + row.sectionName : mode === 'fees' ? (row.hasFee ? 'SET' : 'NOT SET') : row.status || row.type || row.calculationStatus || (row.published ? 'PUBLISHED' : row._recordType === 'CALENDAR' ? row.dayType : 'ACTIVE'); const cardBody = isSalaryCard ? 'Current month (' + row.currentMonthLabel + '): Gross ₹' + formatMoney(row.latestSalary?.grossAmount) + ' · Deduction ₹' + formatMoney(row.latestSalary?.deductionAmount) + ' · Payable ₹' + formatMoney(row.payableAmount) + ' · Paid ₹' + formatMoney(row.paidAmount) + ' · Remaining ₹' + formatMoney(row.remainingAmount) + ' · Present ' + (row.attendanceStatuses?.PRESENT || 0) + ' · Absent ' + (row.attendanceStatuses?.ABSENT || 0) + ' · Half-day ' + (row.attendanceStatuses?.HALF_DAY || 0) + ' · Late ' + (row.attendanceStatuses?.LATE || 0) + ' · Previous remaining ₹' + formatMoney(row.previousRemaining) + ' · Previous credit ₹' + formatMoney(row.previousCredit) + ' · Total due ₹' + formatMoney(row.totalRemaining) + ' · Total credit ₹' + formatMoney(row.totalCredit) : isStudentFee ? 'Student ID: ' + row.studentCode + ' · Fee / Remaining: ₹' + formatMoney(row.totalFee) + ' / ₹' + formatMoney(row.remainingFee) + ' · Paid: ₹' + formatMoney(row.paidAmount) + (row.creditBalance > 0 ? ' · Credit: ₹' + formatMoney(row.creditBalance) : '') : mode === 'fees' ? (row.hasFee ? 'Per-student fee: ₹' + formatMoney(row.totalFee) : 'Fee not set') : mode === 'accounts' ? 'Amount: ₹' + formatMoney(row.amount) + '\nTransaction date: ' + displayDate(row.transactionDate) + '\nAdded: ' + displayDateTime(row.createdAt) + '\nDescription: ' + (row.description || 'No description provided.') + '\nSource: ' + (row.sourceType || 'MANUAL') : row.message || row.description || row.schoolClass?.name || row.student?.studentId || row.subject?.name || row.employee?.name || (row._recordType === 'CALENDAR' ? 'Administration calendar entry' : 'Additional details are not available.'); return <TouchableOpacity accessibilityRole="button" style={[s.card, selectedAcademic?.id === row.id && s.cardSelected]} key={row.id || index} onPress={() => { if (mode === 'academics' && row._recordType !== 'CALENDAR') setSelectedAcademic(row); else if (isStudentFee) setSelectedFeeAccount(row); else if (isSalaryCard && salarySection === 'SETUP') { set('employeeId', row.id); setOpen(true); } else if (isSalaryCard && salarySection === 'HISTORY') { setSelectedSalaryAccount(row); } else if (isSalaryCard) openSalaryPayment(row); }}><View style={s.cardTop}><Text style={s.cardTitle}>{String(cardTitle)}</Text><Text style={s.badge}>{String(cardBadge)}</Text></View><Text style={s.cardBody}>{String(cardBody)}</Text>{isSalaryCard ? <><Text style={s.tap}>{salarySection === 'SETUP' ? 'Tap to update salary' : salarySection === 'HISTORY' ? 'Tap to view salary history' : 'Tap to record salary payment'}</Text>{salarySection === 'PAYMENTS' ? <TouchableOpacity accessibilityRole="button" style={s.smallButton} onPress={() => openSalaryPayment(row)}><Text style={s.smallText}>Open payment form</Text></TouchableOpacity> : null}</> : isStudentFee ? <Text style={s.tap}>{feeSection === 'PAYMENTS' ? 'Tap to record payment' : 'Tap to view payment history'}</Text> : null}{row.date || row.transactionDate || row.createdAt ? <Text style={s.meta}>{displayDate(row.date || row.transactionDate || row.createdAt)}</Text> : null}{mode === 'academics' && row._recordType === 'CALENDAR' ? <View style={s.cardActions}><TouchableOpacity style={s.smallButton} onPress={() => editCalendar(row)}><Text style={s.smallText}>Edit</Text></TouchableOpacity><TouchableOpacity style={s.deleteButton} onPress={() => deleteCalendar(row.id)}><Text style={s.deleteText}>Delete</Text></TouchableOpacity></View> : null}{mode === 'academics' && row._recordType !== 'CALENDAR' ? <Text style={s.tap}>Tap to view connected details</Text> : null}{mode === 'exams' && !row.published ? <TouchableOpacity style={s.smallButton} onPress={() => publishExam(row.id)}><Text style={s.smallText}>Publish result</Text></TouchableOpacity> : null}</TouchableOpacity>; })}</View>) : null}
+      {mode !== 'exams' ? (records.isLoading || feeAccounts.isLoading || academics.isLoading || calendarRecords.isLoading || salaryAccounts.isLoading ? <ActivityIndicator color="#c88728" /> : !hasRecords ? <View style={s.empty}><Text style={s.emptyTitle}>{mode === 'fees' ? (feeSection === 'CLASS_FEES' ? 'No academic classes available' : 'No student fee accounts found') : mode === 'salary' ? 'No active employees found' : 'No records available'}</Text><Text style={s.muted}>{mode === 'fees' && feeSection !== 'CLASS_FEES' ? 'No current student fee accounts are available for the selected filters.' : mode === 'salary' ? 'No active employees match the selected sub-role.' : emptyMessage(mode, form.action)}</Text></View> : <View style={s.grid}>{rows.slice(0, 100).map((row: any, index: number) => { if (row._sectionHeader) return <View key={row._sectionHeader} style={s.sectionHeader}><Text style={s.sectionTitle}>{row._sectionHeader}</Text></View>; const isStudentFee = mode === 'fees' && feeSection !== 'CLASS_FEES'; const isSalaryCard = mode === 'salary'; const cardTitle = isSalaryCard ? row.name : isStudentFee ? row.studentName : mode === 'fees' ? row.name : row.title || row.name || row.student?.name || row.receiptNo || ('Record ' + (index + 1)); const cardBadge = isSalaryCard ? row.subRole || 'SUB-ROLE NOT SET' : isStudentFee ? row.className + ' · ' + row.sectionName : mode === 'fees' ? (row.hasFee ? 'SET' : 'NOT SET') : row.status || row.type || row.calculationStatus || (row.published ? 'PUBLISHED' : row._recordType === 'CALENDAR' ? row.dayType : 'ACTIVE'); const cardBody = isSalaryCard ? 'Current month (' + row.currentMonthLabel + '): Gross ₹' + formatMoney(row.latestSalary?.grossAmount) + ' · Deduction ₹' + formatMoney(row.latestSalary?.deductionAmount) + ' · Payable ₹' + formatMoney(row.payableAmount) + ' · Paid ₹' + formatMoney(row.paidAmount) + ' · Remaining ₹' + formatMoney(row.remainingAmount) + ' · Present ' + (row.attendanceStatuses?.PRESENT || 0) + ' · Absent ' + (row.attendanceStatuses?.ABSENT || 0) + ' · Half-day ' + (row.attendanceStatuses?.HALF_DAY || 0) + ' · Late ' + (row.attendanceStatuses?.LATE || 0) + ' · Previous remaining ₹' + formatMoney(row.previousRemaining) + ' · Previous credit ₹' + formatMoney(row.previousCredit) + ' · Total due ₹' + formatMoney(row.totalRemaining) + ' · Total credit ₹' + formatMoney(row.totalCredit) : isStudentFee ? 'Student ID: ' + row.studentCode + ' · Fee / Remaining: ₹' + formatMoney(row.totalFee) + ' / ₹' + formatMoney(row.remainingFee) + ' · Paid: ₹' + formatMoney(row.paidAmount) + (row.creditBalance > 0 ? ' · Credit: ₹' + formatMoney(row.creditBalance) : '') : mode === 'fees' ? (row.hasFee ? 'Per-student fee: ₹' + formatMoney(row.totalFee) : 'Fee not set') : mode === 'accounts' ? 'Amount: ₹' + formatMoney(row.amount) + '\nTransaction date: ' + displayDate(row.transactionDate) + '\nAdded: ' + displayDateTime(row.createdAt) + '\nDescription: ' + (row.description || 'No description provided.') + '\nSource: ' + (row.sourceType || 'MANUAL') : row.message || row.description || row.schoolClass?.name || row.student?.studentId || row.subject?.name || row.employee?.name || (row._recordType === 'CALENDAR' ? 'Administration calendar entry' : 'Additional details are not available.'); return <TouchableOpacity accessibilityRole="button" style={[s.card, selectedAcademic?.id === row.id && s.cardSelected]} key={row.id || index} onPress={() => { if (mode === 'academics' && row._recordType !== 'CALENDAR') setSelectedAcademic(row); else if (isStudentFee) setSelectedFeeAccount(row); else if (isSalaryCard && salarySection === 'SETUP') { set('employeeId', row.id); setOpen(true); } else if (isSalaryCard && salarySection === 'HISTORY') { setSelectedSalaryAccount(row); } else if (isSalaryCard) openSalaryPayment(row); }}><View style={s.cardTop}><Text style={s.cardTitle}>{String(cardTitle)}</Text><Text style={s.badge}>{String(cardBadge)}</Text></View><Text style={s.cardBody}>{String(cardBody)}</Text>{isSalaryCard ? <><Text style={s.tap}>{salarySection === 'SETUP' ? 'Tap to update salary' : salarySection === 'HISTORY' ? 'Tap to view salary history' : 'Tap to record salary payment'}</Text>{salarySection === 'PAYMENTS' ? <TouchableOpacity accessibilityRole="button" style={s.smallButton} onPress={() => openSalaryPayment(row)}><Text style={s.smallText}>Open payment form</Text></TouchableOpacity> : null}</> : isStudentFee ? <Text style={s.tap}>{feeSection === 'PAYMENTS' ? 'Tap to record payment' : 'Tap to view payment history'}</Text> : null}{row.date || row.transactionDate || row.createdAt ? <Text style={s.meta}>{displayDate(row.date || row.transactionDate || row.createdAt)}</Text> : null}{mode === 'academics' && row._recordType === 'CALENDAR' ? <View style={s.cardActions}><TouchableOpacity style={s.smallButton} onPress={() => editCalendar(row)}><Text style={s.smallText}>Edit</Text></TouchableOpacity><TouchableOpacity style={s.deleteButton} onPress={() => deleteCalendar(row.id)}><Text style={s.deleteText}>Delete</Text></TouchableOpacity></View> : null}{mode === 'academics' && row._recordType !== 'CALENDAR' ? <Text style={s.tap}>Tap to view connected details</Text> : null}{(mode as string) === 'exams' && !row.published ? <TouchableOpacity style={s.smallButton} onPress={() => publishExam(row.id)}><Text style={s.smallText}>Publish result</Text></TouchableOpacity> : null}</TouchableOpacity>; })}</View>) : null}
     </ScrollView>
     <Modal visible={mode === 'academics' && !!selectedAcademic} transparent animationType="fade" onRequestClose={() => setSelectedAcademic(null)}><View style={s.overlay} accessibilityViewIsModal><TouchableOpacity accessibilityRole="button" accessibilityLabel="Close academic details" style={StyleSheet.absoluteFill} onPress={() => setSelectedAcademic(null)} /><View style={s.modalShell}><ScrollView contentContainerStyle={s.modalContent}>{academicDetail ? <View style={s.detailPanel}><View style={s.detailHeader}><View><Text style={s.eyebrow}>{academicDetail.type} DETAILS</Text><Text style={s.panelTitle}>{academicDetail.title}</Text><Text style={s.meta}>{academicDetail.subtitle}</Text></View><View style={s.cardTop}><TouchableOpacity accessibilityRole="button" style={s.smallButton} onPress={() => deleteAcademicRecord(selectedAcademic)}><Text style={s.smallText}>Delete record</Text></TouchableOpacity><TouchableOpacity accessibilityRole="button" style={s.close} onPress={() => setSelectedAcademic(null)}><Text style={s.closeText}>Close ✕</Text></TouchableOpacity></View></View>{academicDetail.sections.length ? <><Text style={s.detailHeading}>Classes and sections</Text>{academicDetail.sections.map((section: any) => <Text style={s.detailRow} key={section.id}>{section.name} · {section.capacity || 'No section details'}</Text>)}</> : null}<Text style={s.detailHeading}>Employees / assigned staff ({academicDetail.employees?.length || 0})</Text>{academicDetail.employees?.length ? academicDetail.employees.map((employee: any) => <Text style={s.detailRow} key={employee.id}>{employee.employeeId} · {employee.name} · Designation: {employee.designation} · Sub-role: {employee.subRole}</Text>) : <Text style={s.muted}>No assigned employees found.</Text>}<Text style={s.detailHeading}>Subject teachers</Text>{academicDetail.teachers.length ? academicDetail.teachers.map((item: any) => <View style={s.cardTop} key={item.id}><Text style={s.detailRow}>{item.employee?.name} → {item.subject?.name} · {item.section?.schoolClass?.name} {item.section?.name} · {item.academicYear?.name}</Text><TouchableOpacity accessibilityRole="button" style={s.smallButton} onPress={() => deleteAssignment(item.id)}><Text style={s.smallText}>Delete</Text></TouchableOpacity></View>) : <Text style={s.muted}>No subject-teacher assignments found.</Text>}<Text style={s.detailHeading}>Class teachers</Text>{academicDetail.classTeachers.length ? academicDetail.classTeachers.map((item: any) => <View style={s.cardTop} key={item.id}><Text style={s.detailRow}>{item.employee?.name} → {item.section?.schoolClass?.name} {item.section?.name} · {item.academicYear?.name}</Text><TouchableOpacity accessibilityRole="button" style={s.smallButton} onPress={() => deleteAssignment(item.id, true)}><Text style={s.smallText}>Delete</Text></TouchableOpacity></View>) : <Text style={s.muted}>No class-teacher assignments found.</Text>}<Text style={s.detailHeading}>Current students ({academicDetail.students.length})</Text>{academicDetail.students.length ? academicDetail.students.map((student: any) => { const enrollment = student.enrollments?.find((item: any) => item.status === 'CURRENT'); return <Text style={s.detailRow} key={student.id}>{student.studentId} · {student.name} · {enrollment?.section?.schoolClass?.name} {enrollment?.section?.name} · Roll {enrollment?.rollNumber || '—'}</Text>; }) : <Text style={s.muted}>No current students assigned.</Text>}</View> : null}</ScrollView></View></View></Modal>
    <Modal visible={mode === 'fees' && feeSection === 'STUDENT_FEES' && !!selectedFeeAccount} transparent animationType="fade" onRequestClose={() => setSelectedFeeAccount(null)}><View style={s.overlay} accessibilityViewIsModal><TouchableOpacity accessibilityRole="button" accessibilityLabel="Close student fee details" style={StyleSheet.absoluteFill} onPress={() => setSelectedFeeAccount(null)} /><View style={s.modalShell}><ScrollView contentContainerStyle={s.modalContent}>{selectedFeeAccount ? <View style={s.detailPanel}><View style={s.detailHeader}><View><Text style={s.eyebrow}>STUDENT FEE DETAILS</Text><Text style={s.panelTitle}>{selectedFeeAccount.studentName}</Text><Text style={s.meta}>{selectedFeeAccount.studentCode} · {selectedFeeAccount.className} · {selectedFeeAccount.sectionName}</Text></View><TouchableOpacity accessibilityRole="button" style={s.close} onPress={() => setSelectedFeeAccount(null)}><Text style={s.closeText}>Close ✕</Text></TouchableOpacity></View><Text style={s.detailHeading}>Fee summary</Text><Text style={s.detailRow}>Total fee: ₹{formatMoney(selectedFeeAccount.totalFee)}</Text><Text style={s.detailRow}>Paid: ₹{formatMoney(selectedFeeAccount.paidAmount)}</Text><Text style={s.detailRow}>Remaining: ₹{formatMoney(selectedFeeAccount.remainingFee)}</Text><Text style={s.detailHeading}>Payment history</Text>{selectedFeeAccount.transactions?.length ? selectedFeeAccount.transactions.map((transaction: any) => <View style={s.cardTop} key={transaction.id}><Text style={s.detailRow}>{displayDate(transaction.paymentDate)} · {displayDateTime(transaction.createdAt)} · {transaction.status}</Text><Text style={s.detailRow}>₹{formatMoney(transaction.amount)}</Text></View>) : <Text style={s.muted}>No payments recorded yet.</Text>}</View> : null}</ScrollView></View></View></Modal>
@@ -389,134 +389,239 @@ const s = StyleSheet.create({ page: { flex: 1, backgroundColor: colors.backgroun
   
   content: { ...surfaces.content, gap: 16 },
   
-  hero: { ...surfaces.card, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: 24, borderRadius: 16, backgroundColor: '#FFFFFF', flexWrap: 'wrap' },
+  hero: {
+    ...surfaces.card,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+    padding: 24,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    flexWrap: 'wrap',
+  },
   
   heroText: { flex: 1 },
   
-  eyebrow: { fontWeight: '800', fontSize: 10, letterSpacing: 1.4, color: colors.blue },
+  eyebrow: { fontWeight: '800', fontSize: 10, letterSpacing: 1.4, color: colors.blueLight },
   
-  title: { marginTop: 5, fontSize: 28, color: colors.ink, fontWeight: '700' },
+  title: { marginTop: 5, fontSize: 28, color: '#f0f6ff', fontWeight: '800', letterSpacing: -0.3 },
   
-  description: { marginTop: 5, maxWidth: 700, lineHeight: 21, color: colors.muted },
+  description: { marginTop: 5, maxWidth: 700, lineHeight: 21, color: 'rgba(255, 255, 255, 0.45)' },
   
-  goldButton: { borderRadius: 11, paddingHorizontal: 16, paddingVertical: 12, justifyContent: 'center', backgroundColor: colors.blue, minHeight: 44 },
+  goldButton: { borderRadius: 11, paddingHorizontal: 16, paddingVertical: 12, justifyContent: 'center', backgroundColor: colors.primary, minHeight: 44 },
   
   goldText: { fontWeight: '800', color: '#FFFFFF' },
   
-  tabs: { backgroundColor: '#fff', borderRadius: 16, padding: 6, flexDirection: 'row', borderWidth: 1, borderColor: '#e1e6ec', flexWrap: 'wrap', gap: 12 },
+  tabs: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 16,
+    padding: 6,
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
   
   tab: { flex: 1, minHeight: 48, borderRadius: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 10, minWidth: 120 },
   
-  tabActive: { borderColor: colors.blue, backgroundColor: colors.blue },
+  tabActive: { borderColor: colors.primary, backgroundColor: colors.primary },
   
   tabIcon: { fontSize: 16 },
   
-  tabText: { color: '#607187', fontSize: 13, fontWeight: '700' },
+  tabText: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 13, fontWeight: '700' },
   
-  tabTextActive: { color: '#fff' },
+  tabTextActive: { color: '#fff', fontWeight: '800' },
   
-  panel: { ...surfaces.card, backgroundColor: '#fff', padding: 20, gap: 12, borderRadius: 14 },
+  panel: {
+    ...surfaces.card,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    padding: 20,
+    gap: 12,
+    borderRadius: 14,
+  },
   
-  panelTitle: { fontSize: 21, fontWeight: '700', color: colors.ink },
+  panelTitle: { fontSize: 21, fontWeight: '800', color: '#f0f6ff', letterSpacing: -0.2 },
   
   field: { gap: 6, minWidth: 0, flexShrink: 1 },
   
-  label: { color: '#506176', fontSize: 12, fontWeight: '700' },
+  label: { color: 'rgba(255, 255, 255, 0.55)', fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
   
-  input: { ...surfaces.input, borderWidth: 1, borderColor: '#d9e0e8', backgroundColor: '#fbfcfd', color: '#172b42', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, fontSize: 14 },
+  input: {
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    color: '#f0f6ff',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 14,
+  },
   
   multiline: { minHeight: 85, textAlignVertical: 'top' },
   
   choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   
-  choice: { borderWidth: 1, borderColor: '#d4dce5', borderRadius: 9, paddingHorizontal: 11, paddingVertical: 9 },
+  choice: {
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 9,
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+  },
   
-  choiceOn: { borderColor: colors.blue, backgroundColor: colors.blue },
+  choiceOn: { borderColor: colors.primary, backgroundColor: colors.primary },
   
-  choiceText: { color: '#506176', fontSize: 12 },
+  choiceText: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 12, fontWeight: '600' },
   
-  choiceTextOn: { color: '#fff', fontWeight: '700', fontSize: 12 },
+  choiceTextOn: { color: '#fff', fontWeight: '800', fontSize: 12 },
   
-  save: { borderRadius: 11, padding: 14, alignItems: 'center', marginTop: 4, justifyContent: 'center', backgroundColor: colors.blue, minHeight: 44 },
+  save: { borderRadius: 11, padding: 14, alignItems: 'center', marginTop: 4, justifyContent: 'center', backgroundColor: colors.primary, minHeight: 44 },
   
-  disabled: { opacity: .65 },
+  disabled: { opacity: 0.65 },
   
   saveText: { fontWeight: '800', color: '#FFFFFF' },
   
   listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 },
   
-  listTitle: { color: '#203451', fontSize: 20, fontWeight: '800' },
+  listTitle: { color: '#f0f6ff', fontSize: 20, fontWeight: '800', letterSpacing: -0.2 },
   
-  refresh: { color: '#3563E9', fontWeight: '700' },
+  refresh: { color: colors.blueLight, fontWeight: '700' },
   
   grid: { gap: 10 },
   
-  sectionHeader: { backgroundColor: '#eaf0f6', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginTop: 8 },
+  sectionHeader: {
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginTop: 8,
+  },
   
-  sectionTitle: { color: '#203451', fontSize: 15, fontWeight: '800' },
+  sectionTitle: { color: '#f0f6ff', fontSize: 15, fontWeight: '800' },
   
-  card: { ...surfaces.card, backgroundColor: '#fff', padding: 17, gap: 6, minWidth: 0, borderWidth: 1, borderRadius: 14, borderColor: colors.border },
+  card: {
+    ...surfaces.card,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    padding: 17,
+    gap: 6,
+    minWidth: 0,
+    borderWidth: 1,
+    borderRadius: 14,
+    borderColor: 'rgba(255, 255, 255, 0.09)',
+  },
   
-  cardSelected: { borderWidth: 2, borderColor: '#3563E9' },
+  cardSelected: { borderWidth: 2, borderColor: colors.primary },
   
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 },
   
-  cardTitle: { color: '#203451', fontSize: 16, fontWeight: '800', flex: 1 },
+  cardTitle: { color: '#f0f6ff', fontSize: 16, fontWeight: '800', flex: 1 },
   
-  badge: { color: '#18734a', fontSize: 10, fontWeight: '800' },
+  badge: { color: colors.success, fontSize: 10, fontWeight: '800' },
   
-  cardBody: { color: '#5d6d80' },
+  cardBody: { color: 'rgba(255, 255, 255, 0.45)' },
 
-  marksCount: { color: '#3563E9', fontSize: 13, fontWeight: '800', marginTop: 4 },
+  marksCount: { color: colors.blueLight, fontSize: 13, fontWeight: '800', marginTop: 4 },
 
-  marksExamCard: { backgroundColor: '#F7FAFF', borderWidth: 1, borderColor: '#D7E2F4', borderRadius: 12, padding: 14, gap: 6 },
+  marksExamCard: { backgroundColor: 'rgba(255, 255, 255, 0.05)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.09)', borderRadius: 12, padding: 14, gap: 6 },
 
-  marksExamSelected: { borderColor: '#3563E9', borderWidth: 2 },
+  marksExamSelected: { borderColor: colors.primary, borderWidth: 2 },
 
-  marksSubjectCard: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#D7E2F4', borderRadius: 12, padding: 14, gap: 6, marginTop: 8 },
+  marksSubjectCard: { backgroundColor: 'rgba(255, 255, 255, 0.05)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.09)', borderRadius: 12, padding: 14, gap: 6, marginTop: 8 },
 
-  marksSubjectSelected: { borderColor: '#3563E9', borderWidth: 2 },
+  marksSubjectSelected: { borderColor: colors.primary, borderWidth: 2 },
 
-  marksNotAssigned: { color: '#B42318', fontSize: 11, fontWeight: '800' },
+  marksNotAssigned: { color: colors.danger, fontSize: 11, fontWeight: '800' },
 
-  marksEntered: { color: '#18734A', fontSize: 11, fontWeight: '800' },
+  marksEntered: { color: colors.success, fontSize: 11, fontWeight: '800' },
 
-  marksEditor: { backgroundColor: '#F2F6FF', borderRadius: 14, padding: 15, marginTop: 8 },
+  marksEditor: { backgroundColor: 'rgba(99, 102, 241, 0.08)', borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.20)', borderRadius: 14, padding: 15, marginTop: 8 },
 
-  meta: { color: '#8a96a5', fontSize: 11 },
+  meta: { color: 'rgba(255, 255, 255, 0.35)', fontSize: 11 },
   
-  tap: { color: '#3563E9', fontSize: 11, fontWeight: '700', marginTop: 4 },
+  tap: { color: colors.blueLight, fontSize: 11, fontWeight: '700', marginTop: 4 },
   
   cardActions: { flexDirection: 'row', gap: 8, marginTop: 4 },
   
-  smallButton: { alignSelf: 'flex-start', backgroundColor: '#eaf0f6', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginTop: 5 },
+  smallButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 5,
+  },
   
-  smallText: { color: '#203451', fontWeight: '800', fontSize: 12 },
+  smallText: { color: '#f0f6ff', fontWeight: '800', fontSize: 12 },
   
-  deleteButton: { alignSelf: 'flex-start', backgroundColor: '#fff0f0', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginTop: 5 },
+  deleteButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(248, 113, 113, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(248, 113, 113, 0.25)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 5,
+  },
   
-  deleteText: { color: '#b42318', fontWeight: '800', fontSize: 12 },
+  deleteText: { color: colors.danger, fontWeight: '800', fontSize: 12 },
   
-  empty: { backgroundColor: '#fff', borderRadius: 15, padding: 30, alignItems: 'center' },
+  empty: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderRadius: 15,
+    padding: 30,
+    alignItems: 'center',
+  },
   
-  emptyTitle: { color: '#203451', fontWeight: '800' },
+  emptyTitle: { color: '#f0f6ff', fontWeight: '800' },
   
-  muted: { color: '#758396', marginTop: 5 },
+  muted: { color: 'rgba(255, 255, 255, 0.40)', marginTop: 5 },
   
-  overlay: { flex: 1, backgroundColor: 'rgba(4, 17, 30, 0.72)', alignItems: 'center', justifyContent: 'center', padding: 18 },
+  overlay: { flex: 1, backgroundColor: 'rgba(4, 8, 18, 0.80)', alignItems: 'center', justifyContent: 'center', padding: 18 },
   
-  modalShell: { width: '92%', maxWidth: 780, maxHeight: '90%', backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', elevation: 16 },
+  modalShell: {
+    width: '92%',
+    maxWidth: 780,
+    maxHeight: '90%',
+    backgroundColor: '#0e1525',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
   
   modalContent: { padding: 0 },
   
-  detailPanel: { backgroundColor: '#fff', padding: 22, gap: 10 },
+  detailPanel: { backgroundColor: '#0e1525', padding: 22, gap: 10 },
   
   detailHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 },
   
-  close: { backgroundColor: '#edf1f5', borderRadius: 9, paddingHorizontal: 13, paddingVertical: 9 },
+  close: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: 9,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+  },
   
-  closeText: { color: '#243a52', fontWeight: '700' },
+  closeText: { color: '#f0f6ff', fontWeight: '700' },
   
-  detailHeading: { color: '#203451', fontSize: 15, fontWeight: '800', marginTop: 5 },
-  
-  detailRow: { color: '#506176', lineHeight: 20 } });
+  detailHeading: { color: '#f0f6ff', fontSize: 15, fontWeight: '800', marginTop: 5 },
+  detailRow: { color: 'rgba(255, 255, 255, 0.60)', lineHeight: 20 },
+  help: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 13, marginBottom: 12, lineHeight: 19 },
+  error: { color: colors.danger, fontSize: 13, marginTop: 8 },
+});

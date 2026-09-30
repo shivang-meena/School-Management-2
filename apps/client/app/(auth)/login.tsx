@@ -7,14 +7,20 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-  Image,
   ScrollView,
   useWindowDimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/hooks/useAuth';
 import { Role } from '@erp/contracts';
-import { colors, surfaces } from '../../src/theme';
+import { colors, radius, shadow } from '../../src/theme';
+
+const ROLES: { key: Role; label: string; icon: keyof typeof Ionicons.glyphMap; hint: string }[] = [
+  { key: 'ADMIN',    label: 'Admin',         icon: 'shield-checkmark-outline', hint: 'e.g. ADMIN001' },
+  { key: 'EMPLOYEE', label: 'Teacher/Staff', icon: 'briefcase-outline',        hint: 'e.g. EMP000001' },
+  { key: 'STUDENT',  label: 'Student',       icon: 'school-outline',           hint: 'e.g. STU000001' },
+];
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -22,11 +28,16 @@ export default function LoginScreen() {
   const params = useLocalSearchParams();
   const { login, user, isLoading: authLoading } = useAuth();
 
-  const [role, setRole] = useState<Role>((params.role as Role) || 'ADMIN');
-  const [userId, setUserId] = useState('');
-  const [password, setPassword] = useState('');
+  const [role, setRole]               = useState<Role>((params.role as Role) || 'ADMIN');
+  const [userId, setUserId]           = useState('');
+  const [password, setPassword]       = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [idFocused, setIdFocused]     = useState(false);
+  const [pwFocused, setPwFocused]     = useState(false);
+
+  const currentRole = ROLES.find(r => r.key === role)!;
 
   const handleRoleChange = (selectedRole: Role) => {
     setRole(selectedRole);
@@ -37,25 +48,16 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (user) {
-      setErrorMessage(`Already logged in as ${user.name || user.loginId}. Sign out first to use another account.`);
+      setErrorMessage(`Already logged in as ${user.name || user.loginId}. Sign out first.`);
       return;
     }
     setErrorMessage('');
     setIsSubmitting(true);
     try {
-      const profile = await login({
-        userId: userId.trim(),
-        password,
-        role,
-      });
-
-      if (role === 'ADMIN') {
-        router.replace('/admin/dashboard');
-      } else if (role === 'EMPLOYEE') {
-        router.replace('/staff/dashboard');
-      } else {
-        router.replace('/student/dashboard');
-      }
+      await login({ userId: userId.trim(), password, role });
+      if (role === 'ADMIN')         router.replace('/admin/dashboard');
+      else if (role === 'EMPLOYEE') router.replace('/staff/dashboard');
+      else                          router.replace('/student/dashboard');
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Login failed. Please check credentials.';
       setErrorMessage(msg);
@@ -66,253 +68,439 @@ export default function LoginScreen() {
   };
 
   const openCurrentPortal = () => {
-    if (user?.role === 'ADMIN') router.replace('/admin/dashboard');
+    if (user?.role === 'ADMIN')         router.replace('/admin/dashboard');
     else if (user?.role === 'EMPLOYEE') router.replace('/staff/dashboard');
-    else router.replace('/student/dashboard');
+    else                                router.replace('/student/dashboard');
   };
 
+  const desktop = width >= 960;
+
   return (
-    <ScrollView style={styles.page} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={styles.layout}>
-        {width >= 960 ? <View style={styles.story}>
-          <Image source={require('../../assets/icon.png')} style={styles.schoolLogo} resizeMode="contain" />
-          <Text style={styles.storyEyebrow}>SHIVORA TECHNOLOGIES</Text>
-          <Text style={styles.storyTitle}>A connected campus.{'\n'}A brighter tomorrow.</Text>
-          <Text style={styles.storyCopy}>A thoughtful space for the people who make our school special. Manage your day, stay informed and focus on what matters.</Text>
-          <View style={styles.storyFeatures}>{['Learning & academics', 'People & school life', 'One school community'].map((label, index) => <View key={label} style={styles.storyFeature}><Text style={styles.featureNumber}>0{index + 1}</Text><Text style={styles.featureText}>{label}</Text></View>)}</View>
-          <Text style={styles.storyFooter}>Technology for better workflows.</Text>
-        </View> : null}
-      <View style={styles.card}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Image source={require('../../assets/icon.png')} style={styles.loginLogo} resizeMode="contain" />
-          <Text style={styles.title}>Welcome to your school</Text>
-          <Text style={styles.subtitle}>Choose your portal and sign in to continue.</Text>
-        </View>
+    <ScrollView
+      style={s.page}
+      contentContainerStyle={s.container}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Ambient glow orbs */}
+      <View style={s.orbTopLeft} pointerEvents="none" />
+      <View style={s.orbBottomRight} pointerEvents="none" />
 
-        {authLoading ? <View style={styles.sessionNotice}><ActivityIndicator color={colors.blue} /><Text style={styles.sessionTitle}>Checking saved session…</Text></View> : user ? <View style={styles.sessionNotice}>
-          <Text style={styles.sessionTitle}>Already logged in</Text>
-          <Text style={styles.sessionText}>{user.name || user.loginId} is already logged in as {user.role === 'ADMIN' ? 'Admin' : user.role === 'EMPLOYEE' ? 'Employee' : 'Student'} in this browser. Sign out before using another account.</Text>
-          <TouchableOpacity style={styles.loginButton} onPress={openCurrentPortal}><Text style={styles.loginButtonText}>Open current portal →</Text></TouchableOpacity>
-        </View> : <>
-          {/* Role Switcher Tabs */}
-          <View style={styles.roleTabs}>
-            {(['ADMIN', 'EMPLOYEE', 'STUDENT'] as Role[]).map((r) => (
-              <TouchableOpacity
-                key={r}
-                style={[styles.roleTab, role === r && styles.activeRoleTab]}
-                onPress={() => handleRoleChange(r)}
-              >
-                <Text style={[styles.roleTabText, role === r && styles.activeRoleTabText]}>
-                  {r === 'ADMIN' ? 'Admin' : r === 'EMPLOYEE' ? 'Employee' : 'Student'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+      <View style={[s.layout, desktop && s.layoutDesktop]}>
 
-          {/* Error notice */}
-          {errorMessage ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{errorMessage}</Text>
+        {/* ── Left Story Panel (desktop only) ── */}
+        {desktop ? (
+          <View style={s.story}>
+            <View style={s.storyBadge}>
+              <Ionicons name="school" size={36} color="#ffffff" />
             </View>
-          ) : null}
-
-          {/* Form Inputs */}
-          <View style={styles.form}>
-            <Text style={styles.label}>
-              {role === 'ADMIN' ? 'Admin login ID' : role === 'EMPLOYEE' ? 'Employee ID (EMP000001)' : 'Student ID (STU000001)'}
+            <Text style={s.storyEyebrow}>ARIHANT PUBLIC SCHOOL</Text>
+            <Text style={s.storyTitle}>A connected campus.{'\n'}A brighter tomorrow.</Text>
+            <Text style={s.storyCopy}>
+              A unified ERP system empowering administrators, faculty, students, and parents
+              with real-time academic records, attendance tracking, and finance workflows.
             </Text>
-            <TextInput
-              style={styles.input}
-              value={userId}
-              onChangeText={setUserId}
-              placeholder="Enter ID or email"
-              autoCapitalize="none"
-            />
-
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Enter password"
-              secureTextEntry
-            />
-
-            <TouchableOpacity
-              style={[styles.loginButton, isSubmitting && { opacity: 0.65 }]}
-              onPress={handleLogin}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="#ffffff" />
-              ) : (
-                <Text style={styles.loginButtonText}>Sign in as {role === 'ADMIN' ? 'Admin' : role === 'EMPLOYEE' ? 'Employee' : 'Student'}  →</Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.backLink} onPress={() => router.push('/')}>
-              <Text style={styles.backLinkText}>← Back to School Home</Text>
-            </TouchableOpacity>
+            <View style={s.storyFeatures}>
+              {[
+                { label: 'Academic & Examination Portal',      icon: 'ribbon-outline'   as const },
+                { label: 'Attendance & Class Timetables',      icon: 'calendar-outline' as const },
+                { label: 'Fee Structures & Instant Receipts',  icon: 'card-outline'     as const },
+              ].map(item => (
+                <View key={item.label} style={s.featureRow}>
+                  <View style={s.featureIcon}>
+                    <Ionicons name={item.icon} size={15} color={colors.blueLight} />
+                  </View>
+                  <Text style={s.featureText}>{item.label}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={s.storyFooter}>Powered by School ERP Platform · 2026</Text>
           </View>
-        </>}
+        ) : null}
+
+        {/* ── Login Card ── */}
+        <View style={s.card}>
+          {/* Card glow border */}
+          <View style={s.cardGlow} pointerEvents="none" />
+
+          {/* Header */}
+          <View style={s.cardHeader}>
+            <View style={s.lockBadge}>
+              <Ionicons name="lock-closed" size={22} color="#ffffff" />
+            </View>
+            <Text style={s.cardTitle}>Portal Sign In</Text>
+            <Text style={s.cardSubtitle}>Choose your role and enter credentials to continue</Text>
+          </View>
+
+          {authLoading ? (
+            <View style={s.sessionBox}>
+              <ActivityIndicator color={colors.blueLight} />
+              <Text style={s.sessionTitle}>Checking saved session…</Text>
+            </View>
+          ) : user ? (
+            <View style={s.sessionBox}>
+              <Ionicons name="checkmark-circle" size={28} color={colors.success} />
+              <Text style={s.sessionTitle}>Already Logged In</Text>
+              <Text style={s.sessionText}>
+                {user.name || user.loginId} is active as{' '}
+                {user.role === 'ADMIN' ? 'Administrator' : user.role === 'EMPLOYEE' ? 'Employee' : 'Student'}.
+              </Text>
+              <TouchableOpacity style={s.ctaBtn} onPress={openCurrentPortal}>
+                <Text style={s.ctaBtnText}>Open Current Portal</Text>
+                <Ionicons name="arrow-forward" size={16} color="#ffffff" />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              {/* ── Role Switcher ── */}
+              <View style={s.roleTabs}>
+                {ROLES.map(r => {
+                  const active = role === r.key;
+                  return (
+                    <TouchableOpacity
+                      key={r.key}
+                      style={[s.roleTab, active && s.roleTabActive]}
+                      onPress={() => handleRoleChange(r.key)}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons
+                        name={r.icon}
+                        size={15}
+                        color={active ? '#ffffff' : 'rgba(255,255,255,0.35)'}
+                      />
+                      <Text style={[s.roleTabText, active && s.roleTabTextActive]}>{r.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* ── Error ── */}
+              {errorMessage ? (
+                <View style={s.errorBox}>
+                  <Ionicons name="alert-circle" size={15} color={colors.danger} />
+                  <Text style={s.errorText}>{errorMessage}</Text>
+                </View>
+              ) : null}
+
+              {/* ── Form ── */}
+              <View style={s.form}>
+                <Text style={s.label}>
+                  {role === 'ADMIN' ? 'Admin Login ID' : role === 'EMPLOYEE' ? 'Employee ID' : 'Student ID'}
+                </Text>
+                <View style={[s.inputWrap, idFocused && s.inputWrapFocused]}>
+                  <Ionicons name="person-outline" size={17} color={idFocused ? colors.blueLight : 'rgba(255,255,255,0.30)'} style={{ marginRight: 10 }} />
+                  <TextInput
+                    style={s.input}
+                    value={userId}
+                    onChangeText={setUserId}
+                    placeholder={currentRole.hint}
+                    placeholderTextColor="rgba(255,255,255,0.25)"
+                    autoCapitalize="characters"
+                    onFocus={() => setIdFocused(true)}
+                    onBlur={() => setIdFocused(false)}
+                  />
+                </View>
+
+                <Text style={[s.label, { marginTop: 16 }]}>Password</Text>
+                <View style={[s.inputWrap, pwFocused && s.inputWrapFocused]}>
+                  <Ionicons name="lock-closed-outline" size={17} color={pwFocused ? colors.blueLight : 'rgba(255,255,255,0.30)'} style={{ marginRight: 10 }} />
+                  <TextInput
+                    style={s.input}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Enter your password"
+                    placeholderTextColor="rgba(255,255,255,0.25)"
+                    secureTextEntry={!showPassword}
+                    onFocus={() => setPwFocused(true)}
+                    onBlur={() => setPwFocused(false)}
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={s.eyeBtn} activeOpacity={0.7}>
+                    <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={17} color="rgba(255,255,255,0.30)" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* ── CTA ── */}
+                <TouchableOpacity
+                  style={[s.ctaBtn, isSubmitting && { opacity: 0.65 }]}
+                  onPress={handleLogin}
+                  disabled={isSubmitting}
+                  activeOpacity={0.85}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color="#ffffff" />
+                  ) : (
+                    <>
+                      <Text style={s.ctaBtnText}>
+                        Sign in as {role === 'ADMIN' ? 'Admin' : role === 'EMPLOYEE' ? 'Staff' : 'Student'}
+                      </Text>
+                      <Ionicons name="arrow-forward" size={16} color="#ffffff" />
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity style={s.backLink} onPress={() => router.push('/')} activeOpacity={0.7}>
+                  <Ionicons name="arrow-back" size={13} color={colors.blueLight} />
+                  <Text style={s.backLinkText}>Return to School Website</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+        </View>
       </View>
-    </View>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.background },
-  layout: { width: '100%', maxWidth: 1080, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 72 },
-  story: { flex: 1, paddingVertical: 36 },
-  schoolLogo: { width: 190, height: 86, borderRadius: 12, backgroundColor: '#fff', marginBottom: 28 },
-  storyEyebrow: { color: colors.blue, fontSize: 10, letterSpacing: 2, fontWeight: '700' },
-  storyTitle: { color: colors.ink, fontSize: 39, lineHeight: 49, fontWeight: '800', marginTop: 18 },
-  storyCopy: { color: colors.muted, fontSize: 14, lineHeight: 24, marginTop: 20 },
-  storyFeatures: { marginTop: 28, gap: 14 },
-  storyFeature: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  featureNumber: { color: colors.blue, backgroundColor: '#E6EDFC', padding: 10, borderRadius: 8, fontSize: 11, fontWeight: '700' },
-  featureText: { color: '#4B6082', fontSize: 13, fontWeight: '600' },
-  storyFooter: { color: '#8A9AB2', fontSize: 11, marginTop: 42 },
-  loginLogo: { width: 150, height: 68, borderRadius: 10, backgroundColor: '#fff', marginBottom: 20 },
+const s = StyleSheet.create({
+  page: { flex: 1, backgroundColor: '#080c14' },
   container: {
-    flex: 1,
-    backgroundColor: '#071A2F',
+    minHeight: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 24,
   },
+
+  // ── Ambient Orbs ──────────────────────────────────────────────
+  orbTopLeft: {
+    position: 'absolute',
+    width: 500,
+    height: 500,
+    borderRadius: 250,
+    top: -160,
+    left: -160,
+    backgroundColor: 'rgba(99,102,241,0.18)',
+  },
+  orbBottomRight: {
+    position: 'absolute',
+    width: 400,
+    height: 400,
+    borderRadius: 200,
+    bottom: -120,
+    right: -120,
+    backgroundColor: 'rgba(139,92,246,0.14)',
+  },
+
+  // ── Layout ────────────────────────────────────────────────────
+  layout: {
+    width: '100%',
+    maxWidth: 1040,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  layoutDesktop: {
+    flexDirection: 'row',
+    gap: 64,
+    alignItems: 'center',
+  },
+
+  // ── Story Panel ───────────────────────────────────────────────
+  story: { flex: 1, paddingVertical: 20 },
+  storyBadge: {
+    width: 68,
+    height: 68,
+    borderRadius: radius.xl,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    ...shadow.md,
+  },
+  storyEyebrow: {
+    color: colors.blueLight,
+    fontSize: 11,
+    letterSpacing: 2,
+    fontWeight: '800',
+  },
+  storyTitle: {
+    color: '#f0f6ff',
+    fontSize: 34,
+    lineHeight: 44,
+    fontWeight: '900',
+    marginTop: 12,
+    letterSpacing: -0.5,
+  },
+  storyCopy: {
+    color: 'rgba(255,255,255,0.50)',
+    fontSize: 14,
+    lineHeight: 22,
+    marginTop: 14,
+    maxWidth: 420,
+  },
+  storyFeatures: { marginTop: 24, gap: 12 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  featureIcon: {
+    width: 32,
+    height: 32,
+    backgroundColor: 'rgba(99,102,241,0.15)',
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(99,102,241,0.30)',
+  },
+  featureText: { color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: '600' },
+  storyFooter: { color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 32 },
+
+  // ── Login Card ────────────────────────────────────────────────
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
-    ...surfaces.card,
-    padding: 30,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: radius.xxl,
+    padding: 32,
     width: '100%',
     maxWidth: 440,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    overflow: 'hidden',
+    ...shadow.lg,
   },
-  header: {
+  cardGlow: {
+    position: 'absolute',
+    top: -80,
+    left: -80,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: 'rgba(99,102,241,0.12)',
+  },
+  cardHeader: { alignItems: 'center', marginBottom: 24 },
+  lockBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.lg,
+    backgroundColor: colors.primary,
     alignItems: 'center',
-    marginBottom: 24,
+    justifyContent: 'center',
+    marginBottom: 14,
+    ...shadow.sm,
   },
-  logoIcon: {
-    fontSize: 38,
-    marginBottom: 8,
-  },
-  title: {
+  cardTitle: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontWeight: '900',
+    color: '#f0f6ff',
+    letterSpacing: -0.3,
   },
-  subtitle: {
-    fontSize: 14,
-    color: '#64748b',
-    marginTop: 4,
+  cardSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.45)',
+    marginTop: 5,
+    textAlign: 'center',
+    lineHeight: 20,
   },
+
+  // ── Role Tabs ─────────────────────────────────────────────────
   roleTabs: {
     flexDirection: 'row',
-    backgroundColor: '#f1f5f9',
-    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: radius.md,
     padding: 4,
     marginBottom: 20,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   roleTab: {
     flex: 1,
-    paddingVertical: 8,
+    flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 6,
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 9,
+    borderRadius: radius.sm,
   },
-  activeRoleTab: {
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+  roleTabActive: {
+    backgroundColor: colors.primary,
+    ...shadow.sm,
   },
   roleTabText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  activeRoleTabText: {
-    color: '#2563eb',
+    fontSize: 11,
     fontWeight: '700',
+    color: 'rgba(255,255,255,0.35)',
   },
-  errorBox: {
-    backgroundColor: '#fee2e2',
-    padding: 10,
-    borderRadius: 6,
-    marginBottom: 16,
-  },
-  errorText: {
-    color: '#b91c1c',
-    fontSize: 13,
-    textAlign: 'center',
-  },
-  sessionNotice: {
-    backgroundColor: '#EEF4FF',
-    borderWidth: 1,
-    borderColor: '#C9D9FF',
-    borderRadius: 14,
-    padding: 18,
-    alignItems: 'center',
-    gap: 10,
-  },
-  sessionTitle: {
-    color: '#17315A',
-    fontSize: 16,
+  roleTabTextActive: {
+    color: '#ffffff',
     fontWeight: '800',
-    textAlign: 'center',
   },
-  sessionText: {
-    color: '#526A8C',
-    fontSize: 13,
-    lineHeight: 20,
-    textAlign: 'center',
+
+  // ── Error Box ─────────────────────────────────────────────────
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.dangerLight,
+    padding: 12,
+    borderRadius: radius.md,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(248,113,113,0.30)',
   },
-  form: {
-    gap: 4,
-  },
+  errorText: { color: colors.danger, fontSize: 12, fontWeight: '600', flex: 1 },
+
+  // ── Form ──────────────────────────────────────────────────────
+  form: { width: '100%' },
   label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#334155',
-    marginBottom: 4,
+    fontSize: 12,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.55)',
+    marginBottom: 8,
+    letterSpacing: 0.4,
+  },
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.10)',
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    paddingHorizontal: 14,
+    minHeight: 50,
+  },
+  inputWrapFocused: {
+    borderColor: colors.primary,
+    backgroundColor: 'rgba(99,102,241,0.08)',
   },
   input: {
-    backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    flex: 1,
     fontSize: 14,
-    marginBottom: 16,
-    color: '#0f172a',
+    color: '#f0f6ff',
+    minHeight: 48,
   },
-  loginButton: {
-    backgroundColor: colors.blue,
-    paddingVertical: 15,
-    borderRadius: 8,
+  eyeBtn: { padding: 6 },
+
+  // ── CTA Button ────────────────────────────────────────────────
+  ctaBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    minHeight: 50,
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 6,
+    gap: 8,
+    marginTop: 22,
+    ...shadow.md,
   },
-  loginButtonText: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 15,
-  },
+  ctaBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '800' },
+
+  // ── Back Link ─────────────────────────────────────────────────
   backLink: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     marginTop: 18,
+    paddingVertical: 6,
   },
-  backLinkText: {
-    fontSize: 13,
-    color: '#64748b',
-    fontWeight: '500',
+  backLinkText: { color: colors.blueLight, fontSize: 12, fontWeight: '700' },
+
+  // ── Session Box ───────────────────────────────────────────────
+  sessionBox: {
+    backgroundColor: 'rgba(99,102,241,0.10)',
+    padding: 20,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(99,102,241,0.25)',
   },
+  sessionTitle: { fontSize: 16, fontWeight: '800', color: '#f0f6ff' },
+  sessionText: { fontSize: 12, color: 'rgba(255,255,255,0.55)', textAlign: 'center', lineHeight: 18 },
 });
