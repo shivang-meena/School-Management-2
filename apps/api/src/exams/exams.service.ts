@@ -37,6 +37,13 @@ export class ExamsService {
     if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate > endDate) throw new BadRequestException('Timetable start date must be before or equal to the end date');
     const section = await this.prisma.section.findUnique({ where: { id: dto.sectionId }, select: { id: true, classId: true } });
     if (!section || section.classId !== dto.classId) throw new BadRequestException('Selected section does not belong to the selected class');
+    const classSubjects = await this.prisma.classSubject.findMany({
+      where: {
+        classId: dto.classId,
+        isActive: true,
+      },
+      select: { subjectId: true },
+    });
     const assignments = await this.prisma.teacherAssignment.findMany({
       where: {
         academicYearId: dto.academicYearId,
@@ -46,8 +53,11 @@ export class ExamsService {
       },
       select: { subjectId: true },
     });
-    const requiredSubjectIds = Array.from(new Set(assignments.map((assignment) => assignment.subjectId)));
-    if (!requiredSubjectIds.length) throw new BadRequestException('No subjects are assigned to the selected section for this academic year');
+    const requiredSubjectIds = Array.from(new Set([
+      ...classSubjects.map((cs) => cs.subjectId),
+      ...assignments.map((assignment) => assignment.subjectId),
+    ]));
+    if (!requiredSubjectIds.length) throw new BadRequestException('No subjects are assigned to the selected class or section for this academic year');
     const scheduledSubjectIds = new Set<string>();
     const entries = dto.entries.map((entry) => {
       const entryDate = dateOnly(entry.date);
@@ -87,6 +97,13 @@ export class ExamsService {
     return this.prisma.examTimetable.findMany({ where, include: { academicYear: true, schoolClass: true, section: true, entries: { include: { subject: true }, orderBy: [{ date: 'asc' }, { startTime: 'asc' }] } }, orderBy: [{ startDate: 'desc' }, { createdAt: 'desc' }] });
   }
 
+  async deleteTimetable(id: string) {
+    const timetable = await this.prisma.examTimetable.findUnique({ where: { id } });
+    if (!timetable) throw new NotFoundException('Exam timetable not found');
+    await this.prisma.examTimetable.delete({ where: { id } });
+    return { message: 'Exam timetable deleted successfully', id };
+  }
+
   async enterMarks(dto: EnterMarksInput) {
     const assessment = await this.prisma.assessment.findUnique({ where: { id: dto.assessmentId } });
     if (!assessment) throw new NotFoundException('Assessment not found');
@@ -115,7 +132,20 @@ export class ExamsService {
 
   async listStudentResults(actor: any) {
     if (actor.role !== Role.STUDENT) throw new ForbiddenException('Student results are available only for student accounts');
-    const student = await this.prisma.student.findUnique({ where: { studentId: actor.studentId }, include: { enrollments: { where: { status: 'CURRENT' }, orderBy: { effectiveFrom: 'desc' }, take: 1 } } });
+    const student = await this.prisma.student.findUnique({
+      where: { studentId: actor.studentId },
+      include: {
+        enrollments: {
+          where: { status: 'CURRENT' },
+          orderBy: { effectiveFrom: 'desc' },
+          take: 1,
+          include: {
+            academicYear: true,
+            section: { include: { schoolClass: true } },
+          },
+        },
+      },
+    });
     const enrollment = student?.enrollments[0];
     if (!student || !enrollment) throw new ForbiddenException('No current enrollment');
     const [timetables, assessments] = await Promise.all([
@@ -136,7 +166,28 @@ export class ExamsService {
       const maximumMarks = subjects.reduce((sum, subject) => sum + subject.maximumMarks, 0);
       const totalMarks = subjects.reduce((sum, subject) => sum + Number(subject.marks || 0), 0);
       const percentage = maximumMarks > 0 ? Number(((totalMarks / maximumMarks) * 100).toFixed(2)) : 0;
-      return [{ id: timetable.id, timetableId: timetable.id, title: timetable.title, type: timetable.type, startDate: timetable.startDate, endDate: timetable.endDate, status: 'RESULT_AVAILABLE', totalMarks, maximumMarks, percentage, subjects, message: 'Total marks: ' + totalMarks + '/' + maximumMarks + ' · Percentage: ' + percentage + '% · ' + subjects.map((subject) => (subject.subject?.name || 'Subject') + ': ' + (subject.entryStatus === ResultEntryStatus.ABSENT ? 'Absent' : subject.marks)).join(' · ') }];
+      return [{
+        id: timetable.id,
+        timetableId: timetable.id,
+        title: timetable.title,
+        type: timetable.type,
+        startDate: timetable.startDate,
+        endDate: timetable.endDate,
+        status: 'RESULT_AVAILABLE',
+        totalMarks,
+        maximumMarks,
+        percentage,
+        student: {
+          name: student.name,
+          studentId: student.studentId,
+          rollNumber: enrollment.rollNumber,
+          className: enrollment.section?.schoolClass?.name,
+          sectionName: enrollment.section?.name,
+          academicYear: enrollment.academicYear?.name,
+        },
+        subjects,
+        message: 'Total marks: ' + totalMarks + '/' + maximumMarks + ' · Percentage: ' + percentage + '% · ' + subjects.map((subject) => (subject.subject?.name || 'Subject') + ': ' + (subject.entryStatus === ResultEntryStatus.ABSENT ? 'Absent' : subject.marks)).join(' · ')
+      }];
     });
   }
 }

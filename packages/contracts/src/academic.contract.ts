@@ -61,3 +61,27 @@ export const CreateTransactionSchema = z.object({
   date: z.string(), description: z.string().optional(), idempotencyKey: z.string().min(8),
 });
 export type CreateTransactionInput = z.infer<typeof CreateTransactionSchema>;
+
+export const CreateParentSubjectSchema = z.object({
+  name: z.string().min(2),
+  code: z.string().min(2),
+  description: z.string().optional(),
+  isActive: z.boolean().optional().default(true),
+});
+export type CreateParentSubjectInput = z.infer<typeof CreateParentSubjectSchema>;
+
+export const UpdateParentSubjectSchema = z.object({
+  name: z.string().min(2).optional(),
+  code: z.string().min(2).optional(),
+  description: z.string().optional(),
+  isActive: z.boolean().optional(),
+});
+export type UpdateParentSubjectInput = z.infer<typeof UpdateParentSubjectSchema>;
+
+export const AssignClassSubjectSchema = z.object({
+  subjectId: z.string().uuid(),
+  parentSubjectId: z.string().uuid().nullable().optional(),
+  isOptional: z.boolean().optional().default(false),
+});
+export type AssignClassSubjectInput = z.infer<typeof AssignClassSubjectSchema>;
+

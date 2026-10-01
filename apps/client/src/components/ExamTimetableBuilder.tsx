@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { colors, surfaces } from '../theme';
@@ -8,6 +8,8 @@ type Props = {
   years: any[];
   classes: any[];
   teacherAssignments: any[];
+  classSubjects?: any[];
+  subjects?: any[];
   onSaved?: () => Promise<void> | void;
 };
 
@@ -61,7 +63,7 @@ function InputField({ label, value, onChangeText, placeholder }: any) {
   return <View style={s.field}><Text style={s.label}>{label}</Text><TextInput style={s.input} value={String(value ?? '')} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="rgba(255,255,255,0.25)" /></View>;
 }
 
-export function ExamTimetableBuilder({ years, classes, teacherAssignments, onSaved }: Props) {
+export function ExamTimetableBuilder({ years, classes, teacherAssignments, classSubjects = [], subjects = [], onSaved }: Props) {
   const client = useQueryClient();
   const [academicYearId, setAcademicYearId] = useState('');
   const [classId, setClassId] = useState('');
@@ -84,10 +86,69 @@ export function ExamTimetableBuilder({ years, classes, teacherAssignments, onSav
   const selectedClassId = classId || classes[0]?.id || '';
   const sectionItems = classes.find((schoolClass: any) => schoolClass.id === selectedClassId)?.sections || [];
   const selectedSectionId = sectionId && sectionItems.some((section: any) => section.id === sectionId) ? sectionId : sectionItems[0]?.id || '';
+
+  const classSubjectsQuery = useQuery<any>({
+    queryKey: ['class-subjects', selectedClassId],
+    queryFn: async () => {
+      if (!selectedClassId) return null;
+      return (await api.get(`/academics/classes/${selectedClassId}/subjects`)).data;
+    },
+    enabled: !!selectedClassId,
+  });
+
   const subjectItems = useMemo(() => {
     const seen = new Set<string>();
-    return teacherAssignments.filter((assignment: any) => assignment.academicYearId === selectedYearId && assignment.sectionId === selectedSectionId && assignment.subject && !seen.has(assignment.subjectId) && seen.add(assignment.subjectId)).map((assignment: any) => assignment.subject);
-  }, [selectedSectionId, selectedYearId, teacherAssignments]);
+    const result: any[] = [];
+
+    const addSubject = (sub: any, streamName?: string) => {
+      if (!sub || !sub.id || seen.has(sub.id)) return;
+      seen.add(sub.id);
+      result.push({
+        ...sub,
+        streamName: streamName || sub.streamName,
+      });
+    };
+
+    // 1. From classSubjectsQuery (direct class endpoint)
+    if (classSubjectsQuery.data) {
+      if (classSubjectsQuery.data.isSeniorSecondary) {
+        for (const stream of (classSubjectsQuery.data.streams || [])) {
+          for (const item of (stream.subjects || [])) {
+            if (item.isActive !== false && item.subject) {
+              addSubject(item.subject, stream.parentSubject?.code || stream.parentSubject?.name);
+            }
+          }
+        }
+      } else {
+        for (const item of (classSubjectsQuery.data.subjects || [])) {
+          if (item.isActive !== false && item.subject) {
+            addSubject(item.subject);
+          }
+        }
+      }
+    }
+
+    // 2. From classSubjects prop (Academics cache)
+    for (const cs of (classSubjects || [])) {
+      if (cs.classId === selectedClassId && cs.isActive !== false) {
+        const subId = cs.subjectId || cs.subject?.id;
+        const subObj = cs.subject || (subjects || []).find((s: any) => s.id === subId);
+        if (subObj) {
+          addSubject(subObj, cs.parentSubject?.code || cs.parentSubject?.name);
+        }
+      }
+    }
+
+    // 3. From teacherAssignments
+    for (const assignment of (teacherAssignments || [])) {
+      if (assignment.academicYearId === selectedYearId && assignment.sectionId === selectedSectionId && assignment.subject) {
+        addSubject(assignment.subject);
+      }
+    }
+
+    return result;
+  }, [classSubjectsQuery.data, classSubjects, selectedClassId, subjects, teacherAssignments, selectedYearId, selectedSectionId]);
+
   const timetableQuery = useQuery<any[]>({
     queryKey: ['exam-timetable-builder', selectedYearId, selectedClassId, selectedSectionId],
     queryFn: async () => (await api.get('/exam-timetables', { params: { academicYearId: selectedYearId, classId: selectedClassId, sectionId: selectedSectionId } })).data,
@@ -147,6 +208,45 @@ export function ExamTimetableBuilder({ years, classes, teacherAssignments, onSav
     }
   };
 
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const deleteTimetable = (id: string, timetableTitle: string) => {
+    const doDelete = async () => {
+      setDeletingId(id);
+      try {
+        await api.delete(`/exam-timetables/${id}`);
+        await timetableQuery.refetch();
+        await client.invalidateQueries({ queryKey: ['admin-records'] });
+        await client.invalidateQueries({ queryKey: ['marks-exam-timetables'] });
+        await onSaved?.();
+      } catch (err: any) {
+        const msg = err?.response?.data?.message || 'Could not delete exam timetable.';
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          window.alert(msg);
+        } else {
+          Alert.alert('Error', msg);
+        }
+      } finally {
+        setDeletingId(null);
+      }
+    };
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      if (window.confirm(`Are you sure you want to delete the exam timetable "${timetableTitle}"? This will remove all scheduled papers in this timetable.`)) {
+        doDelete();
+      }
+    } else {
+      Alert.alert(
+        'Delete exam timetable',
+        `Are you sure you want to delete "${timetableTitle}"? This will remove all scheduled papers in this timetable.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: doDelete },
+        ]
+      );
+    }
+  };
+
   const selectedClass = classes.find((schoolClass: any) => schoolClass.id === selectedClassId);
   const selectedSection = sectionItems.find((section: any) => section.id === selectedSectionId);
 
@@ -184,7 +284,7 @@ export function ExamTimetableBuilder({ years, classes, teacherAssignments, onSav
     </View>
 
     <View style={s.existingPanel}><View style={s.listHeader}><View><Text style={s.panelTitle}>Saved timetables</Text><Text style={s.help}>{selectedClass?.name || 'Class'} · Section {selectedSection?.name || '—'}</Text></View><TouchableOpacity accessibilityRole="button" onPress={() => timetableQuery.refetch()}><Text style={s.refresh}>↻ Refresh</Text></TouchableOpacity></View>
-      {timetableQuery.isLoading ? <ActivityIndicator color={colors.blue} /> : timetableQuery.isError ? <Text style={s.error}>Saved timetables could not be loaded.</Text> : timetableQuery.data?.length ? timetableQuery.data.map((timetable: any) => <View style={s.savedCard} key={timetable.id}><View style={s.savedHeader}><View><Text style={s.savedTitle}>{timetable.title}</Text><Text style={s.savedMeta}>{timetable.type} · {dateLabel(timetable.startDate)} to {dateLabel(timetable.endDate)} · {timetable.section?.name ? `Section ${timetable.section.name}` : 'Legacy class timetable'}</Text></View><Text style={s.badge}>SAVED</Text></View>{(timetable.entries || []).map((entry: any) => <View style={s.savedEntry} key={entry.id}><Text style={s.savedSubject}>{entry.subject?.name || entry.holidayTitle || 'Holiday'}</Text><Text style={s.savedMeta}>{dateLabel(entry.date)} · {entry.isHoliday ? 'Holiday' : `${timeLabel(entry.startTime)}–${timeLabel(entry.endTime)} · ${durationLabel(timeLabel(entry.startTime), timeLabel(entry.endTime))}`}</Text></View>)}</View>) : <Text style={s.help}>No timetable has been saved for this class and section yet.</Text>}
+      {timetableQuery.isLoading ? <ActivityIndicator color={colors.blue} /> : timetableQuery.isError ? <Text style={s.error}>Saved timetables could not be loaded.</Text> : timetableQuery.data?.length ? timetableQuery.data.map((timetable: any) => <View style={s.savedCard} key={timetable.id}><View style={s.savedHeader}><View style={{ flex: 1, minWidth: 180 }}><Text style={s.savedTitle}>{timetable.title}</Text><Text style={s.savedMeta}>{timetable.type} · {dateLabel(timetable.startDate)} to {dateLabel(timetable.endDate)} · {timetable.section?.name ? `Section ${timetable.section.name}` : 'Legacy class timetable'}</Text></View><View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Text style={s.badge}>SAVED</Text><TouchableOpacity accessibilityRole="button" style={s.deleteBtn} onPress={() => deleteTimetable(timetable.id, timetable.title)} disabled={deletingId === timetable.id}>{deletingId === timetable.id ? <ActivityIndicator size="small" color="#fca5a5" /> : <Text style={s.deleteBtnText}>Delete ✕</Text>}</TouchableOpacity></View></View>{(timetable.entries || []).map((entry: any) => <View style={s.savedEntry} key={entry.id}><Text style={s.savedSubject}>{entry.subject?.name || entry.holidayTitle || 'Holiday'}</Text><Text style={s.savedMeta}>{dateLabel(entry.date)} · {entry.isHoliday ? 'Holiday' : `${timeLabel(entry.startTime)}–${timeLabel(entry.endTime)} · ${durationLabel(timeLabel(entry.startTime), timeLabel(entry.endTime))}`}</Text></View>)}</View>) : <Text style={s.help}>No timetable has been saved for this class and section yet.</Text>}
     </View>
   </View>;
 }
@@ -350,4 +450,20 @@ const s = StyleSheet.create({
   },
   savedEntry: { borderTopWidth: 1, borderTopColor: 'rgba(255, 255, 255, 0.06)', paddingTop: 10, marginTop: 10 },
   savedSubject: { color: '#f0f6ff', fontWeight: '700', fontSize: 13 },
+  deleteBtn: {
+    backgroundColor: 'rgba(248, 113, 113, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(248, 113, 113, 0.25)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteBtnText: {
+    color: '#fca5a5',
+    fontWeight: '800',
+    fontSize: 11,
+  },
 });

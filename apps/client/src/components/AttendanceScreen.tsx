@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
+import { useAuth } from '../hooks/useAuth';
 
 type AttendanceMode = 'STUDENT' | 'EMPLOYEE';
 type Status = 'NONE' | 'PRESENT' | 'ABSENT' | 'LATE';
@@ -85,9 +86,34 @@ export function AttendanceScreen({ allowedModes = ['STUDENT', 'EMPLOYEE'], defau
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const { user } = useAuth();
   const academics = useQuery<any>({ queryKey: ['academics'], queryFn: async () => (await api.get('/academics')).data });
   const classes = academics.data?.classes || [];
-  const availableClasses = classes;
+  const classTeacherAssignments = academics.data?.classTeacherAssignments || [];
+
+  const isGlobalStudentAttendance = user?.role === 'ADMIN' || Boolean((user as any)?.hasGlobalStudentAttendance);
+
+  const myClassTeacherAssignments = useMemo(() => {
+    if (user?.role !== 'EMPLOYEE') return [];
+    return classTeacherAssignments.filter((cta: any) =>
+      (user.employeeId && cta.employee?.employeeId === user.employeeId) ||
+      cta.employeeId === (user as any).employeeDbId ||
+      cta.employeeId === user.id
+    );
+  }, [classTeacherAssignments, user]);
+
+  const availableClasses = useMemo(() => {
+    if (isGlobalStudentAttendance || !myClassTeacherAssignments.length) {
+      return classes;
+    }
+    const mySectionIds = myClassTeacherAssignments.map((cta: any) => cta.sectionId);
+    return classes
+      .map((c: any) => ({
+        ...c,
+        sections: (c.sections || []).filter((s: any) => mySectionIds.includes(s.id)),
+      }))
+      .filter((c: any) => c.sections.length > 0);
+  }, [classes, isGlobalStudentAttendance, myClassTeacherAssignments]);
   const sections = useMemo(() => availableClasses.find((item: any) => item.id === classId)?.sections || [], [availableClasses, classId]);
 
   useEffect(() => {

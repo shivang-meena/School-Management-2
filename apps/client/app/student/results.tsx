@@ -1,1 +1,6 @@
-import React from 'react'; import { PortalModuleScreen } from '../../src/components/PortalModuleScreen'; export default function Screen(){return <PortalModuleScreen title="My Results" eyebrow="ACADEMIC PERFORMANCE" description="An exam result appears after all subjects for that exam have marks or absent status assigned." endpoint="/assessments/student-results"/>}
+import React from 'react';
+import { StudentResultsScreen } from '../../src/components/StudentResultsScreen';
+
+export default function Screen() {
+  return <StudentResultsScreen />;
+}

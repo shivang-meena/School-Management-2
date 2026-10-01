@@ -3,6 +3,7 @@ import React from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
+import { downloadFeeReceiptPdf } from '../utils/feeReceiptPdf';
 
 type RazorpayOptions = {
   key: string;
@@ -65,6 +66,17 @@ export function StudentFeesScreen() {
   const [paymentError, setPaymentError] = React.useState('');
   const [paymentStarting, setPaymentStarting] = React.useState(false);
   const account = fees.data;
+  const studentId = account?.student?.studentId;
+  const studentQuery = useQuery<any>({
+    queryKey: ['student-profile-receipt-meta', studentId],
+    queryFn: async () => (await api.get(`/students/${studentId}`)).data,
+    enabled: Boolean(studentId),
+  });
+  const attendanceQuery = useQuery<any>({
+    queryKey: ['student-attendance-receipt-meta', studentId],
+    queryFn: async () => (await api.get(`/attendance/students/${studentId}`)).data,
+    enabled: Boolean(studentId),
+  });
   const transactions = Array.isArray(account?.transactions) ? account.transactions : [];
   const adjustments = Array.isArray(account?.adjustments) ? account.adjustments : [];
   const outstanding = Number(account?.outstanding || 0);
@@ -157,17 +169,89 @@ export function StudentFeesScreen() {
               <View style={s.summaryCard}><Text style={s.summaryLabel}>Remaining</Text><Text style={[s.summaryValue, s.remaining]}>₹{money(account?.outstanding)}</Text></View>
               <View style={s.summaryCard}><Text style={s.summaryLabel}>Credit</Text><Text style={[s.summaryValue, s.credit]}>₹{money(account?.creditBalance)}</Text></View>
             </View>
-            {outstanding > 0 ? <TouchableOpacity accessibilityRole="button" disabled={paymentStarting} onPress={openPaymentModal} style={[s.payButton, paymentStarting && s.disabled]}><Text style={s.payButtonText}>{paymentStarting ? 'Opening payment…' : 'Pay Online'}</Text></TouchableOpacity> : <Text style={s.paidMessage}>No outstanding fee is due.</Text>}
+            <TouchableOpacity accessibilityRole="button" disabled={paymentStarting} onPress={openPaymentModal} style={[s.payButton, paymentStarting && s.disabled]}>
+              <Text style={s.payButtonText}>{paymentStarting ? 'Opening payment…' : outstanding > 0 ? 'Pay Online' : 'Pay Online (Advance / Extra)'}</Text>
+            </TouchableOpacity>
+            {outstanding <= 0 ? <Text style={s.paidMessage}>No outstanding fee is due. Any extra payment will be added to your credit balance.</Text> : null}
             {adjustments.length ? <Text style={s.adjustment}>Adjustments included: ₹{money(adjustments.reduce((sum: number, item: any) => sum + Number(item.amount || 0), 0))}</Text> : null}
           </View>
 
           <View style={s.sectionHeader}><View><Text style={s.sectionTitle}>Payment history</Text><Text style={s.muted}>{transactions.length} payment record(s)</Text></View></View>
-          {transactions.length ? transactions.map((transaction: any) => <View style={s.paymentCard} key={transaction.id}>
-            <View style={s.paymentTop}><View style={s.paymentCopy}><Text style={s.receipt}>{transaction.receiptNo || 'Payment record'}</Text><Text style={s.paymentDate}>{date(transaction.paymentDate)}</Text></View><View style={[s.status, transaction.status !== 'SUCCESS' && s.pendingStatus]}><Text style={[s.statusText, transaction.status !== 'SUCCESS' && s.pendingStatusText]}>{String(transaction.status || 'UNKNOWN').replace('_', ' ')}</Text></View></View>
-            <View style={s.paymentDetails}><Text style={s.amount}>₹{money(transaction.amount)}</Text><Text style={s.method}>{String(transaction.method || 'METHOD NOT SET').replace('_', ' ')}</Text></View>
-            {transaction.reference ? <Text style={s.meta}>Reference: {transaction.reference}</Text> : null}
-            {transaction.remarks ? <Text style={s.meta}>Remarks: {transaction.remarks}</Text> : null}
-          </View>) : <View style={s.state}><Text style={s.stateTitle}>No payment records yet</Text><Text style={s.muted}>Your fee payment receipts will appear here after a successful payment.</Text></View>}
+          {transactions.length ? transactions.map((transaction: any) => {
+            const studentEnrollment = studentQuery.data?.enrollments?.find((e: any) => e.status === 'CURRENT') || studentQuery.data?.enrollments?.[0];
+            const accountEnrollment = account?.student?.enrollments?.[0];
+            const className =
+              account?.className ||
+              accountEnrollment?.section?.schoolClass?.name ||
+              studentEnrollment?.section?.schoolClass?.name ||
+              account?.feeStructure?.schoolClass?.name ||
+              attendanceQuery.data?.section?.className ||
+              '';
+            const sectionName =
+              account?.sectionName ||
+              accountEnrollment?.section?.name ||
+              studentEnrollment?.section?.name ||
+              attendanceQuery.data?.section?.name ||
+              '';
+            const rollNumber =
+              account?.rollNumber ||
+              accountEnrollment?.rollNumber ||
+              studentEnrollment?.rollNumber ||
+              attendanceQuery.data?.rollNumber ||
+              attendanceQuery.data?.student?.rollNumber ||
+              '';
+
+            return (
+              <View style={s.paymentCard} key={transaction.id}>
+                <View style={s.paymentTop}>
+                  <View style={s.paymentCopy}>
+                    <Text style={s.receipt}>{transaction.receiptNo || 'Payment record'}</Text>
+                    <Text style={s.paymentDate}>{date(transaction.paymentDate)}</Text>
+                  </View>
+                  <View style={s.actionsRow}>
+                    <TouchableOpacity
+                      accessibilityRole="button"
+                      style={s.downloadReceiptBtn}
+                      onPress={() => {
+                        downloadFeeReceiptPdf({
+                          receiptNo: transaction.receiptNo,
+                          paymentDate: transaction.paymentDate,
+                          amount: transaction.amount,
+                          method: transaction.method,
+                          status: transaction.status,
+                          reference: transaction.reference,
+                          remarks: transaction.remarks,
+                          studentName: account?.student?.name,
+                          studentId: account?.student?.studentId,
+                          rollNumber,
+                          className,
+                          sectionName,
+                          academicYear: account?.academicYear?.name,
+                          assessed: account?.assessed,
+                          netPaid: account?.netPaid,
+                          outstanding: account?.outstanding,
+                          creditBalance: account?.creditBalance,
+                        });
+                      }}
+                    >
+                      <Text style={s.downloadReceiptText}>⬇ Receipt PDF</Text>
+                    </TouchableOpacity>
+                    <View style={[s.status, transaction.status !== 'SUCCESS' && s.pendingStatus]}>
+                      <Text style={[s.statusText, transaction.status !== 'SUCCESS' && s.pendingStatusText]}>
+                        {String(transaction.status || 'UNKNOWN').replace('_', ' ')}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <View style={s.paymentDetails}>
+                  <Text style={s.amount}>₹{money(transaction.amount)}</Text>
+                  <Text style={s.method}>{String(transaction.method || 'METHOD NOT SET').replace('_', ' ')}</Text>
+                </View>
+                {transaction.reference ? <Text style={s.meta}>Reference: {transaction.reference}</Text> : null}
+                {transaction.remarks ? <Text style={s.meta}>Remarks: {transaction.remarks}</Text> : null}
+              </View>
+            );
+          }) : <View style={s.state}><Text style={s.stateTitle}>No payment records yet</Text><Text style={s.muted}>Your fee payment receipts will appear here after a successful payment.</Text></View>}
         </>}
     </ScrollView>
 
@@ -177,14 +261,14 @@ export function StudentFeesScreen() {
           <Text style={s.eyebrow}>RAZORPAY PAYMENT</Text>
           <Text style={s.modalTitle}>Enter payment amount</Text>
           <Text style={s.muted}>Enter the amount you want to pay. Any extra amount will be added to your credit balance.</Text>
-          <Text style={s.dueText}>Remaining fee: ₹{money(outstanding)}</Text>
+          <Text style={s.dueText}>{outstanding > 0 ? `Remaining fee: ₹${money(outstanding)}` : 'Remaining fee: ₹0 (Advance payment)'}</Text>
           <TextInput
             autoFocus
             keyboardType="decimal-pad"
             value={amountText}
             onChangeText={(value) => { setAmountText(value.replace(/[^0-9.]/g, '')); setPaymentError(''); }}
             placeholder="Enter amount"
-            placeholderTextColor="#8A98A8"
+            placeholderTextColor="rgba(255,255,255,0.25)"
             editable={!paymentStarting}
             style={s.amountInput}
           />
@@ -202,56 +286,163 @@ export function StudentFeesScreen() {
 const s = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.background },
   content: { ...surfaces.content, gap: 18 },
-  hero: { ...surfaces.card, backgroundColor: colors.surface, borderRadius: 16, padding: 24 },
-  eyebrow: { color: colors.blue, fontSize: 10, fontWeight: '800', letterSpacing: 1.4 },
-  title: { color: colors.ink, fontSize: 28, fontWeight: '700', marginTop: 8 },
-  description: { color: colors.muted, fontSize: 14, lineHeight: 21, marginTop: 8 },
-  summaryPanel: { ...surfaces.card, backgroundColor: colors.surface, borderRadius: 14, padding: 20 },
+  hero: {
+    ...surfaces.card,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+  },
+  eyebrow: { color: colors.blueLight, fontSize: 10, fontWeight: '800', letterSpacing: 1.4 },
+  title: { color: '#f0f6ff', fontSize: 28, fontWeight: '800', marginTop: 8, letterSpacing: -0.3 },
+  description: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 14, lineHeight: 21, marginTop: 8 },
+  summaryPanel: {
+    ...surfaces.card,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 14,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.09)',
+  },
   accountHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 },
   accountCopy: { flex: 1, minWidth: 180 },
-  panelTitle: { color: colors.ink, fontSize: 19, fontWeight: '700' },
-  refresh: { backgroundColor: colors.paleBlue, borderRadius: 9, minHeight: 40, paddingHorizontal: 13, justifyContent: 'center' },
-  refreshText: { color: colors.blue, fontWeight: '700', fontSize: 12 },
+  panelTitle: { color: '#f0f6ff', fontSize: 19, fontWeight: '800' },
+  refresh: {
+    backgroundColor: 'rgba(147, 155, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(147, 155, 255, 0.30)',
+    borderRadius: 9,
+    minHeight: 40,
+    paddingHorizontal: 13,
+    justifyContent: 'center',
+  },
+  refreshText: { color: colors.blueLight, fontWeight: '700', fontSize: 12 },
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 18 },
-  summaryCard: { flex: 1, minWidth: 160, backgroundColor: '#F4F7FC', borderRadius: 12, padding: 14 },
-  summaryLabel: { color: colors.muted, fontSize: 12, fontWeight: '700' },
-  summaryValue: { color: colors.ink, fontSize: 21, fontWeight: '800', marginTop: 7 },
-  paid: { color: '#18734A' },
-  remaining: { color: '#B42318' },
-  credit: { color: '#A66B1F' },
-  payButton: { backgroundColor: colors.blue, borderRadius: 10, minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 18, paddingHorizontal: 18 },
+  summaryCard: {
+    flex: 1,
+    minWidth: 160,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
+    padding: 14,
+  },
+  summaryLabel: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 12, fontWeight: '700' },
+  summaryValue: { color: '#f0f6ff', fontSize: 21, fontWeight: '800', marginTop: 7 },
+  paid: { color: colors.success },
+  remaining: { color: colors.danger },
+  credit: { color: colors.warning },
+  payButton: { backgroundColor: colors.primary, borderRadius: 10, minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 18, paddingHorizontal: 18 },
   payButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
-  paidMessage: { color: '#18734A', fontSize: 13, fontWeight: '700', marginTop: 18 },
-  adjustment: { color: colors.muted, fontSize: 12, marginTop: 14 },
+  paidMessage: { color: colors.success, fontSize: 13, fontWeight: '700', marginTop: 10 },
+  adjustment: { color: 'rgba(255, 255, 255, 0.40)', fontSize: 12, marginTop: 14 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sectionTitle: { color: colors.ink, fontSize: 21, fontWeight: '800' },
-  paymentCard: { ...surfaces.card, backgroundColor: colors.surface, borderRadius: 14, padding: 18, gap: 10 },
+  sectionTitle: { color: '#f0f6ff', fontSize: 21, fontWeight: '800' },
+  paymentCard: {
+    ...surfaces.card,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 14,
+    padding: 18,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.09)',
+  },
   paymentTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 },
   paymentCopy: { flex: 1, minWidth: 180 },
-  receipt: { color: colors.ink, fontSize: 16, fontWeight: '800' },
-  paymentDate: { color: colors.muted, fontSize: 12, marginTop: 4 },
-  status: { backgroundColor: '#EAF4EF', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 },
-  statusText: { color: '#287A54', fontSize: 10, fontWeight: '800' },
-  pendingStatus: { backgroundColor: '#FFF4D6' },
-  pendingStatusText: { color: '#A66B1F' },
+  receipt: { color: '#f0f6ff', fontSize: 16, fontWeight: '800' },
+  paymentDate: { color: 'rgba(255, 255, 255, 0.40)', fontSize: 12, marginTop: 4 },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  downloadReceiptBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(96, 165, 250, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(96, 165, 250, 0.35)',
+    borderRadius: 20,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+  },
+  downloadReceiptText: {
+    color: '#93c5fd',
+    fontSize: 10.5,
+    fontWeight: '800',
+  },
+  status: {
+    backgroundColor: 'rgba(52, 211, 153, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(52, 211, 153, 0.30)',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  statusText: { color: colors.success, fontSize: 10, fontWeight: '800' },
+  pendingStatus: {
+    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(251, 191, 36, 0.30)',
+  },
+  pendingStatusText: { color: colors.warning },
   paymentDetails: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  amount: { color: colors.ink, fontSize: 22, fontWeight: '800' },
-  method: { color: colors.muted, fontSize: 12, fontWeight: '700' },
-  meta: { color: colors.muted, fontSize: 12, lineHeight: 18 },
-  state: { ...surfaces.card, backgroundColor: colors.surface, borderRadius: 14, padding: 28, alignItems: 'center', gap: 8 },
-  stateTitle: { color: colors.ink, fontSize: 18, fontWeight: '800', textAlign: 'center' },
-  muted: { color: colors.muted, fontSize: 13, lineHeight: 20 },
-  error: { color: '#B42318', fontWeight: '700', textAlign: 'center' },
-  retry: { color: colors.blue, fontWeight: '800', marginTop: 8 },
-  overlay: { flex: 1, backgroundColor: 'rgba(7, 26, 47, 0.58)', alignItems: 'center', justifyContent: 'center', padding: 20 },
-  modalCard: { width: '100%', maxWidth: 480, backgroundColor: colors.surface, borderRadius: 16, padding: 24, gap: 12 },
-  modalTitle: { color: colors.ink, fontSize: 22, fontWeight: '800' },
-  dueText: { color: colors.ink, fontSize: 14, fontWeight: '800', marginTop: 4 },
-  amountInput: { borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 10, color: colors.ink, fontSize: 20, fontWeight: '700', minHeight: 52, paddingHorizontal: 14, marginTop: 4 },
+  amount: { color: '#f0f6ff', fontSize: 22, fontWeight: '800' },
+  method: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 12, fontWeight: '700' },
+  meta: { color: 'rgba(255, 255, 255, 0.40)', fontSize: 12, lineHeight: 18 },
+  state: {
+    ...surfaces.card,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 14,
+    padding: 28,
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.09)',
+  },
+  stateTitle: { color: '#f0f6ff', fontSize: 18, fontWeight: '800', textAlign: 'center' },
+  muted: { color: 'rgba(255, 255, 255, 0.40)', fontSize: 13, lineHeight: 20 },
+  error: { color: colors.danger, fontWeight: '700', textAlign: 'center' },
+  retry: { color: colors.blueLight, fontWeight: '800', marginTop: 8 },
+  overlay: { flex: 1, backgroundColor: 'rgba(4, 8, 18, 0.80)', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  modalCard: {
+    width: '100%',
+    maxWidth: 480,
+    backgroundColor: '#0e1525',
+    borderRadius: 16,
+    padding: 24,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+  },
+  modalTitle: { color: '#f0f6ff', fontSize: 22, fontWeight: '800' },
+  dueText: { color: '#f0f6ff', fontSize: 14, fontWeight: '800', marginTop: 4 },
+  amountInput: {
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 10,
+    color: '#f0f6ff',
+    fontSize: 20,
+    fontWeight: '700',
+    minHeight: 52,
+    paddingHorizontal: 14,
+    marginTop: 4,
+  },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 8 },
-  cancelButton: { minHeight: 44, borderRadius: 9, justifyContent: 'center', paddingHorizontal: 16, backgroundColor: '#EEF2F7' },
-  cancelText: { color: colors.ink, fontWeight: '800' },
-  confirmButton: { minHeight: 44, borderRadius: 9, justifyContent: 'center', paddingHorizontal: 16, backgroundColor: colors.blue },
+  cancelButton: {
+    minHeight: 44,
+    borderRadius: 9,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  cancelText: { color: '#f0f6ff', fontWeight: '800' },
+  confirmButton: { minHeight: 44, borderRadius: 9, justifyContent: 'center', paddingHorizontal: 16, backgroundColor: colors.primary },
   confirmText: { color: '#FFFFFF', fontWeight: '800' },
   disabled: { opacity: 0.6 },
 });

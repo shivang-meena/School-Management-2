@@ -63,7 +63,7 @@ export default function Screen() {
           <View style={s.scheduleGlow} pointerEvents="none" />
           <View style={s.scheduleHeader}>
             <View>
-              <Text style={s.eyebrow}>TODAY'S AUTO-GENERATED TIMETABLE</Text>
+              <Text style={s.eyebrow}>TODAY'S CLASS SCHEDULE</Text>
               <Text style={s.scheduleTitle}>
                 {timetable?.dayName ? `${timetable.dayName}, ${timetable.date}` : "Today's Schedule"}
               </Text>
@@ -87,14 +87,18 @@ export default function Screen() {
             </View>
           ) : (
             (timetable?.periods || []).slice(0, 6).map((period: any) => (
-              <View key={period.periodNumber} style={s.periodRow}>
+              <View key={period.id || period.periodNumber} style={s.periodRow}>
                 <View style={s.periodTimeBadge}>
                   <Text style={s.periodTime}>{period.startTime}</Text>
                 </View>
                 <View style={s.periodInfo}>
-                  <Text style={s.periodSubject}>{period.subject?.name || 'Period'}</Text>
+                  <Text style={s.periodSubject}>
+                    {period.entryType === 'BREAK' ? 'Recess / Break' : (period.subject?.name || 'Period')}
+                  </Text>
                   <Text style={s.periodTeacher}>
-                    {period.teacher?.name || 'Teacher not assigned'}
+                    {period.entryType === 'BREAK'
+                      ? 'Interval'
+                      : (period.teacher?.name ? `Teacher: ${period.teacher.name}` : 'Teacher not assigned')}
                     {period.status === 'CLASS_WORK' ? ' · Class Work' : ''}
                   </Text>
                 </View>

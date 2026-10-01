@@ -12,7 +12,18 @@ export class AuthService {
   async login(dto: LoginInput) {
     const user = await this.prisma.user.findFirst({
       where: { OR: [{ loginId: dto.userId }, { email: dto.userId }] },
-      include: { student: true, employee: true },
+      include: {
+        student: true,
+        employee: {
+          include: {
+            classTeacherAssignments: {
+              where: {
+                OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date() } }],
+              },
+            },
+          },
+        },
+      },
     });
     if (!user || user.status !== 'ACTIVE') throw new UnauthorizedException('Invalid credentials or inactive account');
     if (dto.role && user.role !== dto.role) throw new UnauthorizedException(`Account is not registered as ${dto.role}`);
@@ -28,7 +39,21 @@ export class AuthService {
   }
 
   async getProfile(id: string) {
-    const user = await this.prisma.user.findUnique({ where: { id }, include: { student: true, employee: true } });
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: {
+        student: true,
+        employee: {
+          include: {
+            classTeacherAssignments: {
+              where: {
+                OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date() } }],
+              },
+            },
+          },
+        },
+      },
+    });
     if (!user || user.status !== 'ACTIVE') throw new UnauthorizedException('Account unavailable');
     return this.profile(user);
   }
@@ -52,6 +77,22 @@ export class AuthService {
 
   private hash(value: string) { return createHash('sha256').update(value).digest('hex'); }
   private profile(user: any) {
-    return { id: user.id, loginId: user.loginId, email: user.email, name: user.name, role: user.role, studentId: user.student?.studentId, employeeId: user.employee?.employeeId, canMarkStudentAttendance: user.employee?.canMarkStudentAttendance || false, canMarkEmployeeAttendance: user.employee?.canMarkEmployeeAttendance || false, mustChangePassword: user.mustChangePassword };
+    const hasGlobalStudentAttendance = Boolean(user.employee?.canMarkStudentAttendance);
+    const isClassTeacher = Boolean(user.employee?.classTeacherAssignments?.length);
+    const canMarkStudentAttendance = hasGlobalStudentAttendance || isClassTeacher;
+
+    return {
+      id: user.id,
+      loginId: user.loginId,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      studentId: user.student?.studentId,
+      employeeId: user.employee?.employeeId,
+      canMarkStudentAttendance,
+      hasGlobalStudentAttendance,
+      canMarkEmployeeAttendance: user.employee?.canMarkEmployeeAttendance || false,
+      mustChangePassword: user.mustChangePassword,
+    };
   }
 }

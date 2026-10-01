@@ -308,6 +308,7 @@ model SchoolClass {
   sections      Section[]
   feeStructures ClassFeeStructure[]
   examTimetables ExamTimetable[]
+  classSubjects ClassSubject[]
 
   @@map("classes")
 }
@@ -339,8 +340,43 @@ model Subject {
   examTimetableEntries ExamTimetableEntry[]
   assessments        Assessment[]
   primaryTeachers    Employee[]              @relation("EmployeePrimarySubject")
+  classSubjects      ClassSubject[]
 
   @@map("subjects")
+}
+
+model ParentSubject {
+  id            String         @id @default(uuid())
+  name          String
+  code          String         @unique
+  description   String?
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  classSubjects ClassSubject[]
+
+  @@map("parent_subjects")
+}
+
+model ClassSubject {
+  id              String         @id @default(uuid())
+  classId         String
+  subjectId       String
+  parentSubjectId String?
+  isOptional      Boolean        @default(false)
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  schoolClass     SchoolClass    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject         Subject        @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  parentSubject   ParentSubject? @relation(fields: [parentSubjectId], references: [id], onDelete: Restrict)
+
+  @@unique([classId, subjectId, parentSubjectId])
+  @@index([classId])
+  @@index([subjectId])
+  @@index([parentSubjectId])
+  @@map("class_subjects")
 }
 
 model StudentEnrollment {

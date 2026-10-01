@@ -241,8 +241,203 @@ export default function StudentsScreen() {
     }
   };
 
+  const downloadListPDF = () => {
+    if (!filteredStudents || filteredStudents.length === 0) {
+      return Alert.alert('No records', 'No students match the current filters to download.');
+    }
+
+    const selectedClassObj = classes.find((c: any) => c.id === filterClassId);
+    const selectedSecObj = availableSections.find((s: any) => s.id === filterSectionId);
+
+    const filterParts: string[] = [];
+    if (selectedClassObj) {
+      filterParts.push(`Class: ${selectedClassObj.name}`);
+      if (selectedSecObj) filterParts.push(`Section: ${selectedSecObj.name}`);
+    } else {
+      filterParts.push('All Classes');
+    }
+    if (searchQuery.trim()) {
+      filterParts.push(`Search: "${searchQuery.trim()}"`);
+    }
+    const filterDesc = filterParts.join(' | ');
+
+    const title = 'Arihant Public School';
+    const subtitle = `STUDENT DIRECTORY REPORT · ${filterDesc} · Total: ${filteredStudents.length} Students`;
+
+    const columns = [
+      { header: '#', x: 5 },
+      { header: 'Roll', x: 25 },
+      { header: 'Student Name', x: 55 },
+      { header: 'ID', x: 165 },
+      { header: 'Class/Sec', x: 230 },
+      { header: 'Guardian Name', x: 300 },
+      { header: 'Mobile', x: 400 },
+      { header: 'Status', x: 475 },
+    ];
+
+    const rows = filteredStudents.map((student: any, idx: number) => {
+      const enrollment = student.enrollments?.find((item: any) => item.status === 'CURRENT') || student.enrollments?.[0];
+      const className = enrollment?.section?.schoolClass?.name || 'Class';
+      const sectionName = enrollment?.section?.name || '';
+      const classSec = `${className} ${sectionName}`.trim();
+      const roll = enrollment?.rollNumber ? String(enrollment.rollNumber) : '—';
+
+      return [
+        String(idx + 1),
+        roll,
+        student.name || '—',
+        student.studentId || '—',
+        classSec,
+        student.guardianName || '—',
+        student.mobile || student.guardianContact || '—',
+        student.status || 'ACTIVE',
+      ];
+    });
+
+    const sanitize = (str: any) => String(str ?? '—').replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)').replace(/[\r\n]+/g, ' ');
+
+    const startX = 30;
+    const rowsPerPage = 26;
+    const pagesData: any[][] = [];
+    for (let i = 0; i < rows.length; i += rowsPerPage) {
+      pagesData.push(rows.slice(i, i + rowsPerPage));
+    }
+    if (pagesData.length === 0) pagesData.push([]);
+
+    const totalPages = pagesData.length;
+    const pageStreams: string[] = [];
+
+    pagesData.forEach((pageRows, pageIdx) => {
+      let stream = '';
+      let currentY = 800;
+
+      if (pageIdx === 0) {
+        stream += '0.04 0.11 0.22 rg 30 760 535 45 re f\n';
+        stream += 'BT /F2 15 Tf 1 1 1 rg 42 787 Td (' + sanitize(title) + ') Tj ET\n';
+        stream += 'BT /F1 9 Tf 0.8 0.88 1 rg 42 770 Td (' + sanitize(subtitle) + ') Tj ET\n';
+        currentY = 735;
+      } else {
+        stream += '0.04 0.11 0.22 rg 30 790 535 25 re f\n';
+        stream += 'BT /F2 11 Tf 1 1 1 rg 42 798 Td (' + sanitize(title) + ' - Contd.) Tj ET\n';
+        currentY = 765;
+      }
+
+      const tableHeaderY = currentY;
+      stream += '0.12 0.22 0.38 rg 30 ' + tableHeaderY + ' 535 20 re f\n';
+      columns.forEach((col) => {
+        stream += 'BT /F2 8.5 Tf 1 1 1 rg ' + (startX + col.x) + ' ' + (tableHeaderY + 6) + ' Td (' + sanitize(col.header) + ') Tj ET\n';
+      });
+
+      currentY -= 20;
+
+      pageRows.forEach((row: string[], rowIdx: number) => {
+        const rowY = currentY;
+        const isAlt = rowIdx % 2 === 0;
+        if (isAlt) {
+          stream += '0.96 0.97 0.99 rg 30 ' + rowY + ' 535 18 re f\n';
+        } else {
+          stream += '1 1 1 rg 30 ' + rowY + ' 535 18 re f\n';
+        }
+        stream += '0.86 0.89 0.93 RG 0.4 w 30 ' + rowY + ' m 565 ' + rowY + ' l S\n';
+
+        columns.forEach((col, colIdx) => {
+          const val = sanitize(row[colIdx]);
+          stream += 'BT /F1 8 Tf 0.1 0.12 0.18 rg ' + (startX + col.x) + ' ' + (rowY + 5) + ' Td (' + val + ') Tj ET\n';
+        });
+
+        currentY -= 18;
+      });
+
+      const tableHeight = (tableHeaderY + 20) - currentY;
+      stream += '0.75 0.8 0.88 RG 0.7 w 30 ' + currentY + ' 535 ' + tableHeight + ' re S\n';
+
+      const footerY = 25;
+      const dateStr = new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
+      stream += 'BT /F1 7.5 Tf 0.45 0.5 0.55 rg 30 ' + footerY + ' Td (Generated: ' + sanitize(dateStr) + ' | Arihant Public School ERP) Tj ET\n';
+      stream += 'BT /F1 7.5 Tf 0.45 0.5 0.55 rg 500 ' + footerY + ' Td (Page ' + (pageIdx + 1) + ' of ' + totalPages + ') Tj ET\n';
+
+      pageStreams.push(stream);
+    });
+
+    let objIndex = 3;
+    const pageObjIds: number[] = [];
+    for (let i = 0; i < totalPages; i++) pageObjIds.push(objIndex++);
+    const contentObjIds: number[] = [];
+    for (let i = 0; i < totalPages; i++) contentObjIds.push(objIndex++);
+    const fontF1Id = objIndex++;
+    const fontF2Id = objIndex++;
+    const totalObjects = objIndex;
+
+    let pdf = '%PDF-1.4\n';
+    const offsets: number[] = [];
+    const addObj = (id: number, content: string) => {
+      offsets[id] = new TextEncoder().encode(pdf).length;
+      pdf += id + ' 0 obj\n' + content + '\nendobj\n';
+    };
+
+    addObj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+    const kidsStr = pageObjIds.map((id) => id + ' 0 R').join(' ');
+    addObj(2, '<< /Type /Pages /Kids [' + kidsStr + '] /Count ' + totalPages + ' >>');
+
+    for (let i = 0; i < totalPages; i++) {
+      addObj(
+        pageObjIds[i],
+        '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents ' +
+          contentObjIds[i] +
+          ' 0 R /Resources << /Font << /F1 ' +
+          fontF1Id +
+          ' 0 R /F2 ' +
+          fontF2Id +
+          ' 0 R >> >> >>'
+      );
+    }
+
+    for (let i = 0; i < totalPages; i++) {
+      const streamContent = pageStreams[i];
+      const streamLen = new TextEncoder().encode(streamContent).length;
+      addObj(contentObjIds[i], '<< /Length ' + streamLen + ' >>\nstream\n' + streamContent + '\nendstream');
+    }
+
+    addObj(fontF1Id, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+    addObj(fontF2Id, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
+
+    const startxref = new TextEncoder().encode(pdf).length;
+    pdf += 'xref\n0 ' + totalObjects + '\n0000000000 65535 f \n';
+    for (let i = 1; i < totalObjects; i++) {
+      pdf += String(offsets[i]).padStart(10, '0') + ' 00000 n \n';
+    }
+    pdf += 'trailer\n<< /Size ' + totalObjects + ' /Root 1 0 R >>\nstartxref\n' + startxref + '\n%%EOF\n';
+
+    if (typeof document !== 'undefined') {
+      const blob = new Blob([pdf], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const cleanFileName = `Students_List_${selectedClassObj ? selectedClassObj.name.replace(/\s+/g, '_') : 'All'}.pdf`;
+      a.download = cleanFileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
+
   return <View style={styles.page}><ScrollView contentContainerStyle={styles.content}>
-    <View style={styles.hero}><View style={styles.heroCopy}><Text style={styles.eyebrow}>STUDENT DIRECTORY</Text><Text style={styles.title}>Students</Text><Text style={styles.sub}>Tap any student to view and edit the complete profile.</Text></View><TouchableOpacity accessibilityRole="button" style={styles.primary} onPress={() => setOpen(!open)}><Text style={styles.primaryText}>{open ? 'Close form' : '+ Add student'}</Text></TouchableOpacity></View>
+    <View style={styles.hero}>
+      <View style={styles.heroCopy}>
+        <Text style={styles.eyebrow}>STUDENT DIRECTORY</Text>
+        <Text style={styles.title}>Students</Text>
+        <Text style={styles.sub}>Tap any student to view and edit the complete profile.</Text>
+      </View>
+      <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <TouchableOpacity accessibilityRole="button" style={[styles.primary, { backgroundColor: '#1d4ed8', flexDirection: 'row', alignItems: 'center', gap: 6 }]} onPress={downloadListPDF}>
+          <Text style={styles.primaryText}>⬇ Download List (PDF)</Text>
+        </TouchableOpacity>
+        <TouchableOpacity accessibilityRole="button" style={styles.primary} onPress={() => setOpen(!open)}>
+          <Text style={styles.primaryText}>{open ? 'Close form' : '+ Add student'}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
     {open ? <View style={styles.form}><Text style={styles.formTitle}>New student</Text><Field label="Full name *" value={form.name} onChangeText={(value: string) => setCreate('name', value)} placeholder="Aarav Sharma" /><View style={styles.row}><View style={styles.half}><Field label="Date of birth *" value={form.dob} onChangeText={(value: string) => setCreate('dob', value)} placeholder="YYYY-MM-DD" /></View><View style={styles.half}><Field label="Admission date *" value={form.admissionDate} onChangeText={(value: string) => setCreate('admissionDate', value)} placeholder="YYYY-MM-DD" /></View></View><Choices label="Gender" value={form.gender} values={['Male', 'Female', 'Other']} onChange={(value: string) => setCreate('gender', value)} /><Field label="Guardian name *" value={form.guardianName} onChangeText={(value: string) => setCreate('guardianName', value)} placeholder="Parent / guardian" /><Field label="Guardian contact *" value={form.guardianContact} onChangeText={(value: string) => setCreate('guardianContact', value)} placeholder="Required phone number" /><Field label="Mobile" value={form.mobile} onChangeText={(value: string) => setCreate('mobile', value)} placeholder="Optional, minimum 10 digits" /><Field label="Email" value={form.email} onChangeText={(value: string) => setCreate('email', value)} placeholder="student@example.com" /><Field label="Roll number *" value={form.rollNumber} onChangeText={(value: string) => setCreate('rollNumber', value)} placeholder="e.g. 12" /><Field label="Address *" value={form.address} onChangeText={(value: string) => setCreate('address', value)} placeholder="Full address" multiline /><Text style={styles.setup}>Admission: {defaultYear?.name || 'current year'} · {defaultSection?.className || 'Class 1'} / Section {defaultSection?.name || 'A'}</Text><TouchableOpacity accessibilityRole="button" style={styles.save} onPress={create} disabled={saving}>{saving ? <ActivityIndicator color="#071d33" /> : <Text style={styles.saveText}>Create student</Text>}</TouchableOpacity></View> : null}
 
     <Modal visible={!!selectedId} transparent animationType="fade" onRequestClose={() => setSelectedId(null)}>

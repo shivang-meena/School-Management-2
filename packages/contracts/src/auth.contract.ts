@@ -19,6 +19,7 @@ export const UserProfileSchema = z.object({
   studentId: z.string().optional(),
   employeeId: z.string().optional(),
   canMarkStudentAttendance: z.boolean().optional(),
+  hasGlobalStudentAttendance: z.boolean().optional(),
   canMarkEmployeeAttendance: z.boolean().optional(),
   mustChangePassword: z.boolean(),
 });

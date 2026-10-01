@@ -13,7 +13,17 @@ export class AttendanceService {
     const date = this.date(dateValue);
     if (actor.role === Role.EMPLOYEE) {
       const employee = await this.prisma.employee.findUnique({ where: { id: actor.employeeDbId }, select: { canMarkStudentAttendance: true } });
-      if (!employee?.canMarkStudentAttendance) throw new ForbiddenException('Student attendance permission is off');
+      if (!employee?.canMarkStudentAttendance) {
+        const isClassTeacher = await this.prisma.classTeacherAssignment.findFirst({
+          where: {
+            employeeId: actor.employeeDbId,
+            sectionId,
+            effectiveFrom: { lte: date },
+            OR: [{ effectiveTo: null }, { effectiveTo: { gte: date } }],
+          },
+        });
+        if (!isClassTeacher) throw new ForbiddenException('Student attendance permission is off. You can only view attendance for your assigned class.');
+      }
     }
     const section = await this.prisma.section.findUnique({ where: { id: sectionId }, include: { schoolClass: true } });
     if (!section) throw new BadRequestException('Selected section not found');
@@ -43,8 +53,18 @@ export class AttendanceService {
     const date = this.date(dto.date); if (dto.date > this.today()) throw new BadRequestException('Future attendance is not allowed'); const current = dto.date === this.today();
     if (actor.role === Role.EMPLOYEE) {
       if (!current) throw new ForbiddenException('Employees cannot correct past attendance');
-      const employee = await this.prisma.employee.findUnique({ where: { id: actor.employeeDbId } });
-      if (!employee?.canMarkStudentAttendance) throw new ForbiddenException('Student attendance permission is off');
+      const employee = await this.prisma.employee.findUnique({ where: { id: actor.employeeDbId }, select: { canMarkStudentAttendance: true } });
+      if (!employee?.canMarkStudentAttendance) {
+        const isClassTeacher = await this.prisma.classTeacherAssignment.findFirst({
+          where: {
+            employeeId: actor.employeeDbId,
+            sectionId: dto.sectionId,
+            effectiveFrom: { lte: date },
+            OR: [{ effectiveTo: null }, { effectiveTo: { gte: date } }],
+          },
+        });
+        if (!isClassTeacher) throw new ForbiddenException('Student attendance permission is off. You can only mark attendance for your assigned class.');
+      }
     }
     const closedDay = await this.prisma.schoolCalendar.findFirst({ where: { date, dayType: { in: ['HOLIDAY', 'WEEKLY_OFF'] } } });
     if (closedDay) throw new BadRequestException(`${closedDay.dayType}: attendance is disabled`);
@@ -94,7 +114,7 @@ export class AttendanceService {
     const leave = records.filter((r) => r.status === 'LEAVE').length;
     const marked = records.length;
     const attendedUnits = present + late + halfDay * 0.5;
-    return { student: { studentId: student.studentId, name: student.name }, academicYear, section: enrollment?.section ? { name: enrollment.section.name, className: enrollment.section.schoolClass.name } : null, summary: { marked, present, late, absent, halfDay, leave, attendedUnits, percentage: marked ? Math.round(attendedUnits / marked * 10000) / 100 : null }, marked, attended: attendedUnits, absent, late, halfDay, leave, percentage: marked ? Math.round(attendedUnits / marked * 10000) / 100 : null, records };
+    return { student: { studentId: student.studentId, name: student.name, rollNumber: enrollment?.rollNumber }, rollNumber: enrollment?.rollNumber, academicYear, section: enrollment?.section ? { name: enrollment.section.name, className: enrollment.section.schoolClass.name } : null, summary: { marked, present, late, absent, halfDay, leave, attendedUnits, percentage: marked ? Math.round(attendedUnits / marked * 10000) / 100 : null }, marked, attended: attendedUnits, absent, late, halfDay, leave, percentage: marked ? Math.round(attendedUnits / marked * 10000) / 100 : null, records };
   }
   async employeeHistory(employeeId: string, actor: any) {
     if (actor.role === Role.EMPLOYEE && actor.employeeId !== employeeId) throw new ForbiddenException('Own attendance only');

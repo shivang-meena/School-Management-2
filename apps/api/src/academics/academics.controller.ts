@@ -15,6 +15,18 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } f
   @Delete('teacher-assignments/:id') @Roles(Role.ADMIN) deleteTeacher(@Param('id') id: string) { return this.service.deleteAssignment(id); }
   @Post('class-teacher-assignments') @Roles(Role.ADMIN) classTeacher(@Body() b: any) { return this.service.assignTeacher(b, true); }
   @Delete('class-teacher-assignments/:id') @Roles(Role.ADMIN) deleteClassTeacher(@Param('id') id: string) { return this.service.deleteAssignment(id, true); }
-  @Delete(':type/:id') @Roles(Role.ADMIN) deleteRecord(@Param('type') type: string, @Param('id') id: string) { return this.service.deleteRecord(type, id); }
+  @Get('parent-subjects') @Roles(Role.ADMIN, Role.EMPLOYEE, Role.STUDENT) parentSubjects(@Query('includeInactive') inc?: string) { return this.service.getParentSubjects(inc === 'true'); }
+  @Post('parent-subjects') @Roles(Role.ADMIN) createParentSubject(@Body() b: any) { return this.service.createParentSubject(b); }
+  @Patch('parent-subjects/:id') @Roles(Role.ADMIN) updateParentSubject(@Param('id') id: string, @Body() b: any) { return this.service.updateParentSubject(id, b); }
+  @Delete('parent-subjects/:id') @Roles(Role.ADMIN) deleteParentSubject(@Param('id') id: string) { return this.service.deleteParentSubject(id); }
+
+  @Get('classes/:classId/subjects') @Roles(Role.ADMIN, Role.EMPLOYEE, Role.STUDENT) classSubjects(@Param('classId') classId: string) { return this.service.getClassSubjects(classId); }
+  @Post('classes/:classId/subjects') @Roles(Role.ADMIN) assignClassSubject(@Param('classId') classId: string, @Body() b: any) { return this.service.assignClassSubject(classId, b); }
+  @Delete('classes/:classId/subjects/:subjectId') @Roles(Role.ADMIN) removeClassSubject(@Param('classId') classId: string, @Param('subjectId') subjectId: string, @Query('parentSubjectId') parentSubjectId?: string) { return this.service.removeClassSubject(classId, subjectId, parentSubjectId); }
+  @Patch('class-subjects/:id') @Roles(Role.ADMIN) updateClassSubject(@Param('id') id: string, @Body() b: any) { return this.service.updateClassSubject(id, b); }
+  @Delete('class-subjects/:id') @Roles(Role.ADMIN) deleteClassSubjectById(@Param('id') id: string) { return this.service.deleteClassSubjectById(id); }
+
   @Post('enrollments/:studentId/transfer') @Roles(Role.ADMIN) transfer(@Param('studentId') id: string, @Body() b: any) { return this.service.transfer(id, b); }
+  @Delete(':type/:id') @Roles(Role.ADMIN) deleteRecord(@Param('type') type: string, @Param('id') id: string) { return this.service.deleteRecord(type, id); }
 }
+

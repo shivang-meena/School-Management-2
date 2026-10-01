@@ -59,17 +59,293 @@ function Choices({ label, value, values, onChange }: any) {
   );
 }
 
-function SubjectChoices({ subjects, value, onChange }: any) {
+function SubjectChoices({ classes = [], classSubjects = [], subjects = [], value, onChange }: any) {
+  const [selectedClassId, setSelectedClassId] = useState<string>('ALL');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Active class name
+  const activeClass = classes.find((c: any) => c.id === selectedClassId);
+  const activeClassName = selectedClassId === 'ALL' ? 'All Classes' : (activeClass?.name || 'Selected Class');
+
+  // Filtered subjects for current class
+  const classFilteredSubjects = useMemo(() => {
+    if (selectedClassId === 'ALL') {
+      return subjects.map((sub: any) => ({
+        id: sub.id,
+        name: sub.name,
+        code: sub.code,
+        streamName: undefined,
+      }));
+    }
+
+    const forClass = classSubjects.filter((cs: any) => cs.classId === selectedClassId && cs.isActive !== false);
+    // Deduplicate and resolve subject details
+    const map = new Map<string, any>();
+    forClass.forEach((cs: any) => {
+      const subId = cs.subjectId || cs.subject?.id;
+      if (!subId) return;
+      const subObj = cs.subject || subjects.find((s: any) => s.id === subId);
+      const streamName = cs.parentSubject?.code || cs.parentSubject?.name;
+      const key = `${subId}_${streamName || ''}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          id: subId,
+          name: subObj?.name || 'Unknown',
+          code: subObj?.code || '',
+          streamName,
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [selectedClassId, classSubjects, subjects]);
+
+  // Modal search filtering
+  const modalDisplayedSubjects = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const baseList = classFilteredSubjects.length > 0 || selectedClassId === 'ALL'
+      ? classFilteredSubjects
+      : subjects.map((sub: any) => ({ id: sub.id, name: sub.name, code: sub.code }));
+
+    if (!q) return baseList;
+    return baseList.filter((s: any) =>
+      (s.name && s.name.toLowerCase().includes(q)) ||
+      (s.code && s.code.toLowerCase().includes(q)) ||
+      (s.streamName && s.streamName.toLowerCase().includes(q))
+    );
+  }, [classFilteredSubjects, selectedClassId, subjects, searchQuery]);
+
+  const chosenSubjectObj = subjects.find((sub: any) => sub.id === value);
+
   return (
-    <View style={s.field}>
-      <Text style={s.label}>Primary subject *</Text>
-      <View style={s.choices}>
-        {subjects.map((subject: any) => (
-          <TouchableOpacity accessibilityRole="button" key={subject.id} style={[s.choice, value === subject.id && s.choiceOn]} onPress={() => onChange(subject.id)}>
-            <Text style={value === subject.id ? s.choiceTextOn : s.choiceText}>{subject.name} ({subject.code})</Text>
+    <View style={s.subjectSection}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+        <Text style={s.label}>PRIMARY SUBJECT *</Text>
+        {value ? (
+          <TouchableOpacity accessibilityRole="button" onPress={() => onChange(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={{ color: '#f87171', fontSize: 11, fontWeight: '700' }}>Clear selection ✕</Text>
           </TouchableOpacity>
-        ))}
+        ) : null}
       </View>
+
+      {/* Step 1: Filter subjects by Class */}
+      <View style={{ width: '100%', gap: 6 }}>
+        <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+          Filter subjects by Class:
+        </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            style={[
+              s.choice,
+              { paddingVertical: 6, paddingHorizontal: 12 },
+              selectedClassId === 'ALL' && s.choiceOn,
+            ]}
+            onPress={() => setSelectedClassId('ALL')}
+          >
+            <Text style={selectedClassId === 'ALL' ? s.choiceTextOn : s.choiceText}>
+              All Classes ({subjects.length})
+            </Text>
+          </TouchableOpacity>
+          {classes.map((cls: any) => {
+            const isSelected = selectedClassId === cls.id;
+            const count = classSubjects.filter((cs: any) => cs.classId === cls.id && cs.isActive !== false).length;
+            return (
+              <TouchableOpacity
+                accessibilityRole="button"
+                key={cls.id}
+                style={[
+                  s.choice,
+                  { paddingVertical: 6, paddingHorizontal: 12 },
+                  isSelected && s.choiceOn,
+                ]}
+                onPress={() => setSelectedClassId(cls.id)}
+              >
+                <Text style={isSelected ? s.choiceTextOn : s.choiceText}>
+                  {cls.name} {count > 0 ? `(${count})` : ''}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Step 2: Select Subject (Dropdown Selector) */}
+      <View style={{ width: '100%', gap: 6 }}>
+        <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+          Select Subject {selectedClassId !== 'ALL' ? `for ${activeClassName}` : ''}:
+        </Text>
+        <TouchableOpacity
+          accessibilityRole="button"
+          style={[
+            s.subjectDropdownBtn,
+            chosenSubjectObj && s.subjectDropdownBtnActive,
+          ]}
+          onPress={() => {
+            setSearchQuery('');
+            setDropdownOpen(true);
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+            <Ionicons
+              name={chosenSubjectObj ? 'checkmark-circle' : 'book-outline'}
+              size={18}
+              color={chosenSubjectObj ? '#38bdf8' : 'rgba(255,255,255,0.4)'}
+            />
+            <Text style={{ color: chosenSubjectObj ? '#ffffff' : 'rgba(255,255,255,0.35)', fontSize: 14, fontWeight: chosenSubjectObj ? '700' : '500' }}>
+              {chosenSubjectObj ? `${chosenSubjectObj.name} (${chosenSubjectObj.code})` : 'Choose Subject from dropdown...'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-down" size={16} color="rgba(255,255,255,0.45)" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Quick Select Pills (Immediate 1-tap options) */}
+      {classFilteredSubjects.length > 0 ? (
+        <View style={{ width: '100%', gap: 6 }}>
+          <Text style={{ color: 'rgba(255,255,255,0.40)', fontSize: 11, fontWeight: '600' }}>
+            Quick select from {activeClassName}:
+          </Text>
+          <View style={s.choices}>
+            {classFilteredSubjects.map((sub: any) => {
+              const isChosen = value === sub.id;
+              const label = sub.streamName ? `${sub.name} (${sub.code}) [${sub.streamName}]` : `${sub.name} (${sub.code})`;
+              return (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  key={sub.id + (sub.streamName || '')}
+                  style={[s.choice, isChosen && s.choiceOn]}
+                  onPress={() => onChange(sub.id)}
+                >
+                  <Text style={isChosen ? s.choiceTextOn : s.choiceText}>{label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      ) : selectedClassId !== 'ALL' ? (
+        <View style={{ padding: 10, backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' }}>
+          <Text style={{ color: 'rgba(255,255,255,0.40)', fontSize: 11, fontStyle: 'italic' }}>
+            No subjects assigned to {activeClassName} yet in Academics. Tap "All Classes" or use the dropdown above to choose any subject.
+          </Text>
+        </View>
+      ) : null}
+
+      {/* Selected Confirmation Badge */}
+      {chosenSubjectObj ? (
+        <View style={s.selectedSubjectBadge}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="checkmark-circle" size={16} color="#38bdf8" />
+            <Text style={{ color: '#38bdf8', fontSize: 12, fontWeight: '700' }}>
+              Selected Primary Subject: {chosenSubjectObj.name} ({chosenSubjectObj.code})
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
+      {/* Dropdown Modal Sheet */}
+      <Modal visible={dropdownOpen} transparent animationType="fade" onRequestClose={() => setDropdownOpen(false)}>
+        <View style={s.modalOverlay}>
+          <TouchableOpacity accessibilityLabel="Close dropdown" style={StyleSheet.absoluteFill} onPress={() => setDropdownOpen(false)} />
+          <View style={s.dropdownSheet}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }}>
+              <View>
+                <Text style={{ color: '#f0f6ff', fontSize: 16, fontWeight: '800' }}>Select Primary Subject</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.40)', fontSize: 11, marginTop: 2 }}>
+                  Showing {modalDisplayedSubjects.length} subjects ({activeClassName})
+                </Text>
+              </View>
+              <TouchableOpacity accessibilityRole="button" onPress={() => setDropdownOpen(false)} style={s.closeBtn}>
+                <Ionicons name="close" size={18} color="rgba(255,255,255,0.60)" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Modal Search Box */}
+            <View style={{ paddingHorizontal: 16, paddingBottom: 10 }}>
+              <View style={[s.searchInputContainer, { minWidth: 0 }]}>
+                <Ionicons name="search" size={15} color="rgba(255,255,255,0.40)" style={{ marginRight: 8 }} />
+                <TextInput
+                  style={[s.searchInput, { paddingVertical: 8 }]}
+                  placeholder="Search subject by name or code..."
+                  placeholderTextColor="rgba(255,255,255,0.30)"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  autoFocus
+                />
+                {searchQuery ? (
+                  <TouchableOpacity onPress={() => setSearchQuery('')}>
+                    <Ionicons name="close-circle" size={16} color="rgba(255,255,255,0.40)" />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            </View>
+
+            {/* Modal Class Filter Bar */}
+            <View style={{ paddingHorizontal: 16, paddingBottom: 10 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                <TouchableOpacity
+                  style={[s.filterChip, selectedClassId === 'ALL' && s.filterChipActive]}
+                  onPress={() => setSelectedClassId('ALL')}
+                >
+                  <Text style={selectedClassId === 'ALL' ? s.filterChipTextActive : s.filterChipText}>All Classes</Text>
+                </TouchableOpacity>
+                {classes.map((c: any) => (
+                  <TouchableOpacity
+                    key={c.id}
+                    style={[s.filterChip, selectedClassId === c.id && s.filterChipActive]}
+                    onPress={() => setSelectedClassId(c.id)}
+                  >
+                    <Text style={selectedClassId === c.id ? s.filterChipTextActive : s.filterChipText}>{c.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Subject Options List */}
+            <ScrollView style={{ maxHeight: 320, paddingHorizontal: 16 }} contentContainerStyle={{ paddingBottom: 16, gap: 6 }}>
+              {modalDisplayedSubjects.length === 0 ? (
+                <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+                  <Text style={{ color: 'rgba(255,255,255,0.40)', fontSize: 13 }}>No subjects found matching "{searchQuery}"</Text>
+                </View>
+              ) : (
+                modalDisplayedSubjects.map((sub: any) => {
+                  const isSelected = value === sub.id;
+                  return (
+                    <TouchableOpacity
+                      key={sub.id + (sub.streamName || '')}
+                      style={[
+                        s.dropdownOption,
+                        isSelected && s.dropdownOptionSelected,
+                      ]}
+                      onPress={() => {
+                        onChange(sub.id);
+                        setDropdownOpen(false);
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                        <View style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: isSelected ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ color: isSelected ? '#a5b4fc' : 'rgba(255,255,255,0.60)', fontSize: 11, fontWeight: '800' }}>
+                            {sub.code?.slice(0, 4) || 'SUB'}
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[s.dropdownOptionText, isSelected && s.dropdownOptionTextSelected]}>
+                            {sub.name}
+                          </Text>
+                          <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, marginTop: 1 }}>
+                            Code: {sub.code}{sub.streamName ? ` · Stream: ${sub.streamName}` : ''}
+                          </Text>
+                        </View>
+                      </View>
+                      {isSelected ? <Ionicons name="checkmark-circle" size={20} color={colors.primary} /> : null}
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -89,6 +365,8 @@ export default function StaffScreen() {
   const detail = useQuery<any>({ queryKey: ['employee-detail', selectedId], queryFn: async () => (await api.get('/employees/' + selectedId)).data, enabled: !!selectedId });
 
   const subjects = academics.data?.subjects || [];
+  const classes = academics.data?.classes || [];
+  const classSubjects = academics.data?.classSubjects || [];
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState('');
@@ -299,6 +577,178 @@ export default function StaffScreen() {
     }
   };
 
+  const downloadListPDF = () => {
+    if (!filteredEmployees || filteredEmployees.length === 0) {
+      return Alert.alert('No records', 'No employees match the current filters to download.');
+    }
+
+    const filterParts: string[] = [];
+    if (filterRole) {
+      filterParts.push(`Role: ${filterRole}`);
+    } else {
+      filterParts.push('All Staff');
+    }
+    if (searchQuery.trim()) {
+      filterParts.push(`Search: "${searchQuery.trim()}"`);
+    }
+    const filterDesc = filterParts.join(' | ');
+
+    const title = 'Arihant Public School';
+    const subtitle = `EMPLOYEE & STAFF DIRECTORY REPORT · ${filterDesc} · Total: ${filteredEmployees.length} Staff`;
+
+    const columns = [
+      { header: '#', x: 5 },
+      { header: 'Emp ID', x: 25 },
+      { header: 'Name', x: 90 },
+      { header: 'Role', x: 200 },
+      { header: 'Designation', x: 275 },
+      { header: 'Mobile', x: 370 },
+      { header: 'Joining Date', x: 450 },
+      { header: 'Status', x: 510 },
+    ];
+
+    const rows = filteredEmployees.map((emp: any, idx: number) => {
+      const joiningDate = emp.joiningDate ? String(emp.joiningDate).slice(0, 10) : '—';
+      return [
+        String(idx + 1),
+        emp.employeeId || '—',
+        emp.name || '—',
+        emp.subRole || 'OTHER',
+        emp.designation || '—',
+        emp.mobile || '—',
+        joiningDate,
+        emp.status || 'ACTIVE',
+      ];
+    });
+
+    const sanitize = (str: any) => String(str ?? '—').replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)').replace(/[\r\n]+/g, ' ');
+
+    const startX = 30;
+    const rowsPerPage = 26;
+    const pagesData: any[][] = [];
+    for (let i = 0; i < rows.length; i += rowsPerPage) {
+      pagesData.push(rows.slice(i, i + rowsPerPage));
+    }
+    if (pagesData.length === 0) pagesData.push([]);
+
+    const totalPages = pagesData.length;
+    const pageStreams: string[] = [];
+
+    pagesData.forEach((pageRows, pageIdx) => {
+      let stream = '';
+      let currentY = 800;
+
+      if (pageIdx === 0) {
+        stream += '0.04 0.11 0.22 rg 30 760 535 45 re f\n';
+        stream += 'BT /F2 15 Tf 1 1 1 rg 42 787 Td (' + sanitize(title) + ') Tj ET\n';
+        stream += 'BT /F1 9 Tf 0.8 0.88 1 rg 42 770 Td (' + sanitize(subtitle) + ') Tj ET\n';
+        currentY = 735;
+      } else {
+        stream += '0.04 0.11 0.22 rg 30 790 535 25 re f\n';
+        stream += 'BT /F2 11 Tf 1 1 1 rg 42 798 Td (' + sanitize(title) + ' - Contd.) Tj ET\n';
+        currentY = 765;
+      }
+
+      const tableHeaderY = currentY;
+      stream += '0.12 0.22 0.38 rg 30 ' + tableHeaderY + ' 535 20 re f\n';
+      columns.forEach((col) => {
+        stream += 'BT /F2 8.5 Tf 1 1 1 rg ' + (startX + col.x) + ' ' + (tableHeaderY + 6) + ' Td (' + sanitize(col.header) + ') Tj ET\n';
+      });
+
+      currentY -= 20;
+
+      pageRows.forEach((row: string[], rowIdx: number) => {
+        const rowY = currentY;
+        const isAlt = rowIdx % 2 === 0;
+        if (isAlt) {
+          stream += '0.96 0.97 0.99 rg 30 ' + rowY + ' 535 18 re f\n';
+        } else {
+          stream += '1 1 1 rg 30 ' + rowY + ' 535 18 re f\n';
+        }
+        stream += '0.86 0.89 0.93 RG 0.4 w 30 ' + rowY + ' m 565 ' + rowY + ' l S\n';
+
+        columns.forEach((col, colIdx) => {
+          const val = sanitize(row[colIdx]);
+          stream += 'BT /F1 8 Tf 0.1 0.12 0.18 rg ' + (startX + col.x) + ' ' + (rowY + 5) + ' Td (' + val + ') Tj ET\n';
+        });
+
+        currentY -= 18;
+      });
+
+      const tableHeight = (tableHeaderY + 20) - currentY;
+      stream += '0.75 0.8 0.88 RG 0.7 w 30 ' + currentY + ' 535 ' + tableHeight + ' re S\n';
+
+      const footerY = 25;
+      const dateStr = new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
+      stream += 'BT /F1 7.5 Tf 0.45 0.5 0.55 rg 30 ' + footerY + ' Td (Generated: ' + sanitize(dateStr) + ' | Arihant Public School ERP) Tj ET\n';
+      stream += 'BT /F1 7.5 Tf 0.45 0.5 0.55 rg 500 ' + footerY + ' Td (Page ' + (pageIdx + 1) + ' of ' + totalPages + ') Tj ET\n';
+
+      pageStreams.push(stream);
+    });
+
+    let objIndex = 3;
+    const pageObjIds: number[] = [];
+    for (let i = 0; i < totalPages; i++) pageObjIds.push(objIndex++);
+    const contentObjIds: number[] = [];
+    for (let i = 0; i < totalPages; i++) contentObjIds.push(objIndex++);
+    const fontF1Id = objIndex++;
+    const fontF2Id = objIndex++;
+    const totalObjects = objIndex;
+
+    let pdf = '%PDF-1.4\n';
+    const offsets: number[] = [];
+    const addObj = (id: number, content: string) => {
+      offsets[id] = new TextEncoder().encode(pdf).length;
+      pdf += id + ' 0 obj\n' + content + '\nendobj\n';
+    };
+
+    addObj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+    const kidsStr = pageObjIds.map((id) => id + ' 0 R').join(' ');
+    addObj(2, '<< /Type /Pages /Kids [' + kidsStr + '] /Count ' + totalPages + ' >>');
+
+    for (let i = 0; i < totalPages; i++) {
+      addObj(
+        pageObjIds[i],
+        '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents ' +
+          contentObjIds[i] +
+          ' 0 R /Resources << /Font << /F1 ' +
+          fontF1Id +
+          ' 0 R /F2 ' +
+          fontF2Id +
+          ' 0 R >> >> >>'
+      );
+    }
+
+    for (let i = 0; i < totalPages; i++) {
+      const streamContent = pageStreams[i];
+      const streamLen = new TextEncoder().encode(streamContent).length;
+      addObj(contentObjIds[i], '<< /Length ' + streamLen + ' >>\nstream\n' + streamContent + '\nendstream');
+    }
+
+    addObj(fontF1Id, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+    addObj(fontF2Id, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
+
+    const startxref = new TextEncoder().encode(pdf).length;
+    pdf += 'xref\n0 ' + totalObjects + '\n0000000000 65535 f \n';
+    for (let i = 1; i < totalObjects; i++) {
+      pdf += String(offsets[i]).padStart(10, '0') + ' 00000 n \n';
+    }
+    pdf += 'trailer\n<< /Size ' + totalObjects + ' /Root 1 0 R >>\nstartxref\n' + startxref + '\n%%EOF\n';
+
+    if (typeof document !== 'undefined') {
+      const blob = new Blob([pdf], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const cleanFileName = `Employees_List_${filterRole || 'All'}.pdf`;
+      a.download = cleanFileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
+
   return (
     <View style={s.page}>
       <View style={s.glowOrb} pointerEvents="none" />
@@ -312,10 +762,16 @@ export default function StaffScreen() {
             <Text style={s.heroTitle}>Employees</Text>
             <Text style={s.heroSub}>Tap an employee to view and edit the complete profile.</Text>
           </View>
-          <TouchableOpacity accessibilityRole="button" style={s.addBtn} onPress={() => setOpen(!open)}>
-            <Ionicons name={open ? 'close' : 'add'} size={18} color="#ffffff" />
-            <Text style={s.addBtnText}>{open ? 'Close form' : 'Add employee'}</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <TouchableOpacity accessibilityRole="button" style={[s.addBtn, { backgroundColor: '#1d4ed8' }]} onPress={downloadListPDF}>
+              <Ionicons name="download-outline" size={17} color="#ffffff" />
+              <Text style={s.addBtnText}>Download List (PDF)</Text>
+            </TouchableOpacity>
+            <TouchableOpacity accessibilityRole="button" style={s.addBtn} onPress={() => setOpen(!open)}>
+              <Ionicons name={open ? 'close' : 'add'} size={18} color="#ffffff" />
+              <Text style={s.addBtnText}>{open ? 'Close form' : 'Add employee'}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* ── Add Form ── */}
@@ -324,7 +780,7 @@ export default function StaffScreen() {
             <Text style={s.formTitle}>New Employee</Text>
             <Field label="Full name *" value={form.name} onChangeText={(v: string) => set('name', v)} placeholder="Priya Mehta" />
             <Choices label="Role" value={form.subRole} values={['TEACHER', 'ACCOUNTANT', 'RECEPTIONIST', 'LIBRARIAN', 'OTHER']} onChange={(v: string) => setForm((p: any) => ({ ...p, subRole: v, primarySubjectId: v === 'TEACHER' ? p.primarySubjectId : null }))} />
-            {form.subRole === 'TEACHER' ? <SubjectChoices subjects={subjects} value={form.primarySubjectId} onChange={(v: string) => set('primarySubjectId', v)} /> : null}
+            {form.subRole === 'TEACHER' ? <SubjectChoices classes={classes} classSubjects={classSubjects} subjects={subjects} value={form.primarySubjectId} onChange={(v: string) => set('primarySubjectId', v)} /> : null}
             <Field label="Designation *" value={form.designation} onChangeText={(v: string) => set('designation', v)} placeholder="Senior Teacher" />
             <Field label="Joining date *" value={form.joiningDate} onChangeText={(v: string) => set('joiningDate', v)} placeholder="YYYY-MM-DD" />
             <Field label="Base salary *" value={form.baseSalary} onChangeText={(v: string) => set('baseSalary', v)} placeholder="35000" />
@@ -571,18 +1027,101 @@ const s = StyleSheet.create({
   formTitle: { fontSize: 20, fontWeight: '800', color: '#f0f6ff', marginBottom: 6 },
 
   // ── Fields ───────────────────────────────────────────────────
-  field: { gap: 6, flex: 1, minWidth: 0, flexShrink: 1 },
+  field: { gap: 6, width: '100%', minWidth: 0, flexShrink: 0 },
   label: { color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
   input: { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.10)', borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 11, color: '#f0f6ff', fontSize: 14 },
   readonly: { backgroundColor: 'rgba(255,255,255,0.03)', opacity: 0.6 },
   multiline: { minHeight: 70, textAlignVertical: 'top' },
 
   // ── Choices ──────────────────────────────────────────────────
-  choices: { flexDirection: 'row', gap: 7, flexWrap: 'wrap' },
+  choices: { flexDirection: 'row', gap: 7, flexWrap: 'wrap', width: '100%' },
   choice: { borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', borderRadius: radius.sm, paddingHorizontal: 11, paddingVertical: 8 },
   choiceOn: { borderColor: colors.primary, backgroundColor: colors.primary },
   choiceText: { color: 'rgba(255,255,255,0.45)', fontSize: 12 },
   choiceTextOn: { color: '#fff', fontWeight: '700', fontSize: 12 },
+
+  // ── Subject Section ──────────────────────────────────────────
+  subjectSection: {
+    width: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 14,
+    gap: 12,
+    marginVertical: 4,
+    flexShrink: 0,
+  },
+  subjectDropdownBtn: {
+    minHeight: 46,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  subjectDropdownBtnActive: {
+    borderColor: 'rgba(56, 189, 248, 0.40)',
+    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+  },
+  selectedSubjectBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.35)',
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    width: '100%',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(4, 8, 18, 0.80)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 18,
+  },
+  dropdownSheet: {
+    width: '92%',
+    maxWidth: 540,
+    backgroundColor: '#0e1525',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  dropdownOption: {
+    minHeight: 48,
+    borderRadius: radius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  dropdownOptionSelected: {
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    borderColor: colors.primary,
+  },
+  dropdownOptionText: {
+    color: '#f0f6ff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  dropdownOptionTextSelected: {
+    color: '#ffffff',
+    fontWeight: '800',
+  },
 
   // ── Toggle ───────────────────────────────────────────────────
   toggle: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
