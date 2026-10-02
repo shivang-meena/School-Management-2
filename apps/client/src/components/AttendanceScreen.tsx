@@ -10,7 +10,31 @@ type Status = 'NONE' | 'PRESENT' | 'ABSENT' | 'LATE';
 type Option = { label: string; value: string };
 type StatusOption = { label: string; short: 'P' | 'A' | 'L'; value: Exclude<Status, 'NONE'>; color: string; background: string; border: string };
 
-const today = new Date().toISOString().slice(0, 10);
+function getTodayStr() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+const today = getTodayStr();
+
+function addDays(dateStr: string, days: number): string {
+  try {
+    const parts = dateStr.split('-').map(Number);
+    if (parts.length === 3) {
+      const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+      dt.setDate(dt.getDate() + days);
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const d = String(dt.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+  } catch {}
+  return dateStr;
+}
+
 const statusOptions: StatusOption[] = [
   { label: 'Present', short: 'P', value: 'PRESENT', color: '#34d399', background: 'rgba(52,211,153,0.18)', border: 'rgba(52,211,153,0.40)' },
   { label: 'Absent', short: 'A', value: 'ABSENT', color: '#f87171', background: 'rgba(248,113,113,0.18)', border: 'rgba(248,113,113,0.40)' },
@@ -70,8 +94,84 @@ function StatusButtons({ value, onChange, personName }: { value: Status; onChang
   </View>;
 }
 
-function DateField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  return <View style={styles.field}><Text style={styles.label}>Attendance date</Text><TextInput style={styles.input} value={value} onChangeText={onChange} placeholder="YYYY-MM-DD" placeholderTextColor="rgba(255,255,255,0.25)" /></View>;
+function DateField({ value, onChange, maxDate }: { value: string; onChange: (value: string) => void; maxDate: string }) {
+  const isToday = value === maxDate;
+  const canGoNext = value < maxDate;
+
+  const handlePrev = () => {
+    onChange(addDays(value, -1));
+  };
+
+  const handleNext = () => {
+    if (canGoNext) {
+      const next = addDays(value, 1);
+      if (next <= maxDate) onChange(next);
+    }
+  };
+
+  const handleToday = () => {
+    onChange(maxDate);
+  };
+
+  const handleChangeText = (text: string) => {
+    if (text > maxDate && /^\d{4}-\d{2}-\d{2}$/.test(text)) {
+      onChange(maxDate);
+    } else {
+      onChange(text);
+    }
+  };
+
+  return (
+    <View style={styles.field}>
+      <View style={styles.dateLabelRow}>
+        <Text style={styles.label}>Attendance date</Text>
+        {isToday ? <Text style={styles.todayBadge}>TODAY</Text> : null}
+      </View>
+      <View style={styles.dateControlsRow}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Previous day"
+          style={styles.dateNavBtn}
+          onPress={handlePrev}
+        >
+          <Text style={styles.dateNavText}>◀ Prev</Text>
+        </TouchableOpacity>
+
+        <TextInput
+          style={[styles.input, styles.dateInput]}
+          value={value}
+          onChangeText={handleChangeText}
+          placeholder="YYYY-MM-DD"
+          placeholderTextColor="rgba(255,255,255,0.25)"
+          maxLength={10}
+        />
+
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Next day"
+          disabled={!canGoNext}
+          style={[styles.dateNavBtn, !canGoNext && styles.disabled]}
+          onPress={handleNext}
+        >
+          <Text style={[styles.dateNavText, !canGoNext && styles.mutedText]}>Next ▶</Text>
+        </TouchableOpacity>
+
+        {!isToday && (
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Go to Today"
+            style={styles.todayBtn}
+            onPress={handleToday}
+          >
+            <Text style={styles.todayBtnText}>Today</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      {value > maxDate ? (
+        <Text style={styles.futureDateWarning}>⚠️ Future dates are not allowed</Text>
+      ) : null}
+    </View>
+  );
 }
 
 type AttendanceScreenProps = { allowedModes?: AttendanceMode[]; defaultMode?: AttendanceMode };
@@ -128,12 +228,12 @@ export function AttendanceScreen({ allowedModes = ['STUDENT', 'EMPLOYEE'], defau
   const students = useQuery<any>({
     queryKey: ['attendance-student-roster', sectionId, date],
     queryFn: async () => (await api.get('/attendance/students', { params: { sectionId, date } })).data,
-    enabled: mode === 'STUDENT' && !!sectionId && !!date,
+    enabled: mode === 'STUDENT' && !!sectionId && !!date && date <= today,
   });
   const employees = useQuery<any>({
     queryKey: ['attendance-employee-roster', date],
     queryFn: async () => (await api.get('/attendance/employees', { params: { date } })).data,
-    enabled: mode === 'EMPLOYEE' && !!date,
+    enabled: mode === 'EMPLOYEE' && !!date && date <= today,
   });
 
   const people = mode === 'STUDENT' ? (students.data?.students || []) : (employees.data?.employees || []);
@@ -155,9 +255,18 @@ export function AttendanceScreen({ allowedModes = ['STUDENT', 'EMPLOYEE'], defau
     setSectionId('');
   };
 
+  const markAll = (status: Exclude<Status, 'NONE'> | 'NONE') => {
+    const next: Record<string, Status> = {};
+    people.forEach((person: any) => {
+      next[person.id] = status;
+    });
+    setStatuses((old) => ({ ...old, ...next }));
+  };
+
   const saveAttendance = async () => {
     setFormError('');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { setFormError('Date must be in YYYY-MM-DD format.'); return; }
+    if (date > today) { setFormError('Future attendance is not allowed. Please choose today or a past date.'); return; }
     if (mode === 'STUDENT' && !sectionId) { setFormError('Please select a class section first.'); return; }
     const records = people.filter((person: any) => statuses[person.id] && statuses[person.id] !== 'NONE').map((person: any) => ({ id: person.id, status: statuses[person.id] }));
     if (!records.length) { setFormError('Please choose P, A or L for at least one person.'); return; }
@@ -183,10 +292,36 @@ export function AttendanceScreen({ allowedModes = ['STUDENT', 'EMPLOYEE'], defau
         {([{ value: 'STUDENT', label: 'Student Attendance', icon: '👨‍🎓' }, { value: 'EMPLOYEE', label: 'Employee Attendance', icon: '👩‍🏫' }] as const).filter((tab) => allowedModes.includes(tab.value)).map((tab) => <TouchableOpacity key={tab.value} accessibilityRole="tab" accessibilityState={{ selected: mode === tab.value }} style={[styles.modeTab, mode === tab.value && styles.modeTabActive]} onPress={() => { setMode(tab.value); setFormError(''); }}><Text style={styles.tabIcon}>{tab.icon}</Text><Text style={[styles.modeTabText, mode === tab.value && styles.modeTabTextActive]}>{tab.label}</Text></TouchableOpacity>)}
       </View>
       <View style={styles.filters}>
-        <DateField value={date} onChange={setDate} />
+        <DateField value={date} onChange={setDate} maxDate={today} />
         {mode === 'STUDENT' ? <><Dropdown label="Class" value={classId} placeholder="Choose class" options={availableClasses.map((item: any) => ({ value: item.id, label: item.name }))} onChange={selectClass} /><Dropdown label="Section" value={sectionId} placeholder="Choose section" options={sections.map((item: any) => ({ value: item.id, label: item.name }))} onChange={setSectionId} disabled={!classId || !sections.length} /></> : null}
       </View>
       <View style={styles.listHeader}><View><Text style={styles.listTitle}>{mode === 'STUDENT' ? 'Student list' : 'Employee list'}</Text><Text style={styles.muted}>{mode === 'STUDENT' ? `${classes.find((item: any) => item.id === classId)?.name || 'Class'} · Section ${sections.find((item: any) => item.id === sectionId)?.name || '—'}` : 'All active employees'} · {date}</Text></View><TouchableOpacity accessibilityRole="button" onPress={() => mode === 'STUDENT' ? students.refetch() : employees.refetch()}><Text style={styles.refresh}>↻ Refresh</Text></TouchableOpacity></View>
+      {people.length ? (
+        <View style={styles.bulkRow}>
+          <Text style={styles.bulkLabel}>Quick Fill:</Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            style={[styles.bulkBtn, styles.bulkBtnPresent]}
+            onPress={() => markAll('PRESENT')}
+          >
+            <Text style={styles.bulkBtnTextPresent}>✓ All Present</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityRole="button"
+            style={[styles.bulkBtn, styles.bulkBtnAbsent]}
+            onPress={() => markAll('ABSENT')}
+          >
+            <Text style={styles.bulkBtnTextAbsent}>✗ All Absent</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityRole="button"
+            style={[styles.bulkBtn, styles.bulkBtnReset]}
+            onPress={() => markAll('NONE')}
+          >
+            <Text style={styles.bulkBtnTextReset}>↺ Clear</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
       {people.length ? <View style={styles.summary}>{counts.map((item) => <View key={item.value} style={styles.summaryItem}><Text style={[styles.summaryCount, { color: item.color }]}>{item.count}</Text><Text style={styles.summaryLabel}>{item.short} · {item.label}</Text></View>)}</View> : null}
       {formError ? <Text style={styles.error}>{formError}</Text> : null}
       {loading ? <ActivityIndicator color="#c88728" size="large" /> : rosterError ? <View style={styles.empty}><Text style={styles.emptyTitle}>Could not load attendance list</Text><Text style={styles.errorText}>{errorText(rosterError)}</Text></View> : !people.length ? <View style={styles.empty}><Text style={styles.emptyTitle}>{mode === 'STUDENT' && !sectionId ? 'Choose a section' : 'No people found'}</Text><Text style={styles.muted}>{mode === 'STUDENT' ? 'Select a class and section to load the complete student list.' : 'There are no active employees for this date.'}</Text></View> : <View style={styles.roster}>{people.map((person: any, index: number) => <View key={person.id} style={styles.personRow}><View style={styles.personInfo}><Text style={styles.roll} numberOfLines={1} adjustsFontSizeToFit>{mode === 'STUDENT' ? (person.rollNumber || index + 1) : index + 1}</Text><View><Text style={styles.personName}>{person.name}</Text><Text style={styles.personMeta}>{mode === 'STUDENT' ? person.studentId : `${person.employeeId} · ${person.designation}`}</Text></View></View><View style={styles.statusControl}><StatusButtons value={statuses[person.id] || 'NONE'} personName={person.name} onChange={(value) => setStatuses((old) => ({ ...old, [person.id]: value }))} /></View></View>)}</View>}
@@ -414,5 +549,24 @@ const styles = StyleSheet.create({
   save: { borderRadius: 11, padding: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, minHeight: 44 },
   
   saveText: { fontWeight: '800', color: '#FFFFFF' },
-  
+
+  dateLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  todayBadge: { backgroundColor: 'rgba(52, 211, 153, 0.18)', color: '#34d399', fontSize: 10, fontWeight: '800', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, letterSpacing: 0.5 },
+  dateControlsRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dateInput: { flex: 1, minWidth: 110, textAlign: 'center', fontWeight: '700' },
+  dateNavBtn: { backgroundColor: 'rgba(255, 255, 255, 0.08)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.12)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
+  dateNavText: { color: '#f0f6ff', fontSize: 12, fontWeight: '700' },
+  mutedText: { color: 'rgba(255, 255, 255, 0.25)' },
+  todayBtn: { backgroundColor: 'rgba(147, 155, 255, 0.15)', borderWidth: 1, borderColor: 'rgba(147, 155, 255, 0.35)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
+  todayBtnText: { color: colors.blueLight, fontSize: 12, fontWeight: '800' },
+  futureDateWarning: { color: colors.danger, fontSize: 11, fontWeight: '700', marginTop: 4 },
+  bulkRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  bulkLabel: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 12, fontWeight: '700' },
+  bulkBtn: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1 },
+  bulkBtnPresent: { backgroundColor: 'rgba(52, 211, 153, 0.12)', borderColor: 'rgba(52, 211, 153, 0.35)' },
+  bulkBtnTextPresent: { color: '#34d399', fontSize: 12, fontWeight: '800' },
+  bulkBtnAbsent: { backgroundColor: 'rgba(248, 113, 113, 0.12)', borderColor: 'rgba(248, 113, 113, 0.35)' },
+  bulkBtnTextAbsent: { color: '#f87171', fontSize: 12, fontWeight: '800' },
+  bulkBtnReset: { backgroundColor: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.12)' },
+  bulkBtnTextReset: { color: 'rgba(255, 255, 255, 0.60)', fontSize: 12, fontWeight: '700' },
 });

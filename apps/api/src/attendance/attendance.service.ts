@@ -10,6 +10,7 @@ export class AttendanceService {
   private date(value: string) { if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new BadRequestException('Use YYYY-MM-DD date'); return new Date(`${value}T00:00:00.000Z`); }
 
   async studentRoster(sectionId: string, dateValue: string, actor: any) {
+    if (dateValue > this.today()) throw new BadRequestException('Future attendance is not allowed');
     const date = this.date(dateValue);
     if (actor.role === Role.EMPLOYEE) {
       const employee = await this.prisma.employee.findUnique({ where: { id: actor.employeeDbId }, select: { canMarkStudentAttendance: true } });
@@ -38,6 +39,7 @@ export class AttendanceService {
   }
 
   async employeeRoster(dateValue: string, actor: any) {
+    if (dateValue > this.today()) throw new BadRequestException('Future attendance is not allowed');
     const date = this.date(dateValue);
     if (actor.role === Role.EMPLOYEE) {
       const employee = await this.prisma.employee.findUnique({ where: { id: actor.employeeDbId }, select: { canMarkEmployeeAttendance: true } });
