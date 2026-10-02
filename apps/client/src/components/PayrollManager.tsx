@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
+import { useAuth } from '../hooks/useAuth';
 import { colors, radius, shadow } from '../theme';
 import { downloadSalarySlipPdf, SalarySlipPdfData } from '../utils/salarySlipPdf';
 
@@ -25,9 +26,7 @@ const SUB_ROLES = [
   { value: '', label: 'All Staff' },
   { value: 'TEACHER', label: 'Teachers' },
   { value: 'ACCOUNTANT', label: 'Accountants' },
-  { value: 'RECEPTIONIST', label: 'Receptionists' },
-  { value: 'LIBRARIAN', label: 'Librarians' },
-  { value: 'OTHER', label: 'Other Staff' },
+  { value: 'STAFF', label: 'Staff' },
 ];
 
 const PAYMENT_METHODS = [
@@ -57,6 +56,8 @@ function formatDate(val: any): string {
 }
 
 export function PayrollManager() {
+  const { user } = useAuth();
+  const isAccountant = user?.subRole === 'ACCOUNTANT';
   const queryClient = useQueryClient();
   const currentDate = new Date();
   const [selectedYear, setSelectedYear] = useState<number>(currentDate.getFullYear());
@@ -173,6 +174,7 @@ export function PayrollManager() {
   };
 
   const handleOpenRevise = (employee: any) => {
+    if (isAccountant) return;
     setSelectedEmployee(employee);
     setRevisionAmount(String(employee.currentSalary || ''));
     setRevisionDate(new Date().toISOString().slice(0, 10));
@@ -637,13 +639,15 @@ export function PayrollManager() {
                       <Text style={s.actionBtnHistoryText}>History</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                      accessibilityRole="button"
-                      style={s.actionBtnRevise}
-                      onPress={() => handleOpenRevise(emp)}
-                    >
-                      <Ionicons name="pencil-outline" size={13} color={colors.muted} />
-                    </TouchableOpacity>
+                    {!isAccountant ? (
+                      <TouchableOpacity
+                        accessibilityRole="button"
+                        style={s.actionBtnRevise}
+                        onPress={() => handleOpenRevise(emp)}
+                      >
+                        <Ionicons name="pencil-outline" size={13} color={colors.muted} />
+                      </TouchableOpacity>
+                    ) : null}
                   </View>
                 </View>
               );

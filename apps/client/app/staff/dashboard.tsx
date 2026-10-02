@@ -15,10 +15,21 @@ interface TileConfig {
 }
 
 function buildTiles(user: any): TileConfig[] {
+  const isAccountant = user?.subRole === 'ACCOUNTANT';
+  const isTeacher = user?.subRole === 'TEACHER' || !user?.subRole;
+
   const base: TileConfig[] = [
+    ...(isAccountant
+      ? ([
+          { title: 'Fee Management',      copy: 'Student fee accounts and collections',  path: '/staff/fees',                icon: 'card-outline',           color: '#10b981', tint: 'rgba(16,185,129,0.12)' },
+          { title: 'Payroll',             copy: 'Employee salaries and payments',        path: '/staff/payroll',             icon: 'cash-outline',           color: '#f59e0b', tint: 'rgba(245,158,11,0.12)'  },
+        ] as TileConfig[])
+      : []),
     { title: 'Own Attendance',      copy: 'Daily status and history',              path: '/staff/attendance',          icon: 'checkbox-outline',       color: '#34d399', tint: 'rgba(52,211,153,0.12)'  },
     { title: 'Own Salary',          copy: 'Finalized calculations and payments',   path: '/staff/salary',              icon: 'cash-outline',           color: '#fbbf24', tint: 'rgba(251,191,36,0.12)'  },
-    { title: 'Teaching Timetable',  copy: 'All assigned sections and periods',     path: '/staff/timetable',           icon: 'time-outline',           color: '#818cf8', tint: 'rgba(99,102,241,0.12)'  },
+    ...(isTeacher
+      ? [{ title: 'Teaching Timetable',  copy: 'All assigned sections and periods',     path: '/staff/timetable',           icon: 'time-outline',           color: '#818cf8', tint: 'rgba(99,102,241,0.12)'  }]
+      : []),
     { title: 'Academic Calendar',   copy: 'Monthly holidays and school dates',     path: '/staff/calendar',            icon: 'calendar-outline',       color: '#38bdf8', tint: 'rgba(56,189,248,0.12)'  },
     { title: 'Notice Board',        copy: 'Employee announcements',                path: '/staff/notices',             icon: 'megaphone-outline',      color: '#c4b5fd', tint: 'rgba(167,139,250,0.12)' },
   ];
@@ -29,6 +40,16 @@ function buildTiles(user: any): TileConfig[] {
   }
   if (user?.canMarkEmployeeAttendance) {
     extra.push({ title: 'Employee Attendance', copy: 'Mark attendance for employees', path: '/staff/employee-attendance', icon: 'briefcase-outline', color: '#fbbf24', tint: 'rgba(251,191,36,0.12)' });
+  }
+  if (isTeacher) {
+    extra.push({
+      title: 'Class Marks Entry',
+      copy: 'Enter exam marks for your assigned class',
+      path: '/staff/marks',
+      icon: 'school-outline',
+      color: '#f59e0b',
+      tint: 'rgba(245,158,11,0.12)',
+    });
   }
 
   return [...base, ...extra];

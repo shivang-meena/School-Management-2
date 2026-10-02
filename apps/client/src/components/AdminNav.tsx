@@ -33,6 +33,9 @@ export const ADMIN_NAV_LINKS: NavLinkItem[] = [
 export function getPortalLinks(role: PortalRole, user?: UserProfile | null): NavLinkItem[] {
   if (role === 'admin') return ADMIN_NAV_LINKS;
 
+  const isAccountant = user?.subRole === 'ACCOUNTANT';
+  const isTeacher = user?.subRole === 'TEACHER' || (!user?.subRole && role === 'staff');
+
   const items: [string, string, keyof typeof Ionicons.glyphMap][] =
     role === 'student'
       ? [
@@ -46,6 +49,12 @@ export function getPortalLinks(role: PortalRole, user?: UserProfile | null): Nav
         ]
       : [
           ['dashboard',  'Dashboard',        'grid-outline'],
+          ...(isAccountant
+            ? ([
+                ['fees',    'Fee Management', 'card-outline'],
+                ['payroll', 'Payroll',        'cash-outline'],
+              ] as [string, string, keyof typeof Ionicons.glyphMap][])
+            : []),
           ['attendance', 'My Attendance',    'checkbox-outline'],
           ...(user?.canMarkStudentAttendance
             ? ([['student-attendance', 'Student Attendance', 'people-outline']] as [string, string, keyof typeof Ionicons.glyphMap][])
@@ -53,7 +62,12 @@ export function getPortalLinks(role: PortalRole, user?: UserProfile | null): Nav
           ...(user?.canMarkEmployeeAttendance
             ? ([['employee-attendance', 'Employee Attendance', 'briefcase-outline']] as [string, string, keyof typeof Ionicons.glyphMap][])
             : []),
-          ['timetable',  'Teaching Timetable', 'time-outline'],
+          ...(isTeacher
+            ? ([
+                ['marks',     'Class Marks Entry',  'school-outline'],
+                ['timetable', 'Teaching Timetable', 'time-outline'],
+              ] as [string, string, keyof typeof Ionicons.glyphMap][])
+            : []),
           ['calendar',   'Academic Calendar',  'calendar-outline'],
           ['salary',     'My Salary',           'cash-outline'],
           ['notices',    'Notice Board',        'megaphone-outline'],

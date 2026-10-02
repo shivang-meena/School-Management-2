@@ -1,1 +1,6 @@
-import React from 'react'; import { useAuth } from '../../src/hooks/useAuth'; import { PortalModuleScreen } from '../../src/components/PortalModuleScreen'; export default function Screen(){const {user}=useAuth();return <PortalModuleScreen title="Own Salary" eyebrow="CALCULATIONS & PAYMENTS" description="Finalized salary calculations, deduction units and payment transactions. Base salary is never reduced by a payment." endpoint={`/employees/${user?.employeeId}`}/>}
+import React from 'react';
+import { StaffSalaryScreen } from '../../src/components/StaffSalaryScreen';
+
+export default function EmployeeSalaryScreen() {
+  return <StaffSalaryScreen />;
+}

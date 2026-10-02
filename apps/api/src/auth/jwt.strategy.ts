@@ -17,6 +17,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       this.prisma.session.findUnique({ where: { tokenHash: createHash('sha256').update(payload.jti || '').digest('hex') } }),
     ]);
     if (!user || user.status !== 'ACTIVE' || user.sessionVersion !== payload.version || !session || session.revokedAt || session.expiresAt <= new Date()) throw new UnauthorizedException('Session is no longer valid');
-    return { id: user.id, loginId: user.loginId, role: user.role, mustChangePassword: user.mustChangePassword, studentId: user.student?.studentId, employeeId: user.employee?.employeeId, employeeDbId: user.employee?.id, jti: payload.jti };
+    return { id: user.id, loginId: user.loginId, role: user.role, subRole: user.employee?.subRole || null, mustChangePassword: user.mustChangePassword, studentId: user.student?.studentId, employeeId: user.employee?.employeeId, employeeDbId: user.employee?.id, jti: payload.jti };
   }
 }

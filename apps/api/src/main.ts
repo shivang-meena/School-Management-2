@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
+import { ZodValidationFilter } from './common/filters/zod-validation.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -25,6 +26,9 @@ async function bootstrap() {
 
   // Global Prefix
   app.setGlobalPrefix('api');
+
+  // Global Filters
+  app.useGlobalFilters(new ZodValidationFilter());
 
   // Global Validation Pipe
   app.useGlobalPipes(

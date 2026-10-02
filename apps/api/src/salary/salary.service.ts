@@ -259,8 +259,32 @@ export class SalaryService {
   }
 
   async history(employeeId: string, actor: any) {
-    if (actor.role === Role.EMPLOYEE && actor.employeeDbId !== employeeId) throw new ForbiddenException('Own salary only');
-    const salaries = await this.ensureSalaryHistory(employeeId);
+    let targetDbId = employeeId;
+    if (actor.role === Role.EMPLOYEE) {
+      targetDbId = actor.employeeDbId;
+    } else if (employeeId) {
+      const emp = await this.prisma.employee.findFirst({ where: { OR: [{ id: employeeId }, { employeeId }] } });
+      if (emp) targetDbId = emp.id;
+    }
+    if (!targetDbId) throw new BadRequestException('Employee ID is required');
+    const salaries = await this.ensureSalaryHistory(targetDbId);
     return [...salaries].reverse();
+  }
+
+  async mySalary(actor: any) {
+    if (!actor.employeeDbId) throw new ForbiddenException('Employee record not found');
+    const employee = await this.prisma.employee.findUnique({
+      where: { id: actor.employeeDbId },
+      include: {
+        salaryRevisions: { orderBy: { effectiveDate: 'desc' } },
+      },
+    });
+    if (!employee) throw new NotFoundException('Employee not found');
+    const salaries = await this.ensureSalaryHistory(employee.id);
+    return {
+      employee,
+      currentSalary: Number(employee.salaryRevisions[0]?.amount || 0),
+      salaries: [...salaries].reverse(),
+    };
   }
 }

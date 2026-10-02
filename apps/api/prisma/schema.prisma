@@ -21,6 +21,7 @@ enum UserStatus {
 enum EmployeeSubRole {
   TEACHER
   ACCOUNTANT
+  STAFF
   RECEPTIONIST
   LIBRARIAN
   OTHER

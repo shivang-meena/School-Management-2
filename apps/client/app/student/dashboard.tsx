@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../src/hooks/useAuth';
+import { useNotices } from '../../src/hooks/useQueries';
 import { api } from '../../src/services/api';
 
 interface TileConfig {
@@ -32,6 +33,8 @@ export default function Screen() {
     queryKey: ['student-auto-timetable-dashboard'],
     queryFn: async () => (await api.get('/timetable')).data,
   });
+  const { data: noticesData, isLoading: noticesLoading } = useNotices();
+  const notices = Array.isArray(noticesData) ? noticesData : [];
 
   return (
     <View style={s.page}>
@@ -56,6 +59,73 @@ export default function Screen() {
             <View style={s.onlineDot} />
             <Text style={s.heroBadgeText}>Student Portal · Active</Text>
           </View>
+        </View>
+
+        {/* ── Notice Board ── */}
+        <View style={s.noticeCard}>
+          <View style={s.noticeGlow} pointerEvents="none" />
+          <View style={s.noticeHeader}>
+            <View>
+              <View style={s.noticeEyebrowRow}>
+                <Ionicons name="megaphone-outline" size={12} color="#c4b5fd" />
+                <Text style={s.noticeEyebrow}>CAMPUS & CLASS UPDATES</Text>
+              </View>
+              <Text style={s.noticeTitle}>Notice Board</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => router.push('/student/notices' as any)}
+              style={s.noticeViewAllBtn}
+              activeOpacity={0.8}
+            >
+              <Text style={s.noticeViewAllText}>View all</Text>
+              <Ionicons name="arrow-forward" size={13} color="#c4b5fd" />
+            </TouchableOpacity>
+          </View>
+
+          {noticesLoading ? (
+            <ActivityIndicator color="#c4b5fd" style={{ marginTop: 16 }} />
+          ) : notices.length === 0 ? (
+            <View style={s.emptyRow}>
+              <Ionicons name="megaphone-outline" size={22} color="rgba(255,255,255,0.20)" />
+              <Text style={s.emptyText}>No active notices published for you.</Text>
+            </View>
+          ) : (
+            notices.slice(0, 3).map((notice: any, idx: number) => {
+              const formattedDate = notice.createdAt
+                ? new Date(notice.createdAt).toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })
+                : null;
+              return (
+                <TouchableOpacity
+                  key={notice.id || idx}
+                  style={s.noticeRow}
+                  activeOpacity={0.7}
+                  onPress={() => router.push('/student/notices' as any)}
+                >
+                  <View style={s.noticeIconBadge}>
+                    <Ionicons name="notifications" size={15} color="#c4b5fd" />
+                  </View>
+                  <View style={s.noticeInfo}>
+                    <View style={s.noticeItemTitleRow}>
+                      <Text style={s.noticeItemTitle} numberOfLines={1}>
+                        {notice.title || 'Notice'}
+                      </Text>
+                      {formattedDate ? (
+                        <Text style={s.noticeDate}>{formattedDate}</Text>
+                      ) : null}
+                    </View>
+                    <Text style={s.noticeMessage} numberOfLines={2}>
+                      {notice.message || 'No additional details.'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.25)" />
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
 
         {/* ── Today's Timetable ── */}
@@ -194,6 +264,110 @@ const s = StyleSheet.create({
   heroBadge: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 14 },
   onlineDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.success },
   heroBadgeText: { fontSize: 12, color: colors.success, fontWeight: '700' },
+
+  // ── Notice Board ──────────────────────────────────────────────
+  noticeCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: radius.xl,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.09)',
+    overflow: 'hidden',
+    ...shadow.sm,
+  },
+  noticeGlow: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    top: -60,
+    right: -40,
+    backgroundColor: 'rgba(196,181,253,0.09)',
+  },
+  noticeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  noticeEyebrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  noticeEyebrow: {
+    fontSize: 10,
+    color: '#c4b5fd',
+    letterSpacing: 1.5,
+    fontWeight: '800',
+  },
+  noticeTitle: {
+    color: '#f0f6ff',
+    fontSize: 18,
+    fontWeight: '800',
+    marginTop: 5,
+    letterSpacing: -0.2,
+  },
+  noticeViewAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(196,181,253,0.12)',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(196,181,253,0.25)',
+  },
+  noticeViewAllText: {
+    color: '#c4b5fd',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  noticeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+  },
+  noticeIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(196,181,253,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noticeInfo: {
+    flex: 1,
+    gap: 3,
+  },
+  noticeItemTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  noticeItemTitle: {
+    color: '#f0f6ff',
+    fontSize: 14,
+    fontWeight: '700',
+    flex: 1,
+  },
+  noticeDate: {
+    color: 'rgba(255,255,255,0.40)',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  noticeMessage: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 12,
+    lineHeight: 18,
+  },
 
   // ── Schedule Card ─────────────────────────────────────────────
   scheduleCard: {

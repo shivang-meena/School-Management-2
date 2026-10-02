@@ -26,8 +26,28 @@ function dateKey(value: any) { return new Date(value).toISOString().slice(0, 10)
 export class ExamsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(dto: CreateExamInput) {
+  async create(dto: CreateExamInput, actor?: any) {
     if (dto.passMarks > dto.maximumMarks) throw new BadRequestException('Pass marks cannot exceed maximum marks');
+    if (actor && actor.role === Role.EMPLOYEE) {
+      const isClassTeacher = await this.prisma.classTeacherAssignment.findFirst({
+        where: {
+          employeeId: actor.employeeDbId,
+          sectionId: dto.sectionId,
+          OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date() } }],
+        },
+      });
+      const isSubjectTeacher = await this.prisma.teacherAssignment.findFirst({
+        where: {
+          employeeId: actor.employeeDbId,
+          sectionId: dto.sectionId,
+          subjectId: dto.subjectId,
+          OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date() } }],
+        },
+      });
+      if (!isClassTeacher && !isSubjectTeacher) {
+        throw new ForbiddenException('You can only create assessments for your assigned class or subject.');
+      }
+    }
     return this.prisma.assessment.create({ data: { ...dto, date: new Date(dto.date), startTime: dto.startTime ? timeOnly(dto.startTime) : null } });
   }
 
@@ -104,10 +124,30 @@ export class ExamsService {
     return { message: 'Exam timetable deleted successfully', id };
   }
 
-  async enterMarks(dto: EnterMarksInput) {
+  async enterMarks(dto: EnterMarksInput, actor?: any) {
     const assessment = await this.prisma.assessment.findUnique({ where: { id: dto.assessmentId } });
     if (!assessment) throw new NotFoundException('Assessment not found');
     if (assessment.published) throw new BadRequestException('Unpublish with reason before editing');
+    if (actor && actor.role === Role.EMPLOYEE) {
+      const isClassTeacher = await this.prisma.classTeacherAssignment.findFirst({
+        where: {
+          employeeId: actor.employeeDbId,
+          sectionId: assessment.sectionId,
+          OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date() } }],
+        },
+      });
+      const isSubjectTeacher = await this.prisma.teacherAssignment.findFirst({
+        where: {
+          employeeId: actor.employeeDbId,
+          sectionId: assessment.sectionId,
+          subjectId: assessment.subjectId,
+          OR: [{ effectiveTo: null }, { effectiveTo: { gte: new Date() } }],
+        },
+      });
+      if (!isClassTeacher && !isSubjectTeacher) {
+        throw new ForbiddenException('You can only enter marks for students in your assigned class.');
+      }
+    }
     return this.prisma.$transaction(dto.results.map((row) => {
       if (!row.absent && row.marks == null) throw new BadRequestException('Marks or absent status is required');
       if (row.marks != null && row.marks > Number(assessment.maximumMarks)) throw new BadRequestException('Marks exceed maximum');
@@ -124,9 +164,26 @@ export class ExamsService {
 
   async list(actor: any, query: any) {
     const where: any = { academicYearId: query.academicYearId || undefined };
-    if (actor.role !== Role.ADMIN) where.published = true;
-    if (actor.role === Role.STUDENT) where.results = { some: { student: { studentId: actor.studentId } } };
-    if (actor.role === Role.EMPLOYEE) { const assignments = await this.prisma.teacherAssignment.findMany({ where: { employeeId: actor.employeeDbId }, select: { sectionId: true } }); where.sectionId = { in: assignments.map((a) => a.sectionId) }; }
+    if (actor.role === Role.STUDENT) {
+      where.published = true;
+      where.results = { some: { student: { studentId: actor.studentId } } };
+    } else if (actor.role === Role.EMPLOYEE) {
+      const [assignments, classAssignments] = await Promise.all([
+        this.prisma.teacherAssignment.findMany({ where: { employeeId: actor.employeeDbId }, select: { sectionId: true } }),
+        this.prisma.classTeacherAssignment.findMany({ where: { employeeId: actor.employeeDbId }, select: { sectionId: true } }),
+      ]);
+      const allowedSectionIds = Array.from(new Set([...assignments.map((a) => a.sectionId), ...classAssignments.map((a) => a.sectionId)]));
+      if (query.sectionId) {
+        if (!allowedSectionIds.includes(query.sectionId)) {
+          throw new ForbiddenException('You can only view assessments for your assigned class.');
+        }
+        where.sectionId = query.sectionId;
+      } else {
+        where.sectionId = { in: allowedSectionIds };
+      }
+    } else {
+      if (query.sectionId) where.sectionId = query.sectionId;
+    }
     return this.prisma.assessment.findMany({ where, include: { subject: true, section: { include: { schoolClass: true } }, results: actor.role === Role.STUDENT ? { where: { student: { studentId: actor.studentId } } } : true }, orderBy: { date: 'desc' } });
   }
 

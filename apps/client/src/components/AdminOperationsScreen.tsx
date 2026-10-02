@@ -1,8 +1,10 @@
 import { colors, surfaces } from '../theme';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
+import { useAuth } from '../hooks/useAuth';
+import { Ionicons } from '@expo/vector-icons';
 import { ExamTimetableBuilder } from './ExamTimetableBuilder';
 import { ClassSubjectManager } from './ClassSubjectManager';
 import { AcademicDetailsModal } from './AcademicDetailsModal';
@@ -56,16 +58,28 @@ function isSeniorSecondary(schoolClass?: { name: string; sortOrder?: number | nu
 }
 
 export function AdminOperationsScreen({ mode, title, eyebrow, description }: Props) {
+  const { user } = useAuth();
+  const isAccountant = user?.subRole === 'ACCOUNTANT';
   const client = useQueryClient();
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(!isAccountant);
   const [formError, setFormError] = useState('');
   const [selectedAcademic, setSelectedAcademic] = useState<any>(null);
   const [academicTab, setAcademicTab] = useState<'classes' | 'class-subjects' | 'calendar'>('classes');
   const [editingCalendarId, setEditingCalendarId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [feeSection, setFeeSection] = useState<'CLASS_FEES' | 'STUDENT_FEES' | 'PAYMENTS'>('CLASS_FEES');
+  const [feeSection, setFeeSection] = useState<'CLASS_FEES' | 'STUDENT_FEES' | 'PAYMENTS'>(
+    isAccountant && mode === 'fees' ? 'STUDENT_FEES' : 'CLASS_FEES'
+  );
+
+  useEffect(() => {
+    if (isAccountant && mode === 'fees' && feeSection === 'CLASS_FEES') {
+      setFeeSection('STUDENT_FEES');
+      setOpen(false);
+    }
+  }, [isAccountant, mode]);
   const [feeStudentClassId, setFeeStudentClassId] = useState('');
   const [feeStudentSectionId, setFeeStudentSectionId] = useState('');
+  const [feeSearchQuery, setFeeSearchQuery] = useState('');
   const [selectedFeeAccount, setSelectedFeeAccount] = useState<any>(null);
   const [editingFeeTx, setEditingFeeTx] = useState<any>(null);
   const [reversingFeeTx, setReversingFeeTx] = useState<any>(null);
@@ -741,7 +755,16 @@ export function AdminOperationsScreen({ mode, title, eyebrow, description }: Pro
   }, [selectedClassForStudentFees, feeRows]);
   const selectFeeClass = (id: string) => { const row = feeRows.find((item: any) => item.id === id); setForm((old: any) => ({ ...old, classId: id, amount: row?.hasFee ? String(row.totalFee) : '' })); };
   const selectFeeStudentClass = (id: string) => { setFeeStudentClassId(id); setFeeStudentSectionId(''); };
-  const studentFeeRows = allStudentFeeRows.filter((row: any) => (!studentFeeClassId || row.classId === studentFeeClassId) && (!studentFeeSectionId || row.sectionId === studentFeeSectionId));
+  const studentFeeRows = allStudentFeeRows.filter((row: any) => {
+    const matchClass = !studentFeeClassId || row.classId === studentFeeClassId;
+    const matchSection = !studentFeeSectionId || row.sectionId === studentFeeSectionId;
+    const query = feeSearchQuery.trim().toLowerCase();
+    const matchSearch = !query ||
+      (row.studentName && row.studentName.toLowerCase().includes(query)) ||
+      (row.studentCode && row.studentCode.toLowerCase().includes(query)) ||
+      (row.rollNumber && row.rollNumber.toLowerCase().includes(query));
+    return matchClass && matchSection && matchSearch;
+  });
 
   const handleDownloadFeeReport = () => {
     const selectedClass = classes.find((c: any) => c.id === studentFeeClassId);
@@ -788,7 +811,7 @@ export function AdminOperationsScreen({ mode, title, eyebrow, description }: Pro
   const rawRows = mode === 'academics' ? academicRows : mode === 'fees' ? (feeSection === 'CLASS_FEES' ? feeRows : studentFeeRows) : mode === 'salary' ? salaryRows : mode === 'accounts' ? records.data?.transactions : mode === 'exams' && examSection === 'TIMETABLE' ? examTimetableRows : records.data;
   const rows = Array.isArray(rawRows) ? rawRows : [];
   const hasRecords = mode === 'academics' ? years.length + classes.length + subjects.length + calendarRows.length > 0 : mode === 'fees' ? (feeSection === 'CLASS_FEES' ? classes.length > 0 : rows.length > 0) : mode === 'salary' ? rows.length > 0 : rows.length > 0;
-  const salaryFilterChoices = [{ value: '', label: 'All sub-roles' }, { value: 'TEACHER', label: 'Teacher' }, { value: 'ACCOUNTANT', label: 'Accountant' }, { value: 'RECEPTIONIST', label: 'Receptionist' }, { value: 'LIBRARIAN', label: 'Librarian' }, { value: 'OTHER', label: 'Other' }];
+  const salaryFilterChoices = [{ value: '', label: 'All sub-roles' }, { value: 'TEACHER', label: 'Teacher' }, { value: 'ACCOUNTANT', label: 'Accountant' }, { value: 'STAFF', label: 'Staff' }];
   const showSalarySetupForm = mode !== 'salary' || salarySection === 'SETUP';
   const formPanelTitle = editingCalendarId ? 'Edit calendar entry' : mode === 'fees' ? (feeSection === 'CLASS_FEES' ? 'Update class fees' : feeSection === 'PAYMENTS' ? 'Record student payment' : 'Student fees') : mode === 'salary' ? 'Update employee salary' : mode === 'exams' ? (examSection === 'TIMETABLE' ? 'Create exam timetable' : 'Enter marks by student') : 'Create / process record';
   const formSaveLabel = editingCalendarId ? 'Update calendar entry' : mode === 'attendance' ? 'Save attendance' : mode === 'salary' ? 'Update salary' : mode === 'fees' ? (selectedFeeRow?.hasFee ? 'Update class fee' : 'Save class fee') : mode === 'exams' && examSection === 'TIMETABLE' ? 'Save exam timetable' : 'Save record';
@@ -798,7 +821,7 @@ export function AdminOperationsScreen({ mode, title, eyebrow, description }: Pro
     <ScrollView contentContainerStyle={s.content}>
       <View style={s.hero}>
         <View style={s.heroText}><Text style={s.eyebrow}>{String(eyebrow)}</Text><Text style={s.title}>{String(title)}</Text><Text style={s.description}>{String(description)}</Text></View>
-        {mode !== 'timetable' ? (
+        {mode !== 'timetable' && !(mode === 'fees' && isAccountant) ? (
           <TouchableOpacity accessibilityRole="button" style={s.goldButton} onPress={() => setOpen(!open)}>
             <Text style={s.goldText}>{open ? 'Close form' : mode === 'fees' ? 'Open fee section' : '+ New record'}</Text>
           </TouchableOpacity>
@@ -816,7 +839,20 @@ export function AdminOperationsScreen({ mode, title, eyebrow, description }: Pro
           onChanged={refresh}
         />
       ) : null}
-      {mode === 'fees' ? <View style={s.tabs}>{[['CLASS_FEES', 'Update Class Fees', '💳'], ['STUDENT_FEES', 'Student Fees', '👨‍🎓'], ['PAYMENTS', 'Record Payment', '💰']].map(([key, label, icon]) => <TouchableOpacity accessibilityRole="tab" accessibilityState={{ selected: feeSection === key }} key={key} style={[s.tab, feeSection === key && s.tabActive]} onPress={() => { setFeeSection(key as any); setFormError(''); }}><Text style={s.tabIcon}>{icon}</Text><Text style={[s.tabText, feeSection === key && s.tabTextActive]}>{label}</Text></TouchableOpacity>)}</View> : null}
+      {mode === 'fees' ? (
+        <View style={s.tabs}>
+          {[
+            ...(!isAccountant ? [['CLASS_FEES', 'Update Class Fees', '💳']] : []),
+            ['STUDENT_FEES', 'Student Fees', '👨‍🎓'],
+            ['PAYMENTS', 'Record Payment', '💰'],
+          ].map(([key, label, icon]) => (
+            <TouchableOpacity accessibilityRole="tab" accessibilityState={{ selected: feeSection === key }} key={key} style={[s.tab, feeSection === key && s.tabActive]} onPress={() => { setFeeSection(key as any); setFormError(''); }}>
+              <Text style={s.tabIcon}>{icon}</Text>
+              <Text style={[s.tabText, feeSection === key && s.tabTextActive]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : null}
       {mode === 'salary' ? <View style={s.tabs}>{[['SETUP', 'Update Salary', '💼'], ['HISTORY', 'Salary History', '📜'], ['PAYMENTS', 'Pay Salary', '💰']].map(([key, label, icon]) => <TouchableOpacity accessibilityRole="tab" accessibilityState={{ selected: salarySection === key }} key={key} style={[s.tab, salarySection === key && s.tabActive]} onPress={() => { setSalarySection(key as any); setFormError(''); setSelectedSalaryAccount(null); setOpen(key === 'SETUP'); }}><Text style={s.tabIcon}>{icon}</Text><Text style={[s.tabText, salarySection === key && s.tabTextActive]}>{label}</Text></TouchableOpacity>)}</View> : null}
       {mode === 'timetable' ? (
         <DailyTimetableBuilder
@@ -865,6 +901,99 @@ export function AdminOperationsScreen({ mode, title, eyebrow, description }: Pro
           </View>
         </View>
       ) : null}
+      {mode === 'fees' && feeSection !== 'CLASS_FEES' ? (
+        <View style={s.feeFilterPanel}>
+          {/* Live Search Bar */}
+          <View style={s.feeSearchWrap}>
+            <Ionicons name="search-outline" size={17} color="rgba(255, 255, 255, 0.4)" style={s.feeSearchIcon} />
+            <TextInput
+              style={s.feeSearchInput}
+              value={feeSearchQuery}
+              onChangeText={setFeeSearchQuery}
+              placeholder="Search student by name, student ID (e.g. STU000001) or roll number..."
+              placeholderTextColor="rgba(255, 255, 255, 0.35)"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {feeSearchQuery ? (
+              <TouchableOpacity accessibilityRole="button" onPress={() => setFeeSearchQuery('')} style={s.feeSearchClear}>
+                <Ionicons name="close-circle" size={18} color="rgba(255, 255, 255, 0.55)" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {/* Class & Section Filter Chips */}
+          <View style={s.feeFilterRow}>
+            <View style={s.feeFilterGroup}>
+              <Text style={s.feeFilterLabel}>FILTER BY CLASS</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipScroll}>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  style={[s.filterChip, !studentFeeClassId && s.filterChipActive]}
+                  onPress={() => { setFeeStudentClassId(''); setFeeStudentSectionId(''); }}
+                >
+                  <Text style={[s.filterChipText, !studentFeeClassId && s.filterChipTextActive]}>All Classes</Text>
+                </TouchableOpacity>
+                {classes.map((c: any) => (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    key={c.id}
+                    style={[s.filterChip, studentFeeClassId === c.id && s.filterChipActive]}
+                    onPress={() => { setFeeStudentClassId(c.id); setFeeStudentSectionId(''); }}
+                  >
+                    <Text style={[s.filterChipText, studentFeeClassId === c.id && s.filterChipTextActive]}>{c.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {studentFeeSections.length > 0 ? (
+              <View style={s.feeFilterGroup}>
+                <Text style={s.feeFilterLabel}>FILTER BY SECTION</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipScroll}>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    style={[s.filterChip, !studentFeeSectionId && s.filterChipActive]}
+                    onPress={() => setFeeStudentSectionId('')}
+                  >
+                    <Text style={[s.filterChipText, !studentFeeSectionId && s.filterChipTextActive]}>All Sections</Text>
+                  </TouchableOpacity>
+                  {studentFeeSections.map((sec: any) => (
+                    <TouchableOpacity
+                      accessibilityRole="button"
+                      key={sec.id}
+                      style={[s.filterChip, studentFeeSectionId === sec.id && s.filterChipActive]}
+                      onPress={() => setFeeStudentSectionId(sec.id)}
+                    >
+                      <Text style={[s.filterChipText, studentFeeSectionId === sec.id && s.filterChipTextActive]}>
+                        Section {sec.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            ) : null}
+          </View>
+
+          {/* Summary / Reset */}
+          <View style={s.feeFilterSummary}>
+            <Text style={s.feeFilterSummaryText}>
+              Showing <Text style={{ color: '#fbbf24', fontWeight: '800' }}>{studentFeeRows.length}</Text> of {allStudentFeeRows.length} students
+              {studentFeeClassId ? ` · ${classes.find((c: any) => c.id === studentFeeClassId)?.name || 'Class'}` : ''}
+              {studentFeeSectionId ? ` · Section ${studentFeeSections.find((s: any) => s.id === studentFeeSectionId)?.name || ''}` : ''}
+              {feeSearchQuery.trim() ? ` · Matching "${feeSearchQuery.trim()}"` : ''}
+            </Text>
+            {(studentFeeClassId || studentFeeSectionId || feeSearchQuery.trim()) ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={() => { setFeeStudentClassId(''); setFeeStudentSectionId(''); setFeeSearchQuery(''); }}
+              >
+                <Text style={s.feeFilterResetText}>Reset filters ✕</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
       {mode === 'accounts' && records.data && typeof records.data.income === 'number' ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
           <View style={{ flex: 1, minWidth: 140, backgroundColor: 'rgba(52, 211, 153, 0.12)', borderWidth: 1, borderColor: 'rgba(52, 211, 153, 0.3)', borderRadius: 12, padding: 14 }}>
@@ -881,7 +1010,10 @@ export function AdminOperationsScreen({ mode, title, eyebrow, description }: Pro
           </View>
         </View>
       ) : null}
-      {mode !== 'exams' && mode !== 'timetable' && !(mode === 'academics' && academicTab === 'class-subjects') ? (records.isLoading || feeAccounts.isLoading || academics.isLoading || calendarRecords.isLoading || salaryAccounts.isLoading ? <ActivityIndicator color="#c88728" /> : !hasRecords ? <View style={s.empty}><Text style={s.emptyTitle}>{mode === 'fees' ? (feeSection === 'CLASS_FEES' ? 'No academic classes available' : 'No student fee accounts found') : mode === 'salary' ? 'No active employees found' : 'No records available'}</Text><Text style={s.muted}>{mode === 'fees' && feeSection !== 'CLASS_FEES' ? 'No current student fee accounts are available for the selected filters.' : mode === 'salary' ? 'No active employees match the selected sub-role.' : emptyMessage(mode, form.action)}</Text></View> : <View style={s.grid}>{rows.slice(0, 100).map((row: any, index: number) => {
+      {mode !== 'exams' && mode !== 'timetable' && !(mode === 'academics' && academicTab === 'class-subjects') ? (records.isLoading || feeAccounts.isLoading || academics.isLoading || calendarRecords.isLoading || salaryAccounts.isLoading ? <ActivityIndicator color="#c88728" /> : !hasRecords ? <View style={s.empty}><Text style={s.emptyTitle}>{mode === 'fees' ? (feeSection === 'CLASS_FEES' ? 'No academic classes available' : 'No student fee accounts found') : mode === 'salary' ? 'No active employees found' : 'No records available'}</Text><Text style={s.muted}>{mode === 'fees' && feeSection !== 'CLASS_FEES' ? 'No current student fee accounts match the selected filters or search query.' : mode === 'salary' ? 'No active employees match the selected sub-role.' : emptyMessage(mode, form.action)}</Text></View> : <View style={s.grid}>{(() => {
+        const isStudentFee = mode === 'fees' && feeSection !== 'CLASS_FEES';
+        const displayRows = isStudentFee ? (studentFeeClassId || feeStudentSectionId || feeSearchQuery.trim() ? rows : rows.slice(0, 200)) : rows.slice(0, 100);
+        return displayRows.map((row: any, index: number) => {
         if (row._sectionHeader) return <View key={row._sectionHeader} style={s.sectionHeader}><Text style={s.sectionTitle}>{row._sectionHeader}</Text></View>;
         const isStudentFee = mode === 'fees' && feeSection !== 'CLASS_FEES';
         const isClassFee = mode === 'fees' && feeSection === 'CLASS_FEES';
@@ -1035,7 +1167,7 @@ export function AdminOperationsScreen({ mode, title, eyebrow, description }: Pro
           {mode !== 'accounts' && (row.date || row.transactionDate || row.createdAt) ? <Text style={s.meta}>{displayDate(row.date || row.transactionDate || row.createdAt)}</Text> : null}
           {mode === 'academics' && row._recordType === 'CALENDAR' ? <View style={s.cardActions}><TouchableOpacity style={s.smallButton} onPress={() => editCalendar(row)}><Text style={s.smallText}>Edit</Text></TouchableOpacity><TouchableOpacity style={s.deleteButton} onPress={() => deleteCalendar(row.id)}><Text style={s.deleteText}>Delete</Text></TouchableOpacity></View> : null}
         
-{mode === 'academics' && row._recordType !== 'CALENDAR' ? <View style={s.cardActions}><TouchableOpacity accessibilityRole="button" style={s.smallButton} onPress={() => setSelectedAcademic(row)}><Text style={s.smallText}>View details</Text></TouchableOpacity><TouchableOpacity accessibilityRole="button" style={s.deleteButton} onPress={() => deleteAcademicRecord(row)}><Text style={s.deleteText}>Delete {row.sections !== undefined || (!row.code && !row.startDate) ? 'class' : 'record'}</Text></TouchableOpacity></View> : null}{(mode as string) === 'exams' && !row.published ? <TouchableOpacity style={s.smallButton} onPress={() => publishExam(row.id)}><Text style={s.smallText}>Publish result</Text></TouchableOpacity> : null}</TouchableOpacity>; })}</View>) : null}
+{mode === 'academics' && row._recordType !== 'CALENDAR' ? <View style={s.cardActions}><TouchableOpacity accessibilityRole="button" style={s.smallButton} onPress={() => setSelectedAcademic(row)}><Text style={s.smallText}>View details</Text></TouchableOpacity><TouchableOpacity accessibilityRole="button" style={s.deleteButton} onPress={() => deleteAcademicRecord(row)}><Text style={s.deleteText}>Delete {row.sections !== undefined || (!row.code && !row.startDate) ? 'class' : 'record'}</Text></TouchableOpacity></View> : null}{(mode as string) === 'exams' && !row.published ? <TouchableOpacity style={s.smallButton} onPress={() => publishExam(row.id)}><Text style={s.smallText}>Publish result</Text></TouchableOpacity> : null}</TouchableOpacity>; }); })()}</View>) : null}
     </ScrollView>
     <Modal visible={mode === 'academics' && !!selectedAcademic} transparent animationType="fade" onRequestClose={() => setSelectedAcademic(null)}>
       <View style={s.overlay} accessibilityViewIsModal>
@@ -1133,7 +1265,7 @@ export function AdminOperationsScreen({ mode, title, eyebrow, description }: Pro
                             >
                               <Text style={s.downloadReceiptText}>⬇ Receipt PDF</Text>
                             </TouchableOpacity>
-                            {transaction.status === 'SUCCESS' ? (
+                            {transaction.status === 'SUCCESS' && !isAccountant ? (
                               <>
                                 <TouchableOpacity
                                   accessibilityRole="button"
@@ -1391,7 +1523,7 @@ export function AdminOperationsScreen({ mode, title, eyebrow, description }: Pro
                 <TouchableOpacity
                   accessibilityRole="button"
                   disabled={reversalAccountLoading}
-                  style={[s.delete, { paddingVertical: 10, paddingHorizontal: 20, backgroundColor: '#dc2626', borderColor: '#b91c1c' }, reversalAccountLoading && s.disabled]}
+                  style={[s.deleteButton, { paddingVertical: 10, paddingHorizontal: 20, backgroundColor: '#dc2626', borderColor: '#b91c1c' }, reversalAccountLoading && s.disabled]}
                   onPress={handleConfirmReverseAccountTx}
                 >
                   {reversalAccountLoading ? <ActivityIndicator color="#ffffff" /> : <Text style={[s.deleteText, { color: '#ffffff' }]}>Confirm Void / Reversal</Text>}
@@ -1899,5 +2031,94 @@ const s = StyleSheet.create({ page: { flex: 1, backgroundColor: colors.backgroun
   },
   paymentReversedText: {
     color: '#f87171',
+  },
+  feeFilterPanel: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
+    gap: 12,
+  },
+  feeSearchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.28)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 44,
+  },
+  feeSearchIcon: {
+    marginRight: 8,
+  },
+  feeSearchInput: {
+    flex: 1,
+    color: '#ffffff',
+    fontSize: 13.5,
+    paddingVertical: 0,
+  },
+  feeSearchClear: {
+    padding: 4,
+  },
+  feeFilterRow: {
+    gap: 10,
+  },
+  feeFilterGroup: {
+    gap: 6,
+  },
+  feeFilterLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: 'rgba(255, 255, 255, 0.45)',
+    letterSpacing: 0.8,
+  },
+  chipScroll: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
+  filterChip: {
+    paddingHorizontal: 13,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+  },
+  filterChipActive: {
+    backgroundColor: 'rgba(251, 191, 36, 0.18)',
+    borderColor: '#fbbf24',
+  },
+  filterChipText: {
+    color: 'rgba(255, 255, 255, 0.65)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  filterChipTextActive: {
+    color: '#fbbf24',
+    fontWeight: '800',
+  },
+  feeFilterSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  feeFilterSummaryText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.55)',
+  },
+  feeFilterResetText: {
+    fontSize: 12,
+    color: '#f87171',
+    fontWeight: '700',
   },
 });

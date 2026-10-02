@@ -51,15 +51,35 @@ export default function LoginScreen() {
       setErrorMessage(`Already logged in as ${user.name || user.loginId}. Sign out first.`);
       return;
     }
+    const trimmedId = userId.trim();
+    if (!trimmedId) {
+      const msg = 'Please enter your User ID or Email.';
+      setErrorMessage(msg);
+      Alert.alert('Missing details', msg);
+      return;
+    }
+    if (!password) {
+      const msg = 'Please enter your password.';
+      setErrorMessage(msg);
+      Alert.alert('Missing details', msg);
+      return;
+    }
+    if (password.length < 8) {
+      const msg = 'Password must be at least 8 characters long.';
+      setErrorMessage(msg);
+      Alert.alert('Invalid password', msg);
+      return;
+    }
     setErrorMessage('');
     setIsSubmitting(true);
     try {
-      await login({ userId: userId.trim(), password, role });
+      await login({ userId: trimmedId, password, role });
       if (role === 'ADMIN')         router.replace('/admin/dashboard');
       else if (role === 'EMPLOYEE') router.replace('/staff/dashboard');
       else                          router.replace('/student/dashboard');
     } catch (err: any) {
-      const msg = err.response?.data?.message || err.message || 'Login failed. Please check credentials.';
+      const rawMsg = err.response?.data?.message || err.message || 'Login failed. Please check credentials.';
+      const msg = Array.isArray(rawMsg) ? rawMsg.join(' | ') : rawMsg;
       setErrorMessage(msg);
       Alert.alert('Authentication Failed', msg);
     } finally {

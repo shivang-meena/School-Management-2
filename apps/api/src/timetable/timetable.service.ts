@@ -226,7 +226,9 @@ export class TimetableService {
 
   async list(query: any, actor: any) {
     if (actor.role === Role.EMPLOYEE) {
-      query.employeeId = actor.employeeDbId;
+      if (!query.sectionId) {
+        query.employeeId = actor.employeeDbId;
+      }
     }
 
     if (actor.role === Role.STUDENT) {

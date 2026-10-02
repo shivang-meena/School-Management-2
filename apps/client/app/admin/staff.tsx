@@ -11,6 +11,7 @@ const initial = { name: '', subRole: 'TEACHER', designation: '', joiningDate: to
 const ROLE_COLORS: Record<string, { color: string; tint: string }> = {
   TEACHER:     { color: '#818cf8', tint: 'rgba(99,102,241,0.15)'  },
   ACCOUNTANT:  { color: '#fbbf24', tint: 'rgba(251,191,36,0.15)'  },
+  STAFF:       { color: '#38bdf8', tint: 'rgba(56,189,248,0.15)'  },
   RECEPTIONIST:{ color: '#34d399', tint: 'rgba(52,211,153,0.15)'  },
   LIBRARIAN:   { color: '#38bdf8', tint: 'rgba(56,189,248,0.15)'  },
   OTHER:       { color: '#c4b5fd', tint: 'rgba(167,139,250,0.15)' },
@@ -372,7 +373,7 @@ export default function StaffScreen() {
   const [filterRole, setFilterRole] = useState('');
 
   const rolesList = useMemo(() => {
-    const set = new Set<string>(['TEACHER', 'ACCOUNTANT', 'RECEPTIONIST', 'LIBRARIAN', 'OTHER']);
+    const set = new Set<string>(['TEACHER', 'ACCOUNTANT', 'STAFF']);
     (employees.data || []).forEach((e: any) => {
       if (e.subRole) set.add(e.subRole);
     });
@@ -445,28 +446,52 @@ export default function StaffScreen() {
   const setEdit = (key: string, value: any) => setEditState((p: any) => ({ ...p, [key]: value }));
 
   const create = async () => {
-    if (!form.name || !form.designation || !form.baseSalary) return Alert.alert('Missing details', 'Name, designation and base salary are required.');
+    if (!form.name?.trim() || !form.designation?.trim() || !form.baseSalary) {
+      return Alert.alert('Missing details', 'Name, designation and base salary are required.');
+    }
+    if (form.mobile && form.mobile.replace(/\D/g, '').length < 10) {
+      return Alert.alert('Invalid mobile', 'Mobile number must contain at least 10 digits.');
+    }
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      return Alert.alert('Invalid email', 'Please enter a valid email address.');
+    }
     setSaving(true);
     try {
-      const { data } = await api.post('/employees', { ...form, baseSalary: Number(form.baseSalary) });
+      const { data } = await api.post('/employees', { ...form, baseSalary: Number(form.baseSalary), mobile: form.mobile?.trim() || undefined, email: form.email?.trim() || undefined });
       Alert.alert('Employee created', 'Employee ID: ' + data.temporaryCredentials.loginId);
       setForm(initial);
       setOpen(false);
       await client.invalidateQueries({ queryKey: ['employees'] });
-    } catch (e: any) { Alert.alert('Could not create employee', e?.response?.data?.message || 'Please check the form.'); }
+    } catch (e: any) {
+      const raw = e?.response?.data?.message;
+      const msg = Array.isArray(raw) ? raw.join('\n') : raw || 'Please check the form.';
+      Alert.alert('Could not create employee', msg);
+    }
     finally { setSaving(false); }
   };
 
   const save = async () => {
-    if (!selectedId || !editState.name || !editState.designation || !editState.joiningDate) return Alert.alert('Missing details', 'Name, designation and joining date are required.');
+    if (!selectedId || !editState.name?.trim() || !editState.designation?.trim() || !editState.joiningDate) {
+      return Alert.alert('Missing details', 'Name, designation and joining date are required.');
+    }
+    if (editState.mobile && editState.mobile.replace(/\D/g, '').length < 10) {
+      return Alert.alert('Invalid mobile', 'Mobile number must contain at least 10 digits.');
+    }
+    if (editState.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editState.email)) {
+      return Alert.alert('Invalid email', 'Please enter a valid email address.');
+    }
     setSaving(true);
     try {
-      await api.patch('/employees/' + selectedId, { name: editState.name, subRole: editState.subRole, designation: editState.designation, joiningDate: editState.joiningDate, mobile: editState.mobile || undefined, email: editState.email || undefined, address: editState.address, canMarkStudentAttendance: editState.canMarkStudentAttendance, canMarkEmployeeAttendance: editState.canMarkEmployeeAttendance });
+      await api.patch('/employees/' + selectedId, { name: editState.name.trim(), subRole: editState.subRole, designation: editState.designation.trim(), joiningDate: editState.joiningDate, mobile: editState.mobile?.trim() || undefined, email: editState.email?.trim() || undefined, address: editState.address, canMarkStudentAttendance: editState.canMarkStudentAttendance, canMarkEmployeeAttendance: editState.canMarkEmployeeAttendance });
       const oldSalary = Number(detail.data?.salaryRevisions?.[0]?.amount || 0), newSalary = Number(editState.baseSalary);
       if (newSalary > 0 && newSalary !== oldSalary) await api.post('/employees/' + selectedId + '/salary-revisions', { amount: newSalary, effectiveDate: editState.joiningDate, reason: 'Admin profile update' });
       Alert.alert('Employee updated', 'All edited details were saved successfully.');
       await Promise.all([client.invalidateQueries({ queryKey: ['employees'] }), client.invalidateQueries({ queryKey: ['employee-detail', selectedId] })]);
-    } catch (e: any) { Alert.alert('Could not update employee', e?.response?.data?.message || 'Please check the form.'); }
+    } catch (e: any) {
+      const raw = e?.response?.data?.message;
+      const msg = Array.isArray(raw) ? raw.join('\n') : raw || 'Please check the form.';
+      Alert.alert('Could not update employee', msg);
+    }
     finally { setSaving(false); }
   };
 
@@ -779,7 +804,7 @@ export default function StaffScreen() {
           <View style={s.formCard}>
             <Text style={s.formTitle}>New Employee</Text>
             <Field label="Full name *" value={form.name} onChangeText={(v: string) => set('name', v)} placeholder="Priya Mehta" />
-            <Choices label="Role" value={form.subRole} values={['TEACHER', 'ACCOUNTANT', 'RECEPTIONIST', 'LIBRARIAN', 'OTHER']} onChange={(v: string) => setForm((p: any) => ({ ...p, subRole: v, primarySubjectId: v === 'TEACHER' ? p.primarySubjectId : null }))} />
+            <Choices label="Role" value={form.subRole} values={['TEACHER', 'ACCOUNTANT', 'STAFF']} onChange={(v: string) => setForm((p: any) => ({ ...p, subRole: v, primarySubjectId: v === 'TEACHER' ? p.primarySubjectId : null }))} />
             {form.subRole === 'TEACHER' ? <SubjectChoices classes={classes} classSubjects={classSubjects} subjects={subjects} value={form.primarySubjectId} onChange={(v: string) => set('primarySubjectId', v)} /> : null}
             <Field label="Designation *" value={form.designation} onChangeText={(v: string) => set('designation', v)} placeholder="Senior Teacher" />
             <Field label="Joining date *" value={form.joiningDate} onChangeText={(v: string) => set('joiningDate', v)} placeholder="YYYY-MM-DD" />
@@ -837,7 +862,7 @@ export default function StaffScreen() {
 
                         <Field label="Employee ID" value={detail.data?.employeeId} editable={false} />
                         <Field label="Full name *" value={editState.name} onChangeText={(v: string) => setEdit('name', v)} />
-                        <Choices label="Role" value={editState.subRole} values={['TEACHER', 'ACCOUNTANT', 'RECEPTIONIST', 'LIBRARIAN', 'OTHER']} onChange={(v: string) => setEdit('subRole', v)} />
+                        <Choices label="Role" value={editState.subRole} values={['TEACHER', 'ACCOUNTANT', 'STAFF']} onChange={(v: string) => setEdit('subRole', v)} />
                         <Field label="Designation *" value={editState.designation} onChangeText={(v: string) => setEdit('designation', v)} />
                         <Field label="Joining date *" value={editState.joiningDate} onChangeText={(v: string) => setEdit('joiningDate', v)} />
                         <Field label="Base salary" value={editState.baseSalary} onChangeText={(v: string) => setEdit('baseSalary', v)} />
