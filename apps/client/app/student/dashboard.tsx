@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../src/hooks/useAuth';
 import { useNotices } from '../../src/hooks/useQueries';
 import { api } from '../../src/services/api';
+import { useTheme, THEME_PALETTES, ThemeColors } from '../../src/context/ThemeContext';
 
 interface TileConfig {
   title: string;
@@ -27,6 +28,8 @@ const tiles: TileConfig[] = [
 ];
 
 export default function Screen() {
+  const { isDark } = useTheme();
+  const s = getThemedStyles(isDark);
   const { user } = useAuth();
   const router = useRouter();
   const { data: timetable, isLoading } = useQuery({
@@ -211,258 +214,271 @@ export default function Screen() {
   );
 }
 
-const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.canvas },
+let stylesDark: any = null;
+let stylesLight: any = null;
+
+function getThemedStyles(isDark: boolean) {
+  if (isDark) {
+    if (!stylesDark) stylesDark = StyleSheet.create(createStyles(THEME_PALETTES.dark, true));
+    return stylesDark;
+  } else {
+    if (!stylesLight) stylesLight = StyleSheet.create(createStyles(THEME_PALETTES.light, false));
+    return stylesLight;
+  }
+}
+
+const createStyles = (tc: ThemeColors, isDark: boolean) => ({
+  page: { flex: 1, backgroundColor: tc.canvas },
   content: { ...surfaces.content, gap: 20 },
 
   // ── Orb ──────────────────────────────────────────────────────
   glowOrb: {
-    position: 'absolute',
+    position: 'absolute' as const,
     width: 380,
     height: 380,
     borderRadius: 190,
     top: -80,
     right: -100,
-    backgroundColor: 'rgba(139,92,246,0.10)',
+    backgroundColor: isDark ? 'rgba(139,92,246,0.10)' : 'rgba(139,92,246,0.06)',
   },
 
   // ── Hero ─────────────────────────────────────────────────────
   hero: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: tc.panel,
     borderRadius: radius.xl,
     padding: 26,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-    overflow: 'hidden',
+    borderColor: tc.line,
+    overflow: 'hidden' as const,
     ...shadow.md,
   },
   heroGlow: {
-    position: 'absolute',
+    position: 'absolute' as const,
     width: 280,
     height: 280,
     borderRadius: 140,
     top: -80,
     right: -50,
-    backgroundColor: 'rgba(139,92,246,0.15)',
+    backgroundColor: isDark ? 'rgba(139,92,246,0.15)' : 'rgba(139,92,246,0.08)',
   },
   heroPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 6,
-    backgroundColor: 'rgba(99,102,241,0.15)',
-    alignSelf: 'flex-start',
+    backgroundColor: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.10)',
+    alignSelf: 'flex-start' as const,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: radius.full,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(99,102,241,0.30)',
+    borderColor: isDark ? 'rgba(99,102,241,0.30)' : 'rgba(99,102,241,0.20)',
   },
-  eyebrow: { fontSize: 10, color: colors.blueLight, letterSpacing: 1.5, fontWeight: '800' },
-  heroName: { fontSize: 26, color: '#f0f6ff', fontWeight: '800', letterSpacing: -0.3 },
-  heroId: { fontSize: 13, lineHeight: 20, color: 'rgba(255,255,255,0.45)', marginTop: 8 },
-  heroBadge: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 14 },
+  eyebrow: { fontSize: 10, color: isDark ? colors.blueLight : colors.primary, letterSpacing: 1.5, fontWeight: '800' as const },
+  heroName: { fontSize: 26, color: tc.text, fontWeight: '800' as const, letterSpacing: -0.3 },
+  heroId: { fontSize: 13, lineHeight: 20, color: tc.muted, marginTop: 8 },
+  heroBadge: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 7, marginTop: 14 },
   onlineDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.success },
-  heroBadgeText: { fontSize: 12, color: colors.success, fontWeight: '700' },
+  heroBadgeText: { fontSize: 12, color: colors.success, fontWeight: '700' as const },
 
   // ── Notice Board ──────────────────────────────────────────────
   noticeCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: tc.panel,
     borderRadius: radius.xl,
     padding: 22,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.09)',
-    overflow: 'hidden',
+    borderColor: tc.line,
+    overflow: 'hidden' as const,
     ...shadow.sm,
   },
   noticeGlow: {
-    position: 'absolute',
+    position: 'absolute' as const,
     width: 200,
     height: 200,
     borderRadius: 100,
     top: -60,
     right: -40,
-    backgroundColor: 'rgba(196,181,253,0.09)',
+    backgroundColor: isDark ? 'rgba(196,181,253,0.09)' : 'rgba(196,181,253,0.05)',
   },
   noticeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
     marginBottom: 16,
-    flexWrap: 'wrap',
+    flexWrap: 'wrap' as const,
     gap: 10,
   },
   noticeEyebrowRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 6,
   },
   noticeEyebrow: {
     fontSize: 10,
-    color: '#c4b5fd',
+    color: isDark ? '#c4b5fd' : '#7c3aed',
     letterSpacing: 1.5,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   noticeTitle: {
-    color: '#f0f6ff',
+    color: tc.text,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '800' as const,
     marginTop: 5,
     letterSpacing: -0.2,
   },
   noticeViewAllBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 5,
-    backgroundColor: 'rgba(196,181,253,0.12)',
+    backgroundColor: isDark ? 'rgba(196,181,253,0.12)' : 'rgba(167,139,250,0.12)',
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(196,181,253,0.25)',
+    borderColor: isDark ? 'rgba(196,181,253,0.25)' : 'rgba(167,139,250,0.30)',
   },
   noticeViewAllText: {
-    color: '#c4b5fd',
+    color: isDark ? '#c4b5fd' : '#7c3aed',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '700' as const,
   },
   noticeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 12,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: tc.line,
   },
   noticeIconBadge: {
     width: 36,
     height: 36,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(196,181,253,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: isDark ? 'rgba(196,181,253,0.12)' : 'rgba(167,139,250,0.15)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
   noticeInfo: {
     flex: 1,
     gap: 3,
   },
   noticeItemTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
     gap: 8,
   },
   noticeItemTitle: {
-    color: '#f0f6ff',
+    color: tc.text,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '700' as const,
     flex: 1,
   },
   noticeDate: {
-    color: 'rgba(255,255,255,0.40)',
+    color: tc.muted,
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '600' as const,
   },
   noticeMessage: {
-    color: 'rgba(255,255,255,0.45)',
+    color: tc.muted,
     fontSize: 12,
     lineHeight: 18,
   },
 
   // ── Schedule Card ─────────────────────────────────────────────
   scheduleCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: tc.panel,
     borderRadius: radius.xl,
     padding: 22,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.09)',
-    overflow: 'hidden',
+    borderColor: tc.line,
+    overflow: 'hidden' as const,
     ...shadow.sm,
   },
   scheduleGlow: {
-    position: 'absolute',
+    position: 'absolute' as const,
     width: 200,
     height: 200,
     borderRadius: 100,
     top: -60,
     right: -40,
-    backgroundColor: 'rgba(56,189,248,0.08)',
+    backgroundColor: isDark ? 'rgba(56,189,248,0.08)' : 'rgba(56,189,248,0.05)',
   },
   scheduleHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
     marginBottom: 16,
-    flexWrap: 'wrap',
+    flexWrap: 'wrap' as const,
     gap: 10,
   },
-  scheduleTitle: { color: '#f0f6ff', fontSize: 18, fontWeight: '800', marginTop: 5, letterSpacing: -0.2 },
+  scheduleTitle: { color: tc.text, fontSize: 18, fontWeight: '800' as const, marginTop: 5, letterSpacing: -0.2 },
   viewAllBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 5,
-    backgroundColor: 'rgba(99,102,241,0.12)',
+    backgroundColor: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.10)',
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(99,102,241,0.25)',
+    borderColor: isDark ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.20)',
   },
-  viewAllText: { color: colors.blueLight, fontSize: 12, fontWeight: '700' },
-  emptyRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 16 },
-  emptyText: { color: 'rgba(255,255,255,0.30)', fontSize: 13 },
+  viewAllText: { color: isDark ? colors.blueLight : colors.primary, fontSize: 12, fontWeight: '700' as const },
+  emptyRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10, paddingVertical: 16 },
+  emptyText: { color: tc.muted, fontSize: 13 },
   periodRow: {
-    flexDirection: 'row',
+    flexDirection: 'row' as const,
     gap: 14,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
-    alignItems: 'center',
+    borderTopColor: tc.line,
+    alignItems: 'center' as const,
   },
   periodTimeBadge: {
-    backgroundColor: 'rgba(99,102,241,0.12)',
+    backgroundColor: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.10)',
     borderRadius: radius.sm,
     paddingHorizontal: 8,
     paddingVertical: 5,
     minWidth: 52,
-    alignItems: 'center',
+    alignItems: 'center' as const,
   },
-  periodTime: { color: colors.blueLight, fontSize: 11, fontWeight: '700' },
+  periodTime: { color: isDark ? colors.blueLight : colors.primary, fontSize: 11, fontWeight: '700' as const },
   periodInfo: { flex: 1 },
-  periodSubject: { color: '#f0f6ff', fontSize: 14, fontWeight: '700' },
-  periodTeacher: { color: 'rgba(255,255,255,0.40)', fontSize: 12, marginTop: 2 },
-  periodDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.15)' },
+  periodSubject: { color: tc.text, fontSize: 14, fontWeight: '700' as const },
+  periodTeacher: { color: tc.muted, fontSize: 12, marginTop: 2 },
+  periodDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: tc.line },
 
   // ── Section Head ─────────────────────────────────────────────
   sectionHead: { gap: 4 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#f0f6ff', letterSpacing: -0.2 },
-  sectionSub: { fontSize: 13, color: 'rgba(255,255,255,0.40)' },
+  sectionTitle: { fontSize: 18, fontWeight: '800' as const, color: tc.text, letterSpacing: -0.2 },
+  sectionSub: { fontSize: 13, color: tc.muted },
 
   // ── Grid ─────────────────────────────────────────────────────
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
+  grid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 14 },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: tc.panel,
     flex: 1,
     minWidth: 200,
     padding: 20,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.09)',
-    overflow: 'hidden',
+    borderColor: tc.line,
+    overflow: 'hidden' as const,
     ...shadow.sm,
   },
-  cardAccent: { position: 'absolute', top: 0, left: 0, right: 0, height: 3, borderRadius: 2 },
+  cardAccent: { position: 'absolute' as const, top: 0, left: 0, right: 0, height: 3, borderRadius: 2 },
   iconWrap: {
     width: 44,
     height: 44,
     borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     marginBottom: 14,
     marginTop: 8,
   },
-  cardTitle: { fontSize: 16, fontWeight: '800', color: '#f0f6ff', letterSpacing: -0.2 },
-  cardCopy: { color: 'rgba(255,255,255,0.40)', fontSize: 12, marginTop: 6, lineHeight: 18 },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 18 },
-  openText: { fontWeight: '800', fontSize: 12 },
+  cardTitle: { fontSize: 16, fontWeight: '800' as const, color: tc.text, letterSpacing: -0.2 },
+  cardCopy: { color: tc.muted, fontSize: 12, marginTop: 6, lineHeight: 18 },
+  cardFooter: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 5, marginTop: 18 },
+  openText: { fontWeight: '800' as const, fontSize: 12 },
 });

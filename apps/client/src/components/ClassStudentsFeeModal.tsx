@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../services/api';
 import { colors, radius, surfaces } from '../theme';
+import { useTheme, THEME_PALETTES, ThemeColors } from '../context/ThemeContext';
 
 interface Props {
   visible: boolean;
@@ -33,6 +34,8 @@ export function ClassStudentsFeeModal({
   onClose,
   onSaved,
 }: Props) {
+  const { isDark, colors: tc } = useTheme();
+  const s = getThemedStyles(isDark);
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
@@ -456,348 +459,363 @@ export function ClassStudentsFeeModal({
   );
 }
 
-const s = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(3, 7, 18, 0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-    ...(Platform.OS === 'web' ? ({ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' } as any) : {}),
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  dialog: {
-    width: '100%',
-    maxHeight: '92%',
-    backgroundColor: '#0c121e',
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.6,
-    shadowRadius: 32,
-    elevation: 20,
-  },
+let stylesDark: any = null;
+let stylesLight: any = null;
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.10)',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    flexShrink: 0,
-    gap: 12,
-  },
-  headerEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  headerEyebrow: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: colors.primary,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: colors.ink },
-  headerSubtitle: { fontSize: 12, color: colors.muted, marginTop: 2 },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+function getThemedStyles(isDark: boolean) {
+  if (isDark) {
+    if (!stylesDark) stylesDark = StyleSheet.create(createStyles(THEME_PALETTES.dark, true) as any);
+    return stylesDark;
+  } else {
+    if (!stylesLight) stylesLight = StyleSheet.create(createStyles(THEME_PALETTES.light, false) as any);
+    return stylesLight;
+  }
+}
 
-  // KPI Bar
-  kpiBar: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 12,
-    flexShrink: 0,
-  },
-  kpiItem: {
-    flex: 1,
-    minWidth: 130,
-    paddingHorizontal: 6,
-  },
-  kpiLabel: { fontSize: 11, color: colors.muted, marginBottom: 2 },
-  kpiValue: { fontSize: 15, fontWeight: '800', color: colors.ink },
+function createStyles(tc: ThemeColors, isDark: boolean) {
+  return {
+    overlay: {
+      flex: 1,
+      backgroundColor: isDark ? 'rgba(3, 7, 18, 0.85)' : 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+      padding: 16,
+      ...(Platform.OS === 'web' ? ({ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' } as any) : {}),
+    },
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    dialog: {
+      width: '100%',
+      maxHeight: '92%',
+      backgroundColor: isDark ? '#0c121e' : tc.panel,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : tc.line,
+      overflow: 'hidden' as const,
+      display: 'flex' as const,
+      flexDirection: 'column' as const,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 16 },
+      shadowOpacity: 0.6,
+      shadowRadius: 32,
+      elevation: 20,
+    },
 
-  // Filter Section
-  filterSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
-    gap: 10,
-    flexShrink: 0,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    borderRadius: radius.sm,
-    paddingHorizontal: 12,
-    height: 38,
-    gap: 8,
-  },
-  searchInput: {
-    flex: 1,
-    color: colors.ink,
-    fontSize: 13,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    alignItems: 'center',
-  },
-  chipGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  chipGroupLabel: { fontSize: 11, color: colors.muted, fontWeight: '600', marginRight: 2 },
-  chip: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: radius.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  chipActive: {
-    backgroundColor: 'rgba(147, 155, 255, 0.18)',
-    borderColor: colors.primary,
-  },
-  chipText: { fontSize: 11, color: colors.muted, fontWeight: '600' },
-  chipTextActive: { color: colors.primary, fontWeight: '700' },
+    // Header
+    header: {
+      flexDirection: 'row' as const,
+      justifyContent: 'space-between' as const,
+      alignItems: 'flex-start' as const,
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.10)' : tc.line,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+      flexShrink: 0,
+      gap: 12,
+    },
+    headerEyebrowRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6, marginBottom: 4 },
+    headerEyebrow: {
+      fontSize: 10,
+      fontWeight: '800' as const,
+      color: tc.primary,
+      letterSpacing: 1,
+      textTransform: 'uppercase' as const,
+    },
+    headerTitle: { fontSize: 18, fontWeight: '800' as const, color: tc.text },
+    headerSubtitle: { fontSize: 12, color: tc.muted, marginTop: 2 },
+    closeBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+    },
 
-  // Scroll Content
-  scroll: { flex: 1, flexShrink: 1 },
-  scrollContent: { padding: 18, gap: 12 },
+    // KPI Bar
+    kpiBar: {
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)',
+      borderBottomWidth: 1,
+      borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : tc.line,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      gap: 12,
+      flexShrink: 0,
+    },
+    kpiItem: {
+      flex: 1,
+      minWidth: 130,
+      paddingHorizontal: 6,
+    },
+    kpiLabel: { fontSize: 11, color: tc.muted, marginBottom: 2 },
+    kpiValue: { fontSize: 15, fontWeight: '800' as const, color: tc.text },
 
-  // Student Card
-  studentList: { gap: 12 },
-  studentCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    padding: 14,
-    gap: 10,
-  },
-  studentCardEditing: {
-    borderColor: colors.primary,
-    backgroundColor: 'rgba(147, 155, 255, 0.05)',
-  },
-  studentCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
-  studentNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  studentName: { fontSize: 15, fontWeight: '700', color: colors.ink },
-  rollBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    borderRadius: 4,
-  },
-  rollBadgeText: { fontSize: 10, color: colors.muted, fontWeight: '600' },
-  sectionBadge: {
-    backgroundColor: 'rgba(147, 155, 255, 0.12)',
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    borderRadius: 4,
-  },
-  sectionBadgeText: { fontSize: 10, color: colors.primary, fontWeight: '700' },
-  studentCodeText: { fontSize: 11, color: colors.muted, marginTop: 2 },
-  offerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(251, 191, 36, 0.12)',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(251, 191, 36, 0.3)',
-  },
-  offerBadgeText: { fontSize: 10, fontWeight: '800', color: '#fbbf24', letterSpacing: 0.4 },
+    // Filter Section
+    filterSection: {
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0, 0, 0, 0.03)',
+      borderBottomWidth: 1,
+      borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : tc.line,
+      gap: 10,
+      flexShrink: 0,
+    },
+    searchBar: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : tc.panel,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : tc.line,
+      borderRadius: radius.sm,
+      paddingHorizontal: 12,
+      height: 38,
+      gap: 8,
+    },
+    searchInput: {
+      flex: 1,
+      color: tc.text,
+      fontSize: 13,
+    },
+    filterRow: {
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      gap: 16,
+      alignItems: 'center' as const,
+    },
+    chipGroup: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      flexWrap: 'wrap' as const,
+      gap: 6,
+    },
+    chipGroupLabel: { fontSize: 11, color: tc.muted, fontWeight: '600' as const, marginRight: 2 },
+    chip: {
+      paddingVertical: 4,
+      paddingHorizontal: 10,
+      borderRadius: radius.sm,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : tc.line,
+    },
+    chipActive: {
+      backgroundColor: isDark ? 'rgba(147, 155, 255, 0.18)' : 'rgba(91, 140, 255, 0.15)',
+      borderColor: tc.primary,
+    },
+    chipText: { fontSize: 11, color: tc.muted, fontWeight: '600' as const },
+    chipTextActive: { color: tc.primary, fontWeight: '700' as const },
 
-  // Fee Metrics Row
-  feeMetricsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.18)',
-    padding: 10,
-    borderRadius: radius.sm,
-  },
-  feeMetricItem: { minWidth: 110 },
-  feeMetricLabel: { fontSize: 10, color: colors.muted, marginBottom: 2 },
-  feeMetricValue: { fontSize: 13, fontWeight: '800', color: colors.ink },
-  editFeeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(147, 155, 255, 0.14)',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(147, 155, 255, 0.3)',
-  },
-  editFeeBtnText: { fontSize: 12, fontWeight: '700', color: colors.primary },
+    // Scroll Content
+    scroll: { flex: 1, flexShrink: 1 },
+    scrollContent: { padding: 18, gap: 12 },
 
-  // Inline Editor Box
-  inlineEditorBox: {
-    backgroundColor: 'rgba(12, 18, 30, 0.95)',
-    borderWidth: 1,
-    borderColor: 'rgba(147, 155, 255, 0.3)',
-    borderRadius: radius.sm,
-    padding: 14,
-    gap: 10,
-    marginTop: 4,
-  },
-  inlineEditorHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  inlineEditorTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.ink,
-  },
-  inlineEditorHint: {
-    fontSize: 11,
-    color: colors.muted,
-    lineHeight: 16,
-  },
-  inlineEditorInputsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  inputLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.muted,
-    marginBottom: 4,
-  },
-  amountInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: radius.sm,
-    color: colors.ink,
-    fontSize: 14,
-    fontWeight: '700',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  reasonInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: radius.sm,
-    color: colors.ink,
-    fontSize: 13,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  errorText: { fontSize: 11, color: colors.danger, fontWeight: '600' },
-  inlineEditorActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 4,
-  },
-  saveFeeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.primary,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: radius.sm,
-  },
-  saveFeeBtnText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#080c14',
-  },
-  cancelEditBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: radius.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  cancelEditBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.ink,
-  },
-  btnDisabled: { opacity: 0.6 },
+    // Student Card
+    studentList: { gap: 12 },
+    studentCard: {
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : tc.panel,
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : tc.line,
+      padding: 14,
+      gap: 10,
+    },
+    studentCardEditing: {
+      borderColor: tc.primary,
+      backgroundColor: isDark ? 'rgba(147, 155, 255, 0.05)' : 'rgba(91, 140, 255, 0.06)',
+    },
+    studentCardHeader: {
+      flexDirection: 'row' as const,
+      justifyContent: 'space-between' as const,
+      alignItems: 'flex-start' as const,
+      gap: 10,
+      flexWrap: 'wrap' as const,
+    },
+    studentNameRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 8,
+      flexWrap: 'wrap' as const,
+    },
+    studentName: { fontSize: 15, fontWeight: '700' as const, color: tc.text },
+    rollBadge: {
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+      paddingVertical: 2,
+      paddingHorizontal: 6,
+      borderRadius: 4,
+    },
+    rollBadgeText: { fontSize: 10, color: tc.muted, fontWeight: '600' as const },
+    sectionBadge: {
+      backgroundColor: isDark ? 'rgba(147, 155, 255, 0.12)' : 'rgba(91, 140, 255, 0.12)',
+      paddingVertical: 2,
+      paddingHorizontal: 6,
+      borderRadius: 4,
+    },
+    sectionBadgeText: { fontSize: 10, color: tc.primary, fontWeight: '700' as const },
+    studentCodeText: { fontSize: 11, color: tc.muted, marginTop: 2 },
+    offerBadge: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 5,
+      backgroundColor: isDark ? 'rgba(251, 191, 36, 0.12)' : 'rgba(251, 191, 36, 0.15)',
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      borderRadius: 4,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(251, 191, 36, 0.3)' : 'rgba(251, 191, 36, 0.4)',
+    },
+    offerBadgeText: { fontSize: 10, fontWeight: '800' as const, color: isDark ? '#fbbf24' : '#d97706', letterSpacing: 0.4 },
 
-  // Empty Box
-  emptyBox: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 36,
-    gap: 8,
-  },
-  emptyTitle: { fontSize: 15, fontWeight: '700', color: colors.ink },
-  emptyText: { fontSize: 12, color: colors.muted, textAlign: 'center', maxWidth: 360 },
+    // Fee Metrics Row
+    feeMetricsRow: {
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      gap: 16,
+      alignItems: 'center' as const,
+      backgroundColor: isDark ? 'rgba(0,0,0,0.18)' : 'rgba(0,0,0,0.03)',
+      padding: 10,
+      borderRadius: radius.sm,
+    },
+    feeMetricItem: { minWidth: 110 },
+    feeMetricLabel: { fontSize: 10, color: tc.muted, marginBottom: 2 },
+    feeMetricValue: { fontSize: 13, fontWeight: '800' as const, color: tc.text },
+    editFeeBtn: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 5,
+      backgroundColor: isDark ? 'rgba(147, 155, 255, 0.14)' : 'rgba(91, 140, 255, 0.14)',
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(147, 155, 255, 0.3)' : tc.line,
+    },
+    editFeeBtnText: { fontSize: 12, fontWeight: '700' as const, color: tc.primary },
 
-  // Footer
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.10)',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    flexShrink: 0,
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  footerHint: { fontSize: 11, color: colors.muted },
-  footerCloseBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: radius.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  footerCloseBtnText: { fontSize: 12, fontWeight: '700', color: colors.ink },
-});
+    // Inline Editor Box
+    inlineEditorBox: {
+      backgroundColor: isDark ? 'rgba(12, 18, 30, 0.95)' : 'rgba(240, 244, 255, 0.95)',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(147, 155, 255, 0.3)' : tc.line,
+      borderRadius: radius.sm,
+      padding: 14,
+      gap: 10,
+      marginTop: 4,
+    },
+    inlineEditorHeader: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 6,
+    },
+    inlineEditorTitle: {
+      fontSize: 13,
+      fontWeight: '700' as const,
+      color: tc.text,
+    },
+    inlineEditorHint: {
+      fontSize: 11,
+      color: tc.muted,
+      lineHeight: 16,
+    },
+    inlineEditorInputsRow: {
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      gap: 12,
+    },
+    inputLabel: {
+      fontSize: 11,
+      fontWeight: '600' as const,
+      color: tc.muted,
+      marginBottom: 4,
+    },
+    amountInput: {
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : tc.panel,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : tc.line,
+      borderRadius: radius.sm,
+      color: tc.text,
+      fontSize: 14,
+      fontWeight: '700' as const,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+    },
+    reasonInput: {
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : tc.panel,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : tc.line,
+      borderRadius: radius.sm,
+      color: tc.text,
+      fontSize: 13,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+    },
+    errorText: { fontSize: 11, color: colors.danger, fontWeight: '600' as const },
+    inlineEditorActionsRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 10,
+      marginTop: 4,
+    },
+    saveFeeBtn: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 6,
+      backgroundColor: tc.primary,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderRadius: radius.sm,
+    },
+    saveFeeBtnText: {
+      fontSize: 12,
+      fontWeight: '800' as const,
+      color: isDark ? '#080c14' : '#ffffff',
+    },
+    cancelEditBtn: {
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: radius.sm,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+    },
+    cancelEditBtnText: {
+      fontSize: 12,
+      fontWeight: '600' as const,
+      color: tc.text,
+    },
+    btnDisabled: { opacity: 0.6 },
+
+    // Empty Box
+    emptyBox: {
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      padding: 36,
+      gap: 8,
+    },
+    emptyTitle: { fontSize: 15, fontWeight: '700' as const, color: tc.text },
+    emptyText: { fontSize: 12, color: tc.muted, textAlign: 'center' as const, maxWidth: 360 },
+
+    // Footer
+    footer: {
+      flexDirection: 'row' as const,
+      justifyContent: 'space-between' as const,
+      alignItems: 'center' as const,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderTopWidth: 1,
+      borderTopColor: isDark ? 'rgba(255, 255, 255, 0.10)' : tc.line,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+      flexShrink: 0,
+      flexWrap: 'wrap' as const,
+      gap: 10,
+    },
+    footerHint: { fontSize: 11, color: tc.muted },
+    footerCloseBtn: {
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderRadius: radius.sm,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+    },
+    footerCloseBtnText: { fontSize: 12, fontWeight: '700' as const, color: tc.text },
+  };
+}

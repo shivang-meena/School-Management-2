@@ -15,6 +15,7 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { colors, radius, surfaces } from '../theme';
+import { useTheme, THEME_PALETTES, ThemeColors } from '../context/ThemeContext';
 
 type Props = {
   classes: any[];
@@ -45,6 +46,8 @@ export function ClassSubjectManager({
   parentSubjects = [],
   onChanged,
 }: Props) {
+  const { isDark, colors: tc } = useTheme();
+  const s = getThemedStyles(isDark);
   const queryClient = useQueryClient();
 
   // Class Selection Filter
@@ -571,7 +574,7 @@ export function ClassSubjectManager({
                   value={editName}
                   onChangeText={setEditName}
                   placeholder="e.g. Mathematics, Physics, Hindi"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  placeholderTextColor={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(17,25,54,0.4)'}
                 />
               </View>
 
@@ -582,7 +585,7 @@ export function ClassSubjectManager({
                   value={editCode}
                   onChangeText={setEditCode}
                   placeholder="e.g. MATH, PHY, HIN"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  placeholderTextColor={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(17,25,54,0.4)'}
                   autoCapitalize="characters"
                 />
               </View>
@@ -595,7 +598,7 @@ export function ClassSubjectManager({
                 <Switch
                   value={editIsOptional}
                   onValueChange={setEditIsOptional}
-                  trackColor={{ false: 'rgba(255,255,255,0.15)', true: colors.primary }}
+                  trackColor={{ false: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)', true: colors.primary }}
                   thumbColor="#ffffff"
                 />
               </View>
@@ -612,7 +615,7 @@ export function ClassSubjectManager({
                 style={[s.saveBtn, editLoading && s.disabledBtn]}
                 onPress={handleSaveSubjectEdit}
               >
-                {editLoading ? <ActivityIndicator color="#071d33" /> : <Text style={s.saveBtnText}>Save Changes</Text>}
+                {editLoading ? <ActivityIndicator color="#ffffff" /> : <Text style={s.saveBtnText}>Save Changes</Text>}
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -645,7 +648,7 @@ export function ClassSubjectManager({
                   value={streamCode}
                   onChangeText={setStreamCode}
                   placeholder="e.g. STR_PCM, STR_COMM"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  placeholderTextColor={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(17,25,54,0.4)'}
                   autoCapitalize="characters"
                 />
               </View>
@@ -659,7 +662,7 @@ export function ClassSubjectManager({
                   value={streamName}
                   onChangeText={setStreamName}
                   placeholder="e.g. PCM (Physics, Chemistry, Mathematics)"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  placeholderTextColor={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(17,25,54,0.4)'}
                 />
               </View>
 
@@ -670,7 +673,7 @@ export function ClassSubjectManager({
                   value={streamDesc}
                   onChangeText={setStreamDesc}
                   placeholder="Details about subjects or career path in this stream"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  placeholderTextColor={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(17,25,54,0.4)'}
                   multiline
                 />
               </View>
@@ -687,7 +690,7 @@ export function ClassSubjectManager({
                 style={[s.saveBtn, streamLoading && s.disabledBtn]}
                 onPress={handleSaveStreamEdit}
               >
-                {streamLoading ? <ActivityIndicator color="#071d33" /> : <Text style={s.saveBtnText}>Update Stream</Text>}
+                {streamLoading ? <ActivityIndicator color="#ffffff" /> : <Text style={s.saveBtnText}>Update Stream</Text>}
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -697,14 +700,28 @@ export function ClassSubjectManager({
   );
 }
 
-const s = StyleSheet.create({
+let stylesDark: any = null;
+let stylesLight: any = null;
+
+function getThemedStyles(isDark: boolean) {
+  if (isDark) {
+    if (!stylesDark) stylesDark = StyleSheet.create(createStyles(THEME_PALETTES.dark, true));
+    return stylesDark;
+  } else {
+    if (!stylesLight) stylesLight = StyleSheet.create(createStyles(THEME_PALETTES.light, false));
+    return stylesLight;
+  }
+}
+
+function createStyles(tc: ThemeColors, isDark: boolean) {
+  return {
   container: {
     gap: 16,
   },
   filterHeader: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : tc.card,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : tc.border,
     borderRadius: radius.lg,
     padding: 16,
     gap: 12,
@@ -713,13 +730,13 @@ const s = StyleSheet.create({
     gap: 4,
   },
   filterHeading: {
-    color: '#ffffff',
+    color: tc.text,
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '900' as const,
     letterSpacing: 0.3,
   },
   filterSubtext: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: tc.muted,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -728,9 +745,9 @@ const s = StyleSheet.create({
     paddingVertical: 4,
   },
   classCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : tc.card,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : tc.border,
     borderRadius: radius.md,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -738,77 +755,77 @@ const s = StyleSheet.create({
     gap: 4,
   },
   classCardSelected: {
-    backgroundColor: 'rgba(56, 189, 248, 0.16)',
-    borderColor: colors.primary,
+    backgroundColor: isDark ? 'rgba(56, 189, 248, 0.16)' : 'rgba(14, 165, 233, 0.12)',
+    borderColor: tc.primary,
     borderWidth: 2,
   },
   classCardBadgeRow: {
-    flexDirection: 'row',
+    flexDirection: 'row' as const,
   },
   classBadge: {
     fontSize: 9,
-    fontWeight: '900',
+    fontWeight: '900' as const,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
-    overflow: 'hidden',
+    overflow: 'hidden' as const,
     letterSpacing: 0.5,
   },
   classBadgeJunior: {
-    backgroundColor: 'rgba(56, 189, 248, 0.2)',
-    color: '#38bdf8',
+    backgroundColor: isDark ? 'rgba(56, 189, 248, 0.2)' : 'rgba(14, 165, 233, 0.15)',
+    color: isDark ? '#38bdf8' : '#0284c7',
   },
   classBadgeSenior: {
-    backgroundColor: 'rgba(167, 139, 250, 0.25)',
-    color: '#c4b5fd',
+    backgroundColor: isDark ? 'rgba(167, 139, 250, 0.25)' : 'rgba(124, 58, 237, 0.15)',
+    color: isDark ? '#c4b5fd' : '#7c3aed',
   },
   classCardTitle: {
-    color: '#ffffff',
+    color: tc.text,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   classCardTitleSelected: {
-    color: colors.primary,
+    color: tc.primary,
   },
   classCardMeta: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: tc.muted,
     fontSize: 10,
   },
 
   modeBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 12,
     padding: 14,
     borderRadius: radius.md,
     borderWidth: 1,
   },
   modeBannerJunior: {
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
-    borderColor: 'rgba(56, 189, 248, 0.25)',
+    backgroundColor: isDark ? 'rgba(56, 189, 248, 0.08)' : 'rgba(14, 165, 233, 0.08)',
+    borderColor: isDark ? 'rgba(56, 189, 248, 0.25)' : 'rgba(14, 165, 233, 0.25)',
   },
   modeBannerSenior: {
-    backgroundColor: 'rgba(167, 139, 250, 0.1)',
-    borderColor: 'rgba(167, 139, 250, 0.3)',
+    backgroundColor: isDark ? 'rgba(167, 139, 250, 0.1)' : 'rgba(124, 58, 237, 0.08)',
+    borderColor: isDark ? 'rgba(167, 139, 250, 0.3)' : 'rgba(124, 58, 237, 0.25)',
   },
   modeBannerIcon: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.06)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
   modeBannerIconText: {
     fontSize: 18,
   },
   modeBannerTitle: {
-    color: '#ffffff',
+    color: tc.text,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   modeBannerSubtitle: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: tc.muted,
     fontSize: 12,
     lineHeight: 16,
     marginTop: 2,
@@ -816,12 +833,12 @@ const s = StyleSheet.create({
 
   loadingBox: {
     padding: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     gap: 10,
   },
   loadingText: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: tc.muted,
     fontSize: 13,
   },
 
@@ -832,41 +849,41 @@ const s = StyleSheet.create({
     gap: 16,
   },
   listHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
   },
   listTitle: {
-    color: '#ffffff',
+    color: tc.text,
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   listSubtitle: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: tc.muted,
     fontSize: 12,
     marginTop: 2,
   },
 
   emptyBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : tc.card,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderStyle: 'dashed',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : tc.border,
+    borderStyle: 'dashed' as const,
     borderRadius: radius.md,
     padding: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     gap: 6,
   },
   emptyTitle: {
-    color: '#ffffff',
+    color: tc.text,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   emptyDesc: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: tc.muted,
     fontSize: 12,
-    textAlign: 'center',
+    textAlign: 'center' as const,
     lineHeight: 18,
     maxWidth: 500,
   },
@@ -875,9 +892,9 @@ const s = StyleSheet.create({
     gap: 10,
   },
   subjectCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : tc.card,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : tc.border,
     borderRadius: radius.md,
     padding: 14,
     gap: 10,
@@ -887,120 +904,120 @@ const s = StyleSheet.create({
     borderColor: 'rgba(248, 113, 113, 0.3)',
   },
   subjectTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
   },
   codeTag: {
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-    borderColor: 'rgba(56, 189, 248, 0.35)',
+    backgroundColor: isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(14, 165, 233, 0.12)',
+    borderColor: isDark ? 'rgba(56, 189, 248, 0.35)' : 'rgba(14, 165, 233, 0.3)',
     borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
   codeTagText: {
-    color: '#38bdf8',
+    color: isDark ? '#38bdf8' : '#0284c7',
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '800' as const,
     letterSpacing: 0.5,
   },
   statusTag: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '800' as const,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
-    overflow: 'hidden',
+    overflow: 'hidden' as const,
   },
   statusTagActive: {
-    backgroundColor: 'rgba(52, 211, 153, 0.15)',
-    color: '#34d399',
+    backgroundColor: isDark ? 'rgba(52, 211, 153, 0.15)' : 'rgba(16, 185, 129, 0.12)',
+    color: isDark ? '#34d399' : '#059669',
   },
   statusTagInactive: {
-    backgroundColor: 'rgba(248, 113, 113, 0.18)',
-    color: '#f87171',
+    backgroundColor: isDark ? 'rgba(248, 113, 113, 0.18)' : 'rgba(239, 68, 68, 0.12)',
+    color: isDark ? '#f87171' : '#dc2626',
   },
   optionalTag: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '800' as const,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
-    overflow: 'hidden',
+    overflow: 'hidden' as const,
   },
   optionalTagCompulsory: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    color: 'rgba(255, 255, 255, 0.6)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+    color: tc.muted,
   },
   optionalTagElective: {
-    backgroundColor: 'rgba(167, 139, 250, 0.2)',
-    color: '#a78bfa',
+    backgroundColor: isDark ? 'rgba(167, 139, 250, 0.2)' : 'rgba(124, 58, 237, 0.12)',
+    color: isDark ? '#a78bfa' : '#7c3aed',
   },
   subjectName: {
-    color: '#f0f6ff',
+    color: tc.text,
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '700' as const,
   },
   subjectCardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    borderTopColor: isDark ? 'rgba(255, 255, 255, 0.06)' : tc.border,
   },
   subjectMeta: {
-    color: 'rgba(255, 255, 255, 0.35)',
+    color: tc.muted,
     fontSize: 11,
   },
   cardActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 8,
   },
   editBtn: {
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    backgroundColor: isDark ? 'rgba(56, 189, 248, 0.12)' : 'rgba(14, 165, 233, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
+    borderColor: isDark ? 'rgba(56, 189, 248, 0.3)' : 'rgba(14, 165, 233, 0.3)',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
   },
   editBtnText: {
-    color: '#38bdf8',
+    color: isDark ? '#38bdf8' : '#0284c7',
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '700' as const,
   },
   toggleBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : tc.border,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
   },
   toggleBtnActive: {
-    backgroundColor: 'rgba(52, 211, 153, 0.12)',
-    borderColor: 'rgba(52, 211, 153, 0.3)',
+    backgroundColor: isDark ? 'rgba(52, 211, 153, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+    borderColor: isDark ? 'rgba(52, 211, 153, 0.3)' : 'rgba(16, 185, 129, 0.3)',
   },
   toggleBtnText: {
-    color: 'rgba(255, 255, 255, 0.75)',
+    color: tc.text,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '700' as const,
   },
   deleteBtn: {
-    backgroundColor: 'rgba(248, 113, 113, 0.12)',
+    backgroundColor: isDark ? 'rgba(248, 113, 113, 0.12)' : 'rgba(239, 68, 68, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(248, 113, 113, 0.3)',
+    borderColor: isDark ? 'rgba(248, 113, 113, 0.3)' : 'rgba(239, 68, 68, 0.3)',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
   },
   deleteBtnText: {
-    color: '#f87171',
+    color: isDark ? '#f87171' : '#dc2626',
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '700' as const,
   },
 
   streamSelectorBlock: {
@@ -1011,9 +1028,9 @@ const s = StyleSheet.create({
     paddingVertical: 4,
   },
   streamTab: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : tc.card,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : tc.border,
     borderRadius: radius.md,
     padding: 12,
     minWidth: 160,
@@ -1021,60 +1038,60 @@ const s = StyleSheet.create({
     gap: 6,
   },
   streamTabSelected: {
-    backgroundColor: 'rgba(167, 139, 250, 0.16)',
-    borderColor: colors.purple,
+    backgroundColor: isDark ? 'rgba(167, 139, 250, 0.16)' : 'rgba(124, 58, 237, 0.12)',
+    borderColor: tc.purple,
     borderWidth: 2,
   },
   streamTabTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
   },
   streamTabCode: {
-    color: colors.purple,
+    color: tc.purple,
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '900' as const,
   },
   streamTabCodeSelected: {
-    color: '#ffffff',
+    color: tc.text,
   },
   streamCountBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    color: 'rgba(255, 255, 255, 0.6)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+    color: tc.muted,
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '700' as const,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
-    overflow: 'hidden',
+    overflow: 'hidden' as const,
   },
   streamCountBadgeSelected: {
-    backgroundColor: colors.purple,
+    backgroundColor: tc.purple,
     color: '#ffffff',
   },
   streamTabName: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: tc.muted,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '700' as const,
   },
   streamTabNameSelected: {
-    color: '#ffffff',
-    fontWeight: '800',
+    color: tc.text,
+    fontWeight: '800' as const,
   },
 
   childSubjectsBlock: {
     gap: 14,
   },
   streamHeaderCard: {
-    backgroundColor: 'rgba(167, 139, 250, 0.08)',
+    backgroundColor: isDark ? 'rgba(167, 139, 250, 0.08)' : 'rgba(124, 58, 237, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(167, 139, 250, 0.25)',
+    borderColor: isDark ? 'rgba(167, 139, 250, 0.25)' : 'rgba(124, 58, 237, 0.2)',
     borderRadius: radius.md,
     padding: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    flexWrap: 'wrap' as const,
     gap: 12,
   },
   streamHeaderInfo: {
@@ -1083,79 +1100,79 @@ const s = StyleSheet.create({
     gap: 4,
   },
   streamHeaderBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 8,
   },
   streamHeaderCode: {
-    color: colors.purple,
+    color: tc.purple,
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '900' as const,
     letterSpacing: 0.5,
   },
   streamHeaderTitle: {
-    color: '#ffffff',
+    color: tc.text,
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '900' as const,
   },
   streamHeaderDesc: {
-    color: 'rgba(255, 255, 255, 0.55)',
+    color: tc.muted,
     fontSize: 12,
   },
   streamHeaderActions: {
-    flexDirection: 'row',
+    flexDirection: 'row' as const,
     gap: 8,
   },
 
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     padding: 20,
   },
   modalCard: {
-    backgroundColor: '#0f172a',
+    backgroundColor: tc.card,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    width: '100%',
+    borderColor: tc.border,
+    width: '100%' as const,
     maxWidth: 520,
-    maxHeight: '90%',
-    overflow: 'hidden',
+    maxHeight: '90%' as const,
+    overflow: 'hidden' as const,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'flex-start' as const,
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomColor: tc.border,
   },
   modalEyebrow: {
-    color: colors.primary,
+    color: tc.primary,
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '900' as const,
     letterSpacing: 1,
   },
   modalTitle: {
-    color: '#ffffff',
+    color: tc.text,
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '900' as const,
     marginTop: 2,
   },
   modalCloseBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: tc.border,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
   modalCloseText: {
-    color: '#ffffff',
+    color: tc.text,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   modalBody: {
     padding: 20,
@@ -1165,70 +1182,71 @@ const s = StyleSheet.create({
     gap: 6,
   },
   formLabel: {
-    color: '#f0f6ff',
+    color: tc.text,
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   reqStar: {
-    color: colors.danger,
+    color: tc.danger,
   },
   textInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: tc.border,
     borderRadius: radius.md,
-    color: '#ffffff',
+    color: tc.text,
     fontSize: 14,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tc.border,
     borderRadius: radius.md,
     padding: 14,
     gap: 12,
   },
   switchLabel: {
-    color: '#f0f6ff',
+    color: tc.text,
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   switchHelp: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: tc.muted,
     fontSize: 11,
     marginTop: 2,
   },
   errorBanner: {
-    backgroundColor: 'rgba(248, 113, 113, 0.12)',
+    backgroundColor: isDark ? 'rgba(248, 113, 113, 0.12)' : 'rgba(239, 68, 68, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(248, 113, 113, 0.3)',
+    borderColor: isDark ? 'rgba(248, 113, 113, 0.3)' : 'rgba(239, 68, 68, 0.3)',
     borderRadius: radius.md,
     padding: 12,
   },
   errorText: {
-    color: colors.danger,
+    color: tc.danger,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '700' as const,
   },
   saveBtn: {
-    backgroundColor: colors.primary,
+    backgroundColor: tc.primary,
     paddingVertical: 14,
     borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     marginTop: 4,
   },
   saveBtnText: {
-    color: '#071d33',
-    fontWeight: '900',
+    color: '#ffffff',
+    fontWeight: '900' as const,
     fontSize: 14,
   },
   disabledBtn: {
     opacity: 0.6,
   },
-});
+  };
+}

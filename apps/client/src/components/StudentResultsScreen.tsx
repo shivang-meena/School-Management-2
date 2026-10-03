@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { colors, radius, surfaces } from '../theme';
+import { useTheme, THEME_PALETTES, ThemeColors } from '../context/ThemeContext';
 import { downloadMarksheetPdf, MarksheetPdfData } from '../utils/marksheetPdf';
 
 interface SubjectResult {
@@ -85,6 +86,8 @@ function formatDate(dateStr?: string): string {
 
 export function StudentResultsScreen() {
   const { user } = useAuth();
+  const { isDark, colors: tc } = useTheme();
+  const s = getThemedStyles(isDark);
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
@@ -145,7 +148,7 @@ export function StudentResultsScreen() {
             onPress={() => refetch()}
             activeOpacity={0.8}
           >
-            <Ionicons name="refresh-outline" size={16} color={colors.primary} />
+            <Ionicons name="refresh-outline" size={16} color={tc.primary} />
             <Text style={s.refreshBtnText}>Refresh data</Text>
           </TouchableOpacity>
         </View>
@@ -153,7 +156,7 @@ export function StudentResultsScreen() {
         {/* ── Loading State ── */}
         {isLoading && (
           <View style={s.stateBox}>
-            <ActivityIndicator size="large" color={colors.primary} />
+            <ActivityIndicator size="large" color={tc.primary} />
             <Text style={s.stateText}>Loading examination results…</Text>
           </View>
         )}
@@ -161,7 +164,7 @@ export function StudentResultsScreen() {
         {/* ── Error State ── */}
         {!isLoading && isError && (
           <View style={s.stateBox}>
-            <Ionicons name="alert-circle-outline" size={40} color={colors.danger} />
+            <Ionicons name="alert-circle-outline" size={40} color={tc.danger} />
             <Text style={s.stateTitle}>Unable to load results</Text>
             <Text style={s.stateText}>There was an issue fetching your records. Please try again.</Text>
             <TouchableOpacity style={s.primaryActionBtn} onPress={() => refetch()}>
@@ -215,7 +218,7 @@ export function StudentResultsScreen() {
                         const score = isAbsent ? 'Absent' : `${sub.marks ?? 0}`;
                         return (
                           <Text key={sub.subjectId || sIdx} style={s.subjectListText}>
-                            {sub.subject?.name || 'Subject'}: <Text style={{ fontWeight: '700', color: isAbsent ? colors.danger : colors.ink }}>{score}</Text>
+                            {sub.subject?.name || 'Subject'}: <Text style={{ fontWeight: '700', color: isAbsent ? tc.danger : tc.text }}>{score}</Text>
                             {sIdx < exam.subjects.length - 1 ? '  ·  ' : ''}
                           </Text>
                         );
@@ -240,7 +243,7 @@ export function StudentResultsScreen() {
 
                       <View style={s.viewDetailsBtn}>
                         <Text style={s.viewDetailsText}>View Marksheet</Text>
-                        <Ionicons name="arrow-forward-outline" size={14} color={colors.primary} />
+                        <Ionicons name="arrow-forward-outline" size={14} color={tc.primary} />
                       </View>
                     </View>
                   </View>
@@ -289,7 +292,7 @@ export function StudentResultsScreen() {
                   style={s.closeIconBtn}
                   onPress={() => setSelectedExam(null)}
                 >
-                  <Ionicons name="close" size={20} color={colors.ink} />
+                  <Ionicons name="close" size={20} color={tc.text} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -346,7 +349,7 @@ export function StudentResultsScreen() {
                     </View>
                     <View style={s.infoCol}>
                       <Text style={s.infoLabel}>Result Status:</Text>
-                      <Text style={[s.infoValue, { color: selectedExam.percentage >= 33 ? colors.success : colors.danger, fontWeight: '700' }]}>
+                      <Text style={[s.infoValue, { color: selectedExam.percentage >= 33 ? tc.success : tc.danger, fontWeight: '700' }]}>
                         {selectedExam.percentage >= 33 ? 'Passed' : 'Needs Improvement'}
                       </Text>
                     </View>
@@ -378,7 +381,7 @@ export function StudentResultsScreen() {
 
                     return (
                       <View key={sub.subjectId || idx} style={[s.tableRow, idx % 2 === 1 && s.tableRowAlt]}>
-                        <Text style={[s.td, { flex: 0.6, color: colors.muted }]}>
+                        <Text style={[s.td, { flex: 0.6, color: tc.muted }]}>
                           {String(idx + 1).padStart(2, '0')}
                         </Text>
                         <View style={{ flex: 2.8 }}>
@@ -386,8 +389,8 @@ export function StudentResultsScreen() {
                           {sub.subject?.code ? <Text style={s.tdSubjectCode}>{sub.subject.code}</Text> : null}
                         </View>
                         <Text style={[s.td, { flex: 1.2 }]}>{max}</Text>
-                        <Text style={[s.td, { flex: 1.2, color: colors.muted }]}>{passMarks}</Text>
-                        <Text style={[s.td, { flex: 1.4, fontWeight: '700', color: isAbsent ? colors.danger : colors.ink }]}>
+                        <Text style={[s.td, { flex: 1.2, color: tc.muted }]}>{passMarks}</Text>
+                        <Text style={[s.td, { flex: 1.4, fontWeight: '700', color: isAbsent ? tc.danger : tc.text }]}>
                           {isAbsent ? 'Absent' : marks}
                         </Text>
                         <Text style={[s.td, { flex: 1.2, fontWeight: '700' }]}>{grade}</Text>
@@ -395,7 +398,7 @@ export function StudentResultsScreen() {
                           <Text
                             style={[
                               s.statusText,
-                              { color: isAbsent ? colors.danger : isPass ? colors.success : colors.danger },
+                              { color: isAbsent ? tc.danger : isPass ? tc.success : tc.danger },
                             ]}
                           >
                             {isAbsent ? 'ABSENT' : isPass ? 'PASS' : 'FAIL'}
@@ -413,10 +416,10 @@ export function StudentResultsScreen() {
                     <Text style={[s.tdTotal, { flex: 1.2 }]}>
                       {selectedExam.maximumMarks}
                     </Text>
-                    <Text style={[s.tdTotal, { flex: 1.2, color: colors.muted }]}>
+                    <Text style={[s.tdTotal, { flex: 1.2, color: tc.muted }]}>
                       {Math.round(selectedExam.maximumMarks * 0.33)}
                     </Text>
-                    <Text style={[s.tdTotal, { flex: 1.4, color: colors.primary, fontSize: 14 }]}>
+                    <Text style={[s.tdTotal, { flex: 1.4, color: tc.primary, fontSize: 14 }]}>
                       {selectedExam.totalMarks}
                     </Text>
                     <Text style={[s.tdTotal, { flex: 1.2 }]}>
@@ -427,7 +430,7 @@ export function StudentResultsScreen() {
                         style={[
                           s.statusText,
                           {
-                            color: selectedExam.percentage >= 33 ? colors.success : colors.danger,
+                            color: selectedExam.percentage >= 33 ? tc.success : tc.danger,
                             fontWeight: '800',
                           },
                         ]}
@@ -454,7 +457,7 @@ export function StudentResultsScreen() {
                   </View>
                   <View style={s.summaryCol}>
                     <Text style={s.summaryLabel}>Result</Text>
-                    <Text style={[s.summaryValue, { color: selectedExam.percentage >= 33 ? colors.success : colors.danger }]}>
+                    <Text style={[s.summaryValue, { color: selectedExam.percentage >= 33 ? tc.success : tc.danger }]}>
                       {getDivisionText(selectedExam.percentage)}
                     </Text>
                   </View>
@@ -502,368 +505,383 @@ export function StudentResultsScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.canvas },
-  content: { ...surfaces.content, paddingBottom: 40 },
+let stylesDark: any = null;
+let stylesLight: any = null;
 
-  // Hero
-  hero: {
-    ...surfaces.card,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 16,
-    marginBottom: 20,
-    padding: 24,
-    borderRadius: radius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
-    flexWrap: 'wrap',
-  },
-  heroCopy: { flex: 1, minWidth: 260 },
-  eyebrow: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.primary,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginBottom: 6,
-  },
-  title: { fontSize: 24, fontWeight: '800', color: colors.ink, marginBottom: 6 },
-  description: { fontSize: 13, color: colors.muted, lineHeight: 19 },
-  refreshBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: radius.sm,
-    backgroundColor: 'rgba(147,155,255,0.12)',
-    borderWidth: 1,
-    borderColor: colors.glowBorderSm,
-  },
-  refreshBtnText: { color: colors.primary, fontSize: 13, fontWeight: '600' },
+function getThemedStyles(isDark: boolean) {
+  if (isDark) {
+    if (!stylesDark) stylesDark = StyleSheet.create(createStyles(THEME_PALETTES.dark, true) as any);
+    return stylesDark;
+  } else {
+    if (!stylesLight) stylesLight = StyleSheet.create(createStyles(THEME_PALETTES.light, false) as any);
+    return stylesLight;
+  }
+}
 
-  // States
-  stateBox: {
-    padding: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    marginVertical: 20,
-  },
-  emptyIcon: { fontSize: 24, color: colors.muted, marginBottom: 10 },
-  stateTitle: { fontSize: 16, fontWeight: '700', color: colors.ink, marginTop: 10, marginBottom: 4 },
-  stateText: { fontSize: 13, color: colors.muted, textAlign: 'center', maxWidth: 400 },
-  primaryActionBtn: {
-    marginTop: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    backgroundColor: colors.primary,
-    borderRadius: radius.sm,
-  },
-  primaryActionBtnText: { color: '#080c14', fontWeight: '700', fontSize: 13 },
+function createStyles(tc: ThemeColors, isDark: boolean) {
+  return {
+    page: { flex: 1, backgroundColor: tc.canvas },
+    content: { ...surfaces.content, paddingBottom: 40 },
 
-  // Exam List Cards
-  cardGrid: { gap: 14 },
-  examCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    padding: 18,
-    gap: 12,
-  },
-  examCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  examCardTitle: { fontSize: 17, fontWeight: '700', color: colors.ink },
-  examCardMeta: { fontSize: 12, color: colors.muted, marginTop: 4 },
-  resultAvailableBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.full,
-    backgroundColor: 'rgba(52, 211, 153, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(52, 211, 153, 0.35)',
-  },
-  resultAvailableText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#34d399',
-    letterSpacing: 0.5,
-  },
-  subjectsListRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    backgroundColor: 'rgba(0,0,0,0.18)',
-    padding: 10,
-    borderRadius: radius.sm,
-  },
-  subjectListText: { fontSize: 12, color: colors.muted },
-  examCardBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.06)',
-    paddingTop: 10,
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  cardActionsGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  cardDownloadPdfBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 7,
-    paddingHorizontal: 13,
-    borderRadius: radius.sm,
-    backgroundColor: colors.primary,
-  },
-  cardDownloadPdfBtnText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#080c14',
-  },
-  openHintText: { fontSize: 12, color: colors.muted },
-  viewDetailsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-  },
-  viewDetailsText: { fontSize: 13, fontWeight: '600', color: colors.primary },
+    // Hero
+    hero: {
+      ...surfaces.card,
+      flexDirection: 'row' as const,
+      justifyContent: 'space-between' as const,
+      alignItems: 'center' as const,
+      gap: 16,
+      marginBottom: 20,
+      padding: 24,
+      borderRadius: radius.md,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : tc.panel,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : tc.line,
+      flexWrap: 'wrap' as const,
+    },
+    heroCopy: { flex: 1, minWidth: 260 },
+    eyebrow: {
+      fontSize: 11,
+      fontWeight: '700' as const,
+      color: tc.primary,
+      letterSpacing: 1.2,
+      textTransform: 'uppercase' as const,
+      marginBottom: 6,
+    },
+    title: { fontSize: 24, fontWeight: '800' as const, color: tc.text, marginBottom: 6 },
+    description: { fontSize: 13, color: tc.muted, lineHeight: 19 },
+    refreshBtn: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 6,
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: radius.sm,
+      backgroundColor: isDark ? 'rgba(147,155,255,0.12)' : 'rgba(91, 140, 255, 0.1)',
+      borderWidth: 1,
+      borderColor: isDark ? colors.glowBorderSm : tc.line,
+    },
+    refreshBtnText: { color: tc.primary, fontSize: 13, fontWeight: '600' as const },
 
-  // ── Modal Styles ──
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.78)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  modalDialog: {
-    width: '100%',
-    maxHeight: '88%',
-    backgroundColor: '#0c121e',
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.10)',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    flexShrink: 0,
-    gap: 12,
-  },
-  modalHeaderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  headerDownloadBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: radius.sm,
-    backgroundColor: colors.primary,
-  },
-  headerDownloadBtnText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#080c14',
-  },
-  schoolTitle: { fontSize: 16, fontWeight: '800', color: colors.ink, letterSpacing: 0.5 },
-  marksheetSubtitle: { fontSize: 11, color: colors.muted, letterSpacing: 0.5, marginTop: 2 },
-  closeIconBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+    // States
+    stateBox: {
+      padding: 40,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : tc.panel,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255,255,255,0.08)' : tc.line,
+      marginVertical: 20,
+    },
+    emptyIcon: { fontSize: 24, color: tc.muted, marginBottom: 10 },
+    stateTitle: { fontSize: 16, fontWeight: '700' as const, color: tc.text, marginTop: 10, marginBottom: 4 },
+    stateText: { fontSize: 13, color: tc.muted, textAlign: 'center' as const, maxWidth: 400 },
+    primaryActionBtn: {
+      marginTop: 14,
+      paddingHorizontal: 18,
+      paddingVertical: 8,
+      backgroundColor: tc.primary,
+      borderRadius: radius.sm,
+    },
+    primaryActionBtnText: { color: isDark ? '#080c14' : '#ffffff', fontWeight: '700' as const, fontSize: 13 },
 
-  modalScroll: { flex: 1, flexShrink: 1 },
-  modalContent: { padding: 20, gap: 16 },
+    // Exam List Cards
+    cardGrid: { gap: 14 },
+    examCard: {
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : tc.panel,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : tc.line,
+      padding: 18,
+      gap: 12,
+    },
+    examCardHeader: {
+      flexDirection: 'row' as const,
+      justifyContent: 'space-between' as const,
+      alignItems: 'flex-start' as const,
+      gap: 12,
+    },
+    examCardTitle: { fontSize: 17, fontWeight: '700' as const, color: tc.text },
+    examCardMeta: { fontSize: 12, color: tc.muted, marginTop: 4 },
+    resultAvailableBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: radius.full,
+      backgroundColor: isDark ? 'rgba(52, 211, 153, 0.12)' : 'rgba(52, 211, 153, 0.15)',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(52, 211, 153, 0.35)' : 'rgba(52, 211, 153, 0.4)',
+    },
+    resultAvailableText: {
+      fontSize: 10,
+      fontWeight: '800' as const,
+      color: isDark ? '#34d399' : '#059669',
+      letterSpacing: 0.5,
+    },
+    subjectsListRow: {
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      backgroundColor: isDark ? 'rgba(0,0,0,0.18)' : 'rgba(0,0,0,0.03)',
+      padding: 10,
+      borderRadius: radius.sm,
+    },
+    subjectListText: { fontSize: 12, color: tc.muted },
+    examCardBottom: {
+      flexDirection: 'row' as const,
+      justifyContent: 'space-between' as const,
+      alignItems: 'center' as const,
+      borderTopWidth: 1,
+      borderTopColor: isDark ? 'rgba(255, 255, 255, 0.06)' : tc.line,
+      paddingTop: 10,
+      flexWrap: 'wrap' as const,
+      gap: 8,
+    },
+    cardActionsGroup: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 10,
+    },
+    cardDownloadPdfBtn: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 6,
+      paddingVertical: 7,
+      paddingHorizontal: 13,
+      borderRadius: radius.sm,
+      backgroundColor: tc.primary,
+    },
+    cardDownloadPdfBtnText: {
+      fontSize: 12,
+      fontWeight: '800' as const,
+      color: isDark ? '#080c14' : '#ffffff',
+    },
+    openHintText: { fontSize: 12, color: tc.muted },
+    viewDetailsBtn: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 5,
+      paddingVertical: 7,
+      paddingHorizontal: 10,
+    },
+    viewDetailsText: { fontSize: 13, fontWeight: '600' as const, color: tc.primary },
 
-  examHeaderBox: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    backgroundColor: 'rgba(147,155,255,0.06)',
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(147,155,255,0.15)',
-  },
-  examHeading: { fontSize: 15, fontWeight: '800', color: colors.ink },
-  examDatesText: { fontSize: 11, color: colors.muted, marginTop: 2 },
+    // ── Modal Styles ──
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: isDark ? 'rgba(0, 0, 0, 0.78)' : 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+      padding: 16,
+    },
+    modalBackdrop: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    modalDialog: {
+      width: '100%',
+      maxHeight: '88%',
+      backgroundColor: isDark ? '#0c121e' : tc.panel,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : tc.line,
+      overflow: 'hidden' as const,
+      display: 'flex' as const,
+      flexDirection: 'column' as const,
+    },
+    modalHeader: {
+      flexDirection: 'row' as const,
+      justifyContent: 'space-between' as const,
+      alignItems: 'center' as const,
+      paddingHorizontal: 18,
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.10)' : tc.line,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0,0,0,0.02)',
+      flexShrink: 0,
+      gap: 12,
+    },
+    modalHeaderRight: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 10,
+    },
+    headerDownloadBtn: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 6,
+      paddingVertical: 7,
+      paddingHorizontal: 12,
+      borderRadius: radius.sm,
+      backgroundColor: tc.primary,
+    },
+    headerDownloadBtnText: {
+      fontSize: 12,
+      fontWeight: '800' as const,
+      color: isDark ? '#080c14' : '#ffffff',
+    },
+    schoolTitle: { fontSize: 16, fontWeight: '800' as const, color: tc.text, letterSpacing: 0.5 },
+    marksheetSubtitle: { fontSize: 11, color: tc.muted, letterSpacing: 0.5, marginTop: 2 },
+    closeIconBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+    },
 
-  // Student Info Table
-  studentInfoTable: {
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
-    borderRadius: radius.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-  },
-  studentInfoRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  infoCol: {
-    flex: 1,
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  infoLabel: { fontSize: 12, color: colors.muted, width: 120 },
-  infoValue: { fontSize: 12, fontWeight: '600', color: colors.ink, flex: 1 },
+    modalScroll: { flex: 1, flexShrink: 1 },
+    modalContent: { padding: 20, gap: 16 },
 
-  // Table
-  tableWrap: {
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    borderRadius: radius.sm,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  tableHeadRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.07)',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
-  },
-  th: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.muted,
-    textAlign: 'center',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
-  },
-  tableRowAlt: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-  },
-  td: {
-    fontSize: 12,
-    color: colors.ink,
-    textAlign: 'center',
-  },
-  tdSubjectName: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.ink,
-  },
-  tdSubjectCode: {
-    fontSize: 10,
-    color: colors.primary,
-    marginTop: 1,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  tableFooterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-  },
-  tdTotal: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.ink,
-    textAlign: 'center',
-  },
+    examHeaderBox: {
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      backgroundColor: isDark ? 'rgba(147,155,255,0.06)' : 'rgba(91, 140, 255, 0.08)',
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(147,155,255,0.15)' : tc.line,
+    },
+    examHeading: { fontSize: 15, fontWeight: '800' as const, color: tc.text },
+    examDatesText: { fontSize: 11, color: tc.muted, marginTop: 2 },
 
-  // Summary Box
-  summaryBox: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
-    borderRadius: radius.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    padding: 12,
-  },
-  summaryCol: {
-    flex: 1,
-    minWidth: 110,
-    alignItems: 'center',
-  },
-  summaryLabel: { fontSize: 11, color: colors.muted, marginBottom: 2 },
-  summaryValue: { fontSize: 14, fontWeight: '700', color: colors.ink },
+    // Student Info Table
+    studentInfoTable: {
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : tc.line,
+      borderRadius: radius.sm,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0,0,0,0.02)',
+    },
+    studentInfoRow: {
+      flexDirection: 'row' as const,
+      borderBottomWidth: 1,
+      borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.08)' : tc.line,
+    },
+    infoCol: {
+      flex: 1,
+      paddingVertical: 9,
+      paddingHorizontal: 14,
+      flexDirection: 'row' as const,
+      gap: 8,
+    },
+    infoLabel: { fontSize: 12, color: tc.muted, width: 120 },
+    infoValue: { fontSize: 12, fontWeight: '600' as const, color: tc.text, flex: 1 },
 
-  noteBox: {
-    paddingVertical: 6,
-  },
-  noteText: { fontSize: 11, color: colors.muted, fontStyle: 'italic' },
+    // Table
+    tableWrap: {
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : tc.line,
+      borderRadius: radius.sm,
+      overflow: 'hidden' as const,
+      backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'transparent',
+    },
+    tableHeadRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.04)',
+      paddingVertical: 10,
+      paddingHorizontal: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.12)' : tc.line,
+    },
+    th: {
+      fontSize: 11,
+      fontWeight: '700' as const,
+      color: tc.muted,
+      textAlign: 'center' as const,
+    },
+    tableRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      paddingVertical: 10,
+      paddingHorizontal: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.06)' : tc.line,
+    },
+    tableRowAlt: {
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)',
+    },
+    td: {
+      fontSize: 12,
+      color: tc.text,
+      textAlign: 'center' as const,
+    },
+    tdSubjectName: {
+      fontSize: 12,
+      fontWeight: '600' as const,
+      color: tc.text,
+    },
+    tdSubjectCode: {
+      fontSize: 10,
+      color: tc.primary,
+      marginTop: 1,
+    },
+    statusText: {
+      fontSize: 10,
+      fontWeight: '700' as const,
+    },
+    tableFooterRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+      paddingVertical: 12,
+      paddingHorizontal: 10,
+    },
+    tdTotal: {
+      fontSize: 12,
+      fontWeight: '700' as const,
+      color: tc.text,
+      textAlign: 'center' as const,
+    },
 
-  // Modal Actions
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.10)',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-  },
-  downloadPdfBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    paddingVertical: 9,
-    paddingHorizontal: 16,
-    borderRadius: radius.sm,
-    backgroundColor: colors.primary,
-  },
-  downloadPdfBtnText: { color: '#080c14', fontSize: 13, fontWeight: '700' },
-  closeBtn: {
-    paddingVertical: 9,
-    paddingHorizontal: 16,
-    borderRadius: radius.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  closeBtnText: { color: colors.ink, fontSize: 13, fontWeight: '600' },
-});
+    // Summary Box
+    summaryBox: {
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : tc.line,
+      borderRadius: radius.sm,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0,0,0,0.02)',
+      padding: 12,
+    },
+    summaryCol: {
+      flex: 1,
+      minWidth: 110,
+      alignItems: 'center' as const,
+    },
+    summaryLabel: { fontSize: 11, color: tc.muted, marginBottom: 2 },
+    summaryValue: { fontSize: 14, fontWeight: '700' as const, color: tc.text },
+
+    noteBox: {
+      paddingVertical: 6,
+    },
+    noteText: { fontSize: 11, color: tc.muted, fontStyle: 'italic' as const },
+
+    // Modal Actions
+    modalActions: {
+      flexDirection: 'row' as const,
+      justifyContent: 'flex-end' as const,
+      alignItems: 'center' as const,
+      gap: 12,
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+      borderTopWidth: 1,
+      borderTopColor: isDark ? 'rgba(255, 255, 255, 0.10)' : tc.line,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0,0,0,0.02)',
+    },
+    downloadPdfBtn: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 7,
+      paddingVertical: 9,
+      paddingHorizontal: 16,
+      borderRadius: radius.sm,
+      backgroundColor: tc.primary,
+    },
+    downloadPdfBtnText: { color: isDark ? '#080c14' : '#ffffff', fontSize: 13, fontWeight: '700' as const },
+    closeBtn: {
+      paddingVertical: 9,
+      paddingHorizontal: 16,
+      borderRadius: radius.sm,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+    },
+    closeBtnText: { color: tc.text, fontSize: 13, fontWeight: '600' as const },
+  };
+}

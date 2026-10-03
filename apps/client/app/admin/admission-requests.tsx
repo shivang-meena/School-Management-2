@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Tex
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../src/services/api';
 import { colors, surfaces } from '../../src/theme';
+import { useTheme, THEME_PALETTES, ThemeColors } from '../../src/context/ThemeContext';
 
 type Registration = {
   id: string;
@@ -25,6 +26,8 @@ type Registration = {
 const dateLabel = (value?: string | null) => value ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
 export default function AdmissionRequestsScreen() {
+  const { isDark } = useTheme();
+  const styles = getThemedStyles(isDark);
   const client = useQueryClient();
   const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'REJECTED' | 'APPROVED'>('ALL');
   const [selected, setSelected] = useState<Registration | null>(null);
@@ -73,51 +76,72 @@ export default function AdmissionRequestsScreen() {
   </View>;
 }
 
-function StatusBadge({ status }: { status: string }) { const tone = status === 'PENDING' ? styles.pending : status === 'APPROVED' ? styles.approved : styles.rejected; return <View style={[styles.badge, tone]}><Text style={[styles.badgeText, status === 'PENDING' ? styles.pendingText : status === 'APPROVED' ? styles.approvedText : styles.rejectedText]}>{status}</Text></View>; }
-function Detail({ label, value }: { label: string; value: string }) { return <View style={styles.detail}><Text style={styles.detailLabel}>{label}</Text><Text style={styles.detailValue}>{value}</Text></View>; }
+function StatusBadge({ status }: { status: string }) {
+  const { isDark } = useTheme();
+  const styles = getThemedStyles(isDark);
+  const tone = status === 'PENDING' ? styles.pending : status === 'APPROVED' ? styles.approved : styles.rejected;
+  return (
+    <View style={[styles.badge, tone]}>
+      <Text style={[styles.badgeText, status === 'PENDING' ? styles.pendingText : status === 'APPROVED' ? styles.approvedText : styles.rejectedText]}>
+        {status}
+      </Text>
+    </View>
+  );
+}
 
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.background },
+function Detail({ label, value }: { label: string; value: string }) {
+  const { isDark } = useTheme();
+  const styles = getThemedStyles(isDark);
+  return (
+    <View style={styles.detail}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value}</Text>
+    </View>
+  );
+}
+
+const createStyles = (tc: ThemeColors, isDark: boolean) => ({
+  page: { flex: 1, backgroundColor: tc.canvas },
   content: { ...surfaces.content, padding: 28, gap: 20 },
-  headingRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 },
+  headingRow: { flexDirection: 'row' as const, alignItems: 'flex-start' as const, justifyContent: 'space-between' as const, flexWrap: 'wrap' as const, gap: 16 },
   headingCopy: { flex: 1, minWidth: 240 },
-  eyebrow: { color: colors.blueLight, fontSize: 10, fontWeight: '800', letterSpacing: 1.7 },
-  title: { color: '#f0f6ff', fontSize: 29, fontWeight: '800', marginTop: 7, letterSpacing: -0.3 },
-  description: { color: 'rgba(255,255,255,0.45)', fontSize: 13, lineHeight: 21, marginTop: 7 },
-  refresh: { backgroundColor: 'rgba(99,102,241,0.15)', borderWidth: 1, borderColor: 'rgba(99,102,241,0.30)', borderRadius: 9, paddingHorizontal: 15, paddingVertical: 12 },
-  refreshText: { color: colors.blueLight, fontWeight: '700', fontSize: 12 },
-  stats: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  eyebrow: { color: tc.sky, fontSize: 10, fontWeight: '800' as const, letterSpacing: 1.7 },
+  title: { color: tc.text, fontSize: 29, fontWeight: '800' as const, marginTop: 7, letterSpacing: -0.3 },
+  description: { color: tc.muted, fontSize: 13, lineHeight: 21, marginTop: 7 },
+  refresh: { backgroundColor: isDark ? 'rgba(99,102,241,0.15)' : '#EEF0FF', borderWidth: 1, borderColor: isDark ? 'rgba(99,102,241,0.30)' : tc.line, borderRadius: 9, paddingHorizontal: 15, paddingVertical: 12 },
+  refreshText: { color: tc.sky, fontWeight: '700' as const, fontSize: 12 },
+  stats: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 12 },
   stat: {
     ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderColor: tc.line,
     borderRadius: 14,
     padding: 15,
     flex: 1,
     minWidth: 190,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 12,
   },
-  statIcon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  statValue: { fontSize: 20, fontWeight: '800' },
-  statLabel: { color: '#f0f6ff', fontSize: 12, fontWeight: '700' },
-  statHint: { color: 'rgba(255,255,255,0.40)', fontSize: 10, marginTop: 4 },
+  statIcon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center' as const, justifyContent: 'center' as const },
+  statValue: { fontSize: 20, fontWeight: '800' as const },
+  statLabel: { color: tc.text, fontSize: 12, fontWeight: '700' as const },
+  statHint: { color: tc.muted, fontSize: 10, marginTop: 4 },
   listCard: {
     ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderColor: tc.line,
     borderRadius: 16,
     padding: 22,
   },
-  listHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, paddingBottom: 15 },
-  listTitle: { color: '#f0f6ff', fontSize: 17, fontWeight: '700' },
-  listSubtitle: { color: 'rgba(255,255,255,0.40)', fontSize: 11, marginTop: 4 },
+  listHeader: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, flexWrap: 'wrap' as const, gap: 12, paddingBottom: 15 },
+  listTitle: { color: tc.text, fontSize: 17, fontWeight: '700' as const },
+  listSubtitle: { color: tc.muted, fontSize: 11, marginTop: 4 },
   secure: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 6,
     backgroundColor: 'rgba(52,211,153,0.12)',
     borderWidth: 1,
@@ -127,15 +151,15 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   secureDot: { color: '#34d399', fontSize: 8 },
-  secureText: { color: '#34d399', fontSize: 10, fontWeight: '700' },
-  rows: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
+  secureText: { color: '#34d399', fontSize: 10, fontWeight: '700' as const },
+  rows: { borderTopWidth: 1, borderTopColor: tc.line },
   row: {
     minHeight: 78,
     paddingVertical: 13,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderBottomColor: tc.line,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 13,
   },
   rowPressed: { opacity: 0.65 },
@@ -143,71 +167,83 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(99,102,241,0.15)',
+    backgroundColor: isDark ? 'rgba(99,102,241,0.15)' : '#EEF0FF',
     borderWidth: 1,
-    borderColor: 'rgba(99,102,241,0.30)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: isDark ? 'rgba(99,102,241,0.30)' : tc.line,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
   avatarPending: { backgroundColor: 'rgba(251,191,36,0.15)', borderColor: 'rgba(251,191,36,0.30)' },
-  avatarText: { color: colors.blueLight, fontSize: 12, fontWeight: '800' },
+  avatarText: { color: tc.sky, fontSize: 12, fontWeight: '800' as const },
   rowMain: { flex: 1, minWidth: 0 },
-  nameLine: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
-  rowName: { color: '#f0f6ff', fontSize: 14, fontWeight: '700' },
-  meta: { color: 'rgba(255,255,255,0.40)', fontSize: 11, marginTop: 4 },
-  guardian: { color: 'rgba(255,255,255,0.35)', fontSize: 11, marginTop: 6 },
-  chevron: { color: 'rgba(255,255,255,0.30)', fontSize: 26, paddingHorizontal: 4 },
+  nameLine: { flexDirection: 'row' as const, alignItems: 'center' as const, flexWrap: 'wrap' as const, gap: 8 },
+  rowName: { color: tc.text, fontSize: 14, fontWeight: '700' as const },
+  meta: { color: tc.muted, fontSize: 11, marginTop: 4 },
+  guardian: { color: tc.muted, fontSize: 11, marginTop: 6 },
+  chevron: { color: tc.muted, fontSize: 26, paddingHorizontal: 4 },
   badge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
-  badgeText: { fontSize: 8, fontWeight: '800', letterSpacing: 0.5 },
+  badgeText: { fontSize: 8, fontWeight: '800' as const, letterSpacing: 0.5 },
   pending: { backgroundColor: 'rgba(251,191,36,0.15)', borderWidth: 1, borderColor: 'rgba(251,191,36,0.30)' },
   pendingText: { color: '#fbbf24' },
   approved: { backgroundColor: 'rgba(52,211,153,0.15)', borderWidth: 1, borderColor: 'rgba(52,211,153,0.30)' },
   approvedText: { color: '#34d399' },
   rejected: { backgroundColor: 'rgba(248,113,113,0.15)', borderWidth: 1, borderColor: 'rgba(248,113,113,0.30)' },
   rejectedText: { color: '#f87171' },
-  state: { alignItems: 'center', justifyContent: 'center', minHeight: 220, padding: 28 },
-  stateTitle: { color: '#f0f6ff', fontWeight: '700', fontSize: 15, textAlign: 'center' },
-  stateText: { color: 'rgba(255,255,255,0.40)', fontSize: 12, textAlign: 'center', marginTop: 8 },
-  emptyIcon: { color: 'rgba(255,255,255,0.20)', fontSize: 33, marginBottom: 12 },
-  link: { color: colors.blueLight, fontSize: 12, fontWeight: '700', marginTop: 12 },
-  overlay: { flex: 1, backgroundColor: 'rgba(4, 8, 18, 0.80)', alignItems: 'center', justifyContent: 'center', padding: 18 },
+  state: { alignItems: 'center' as const, justifyContent: 'center' as const, minHeight: 220, padding: 28 },
+  stateTitle: { color: tc.text, fontWeight: '700' as const, fontSize: 15, textAlign: 'center' as const },
+  stateText: { color: tc.muted, fontSize: 12, textAlign: 'center' as const, marginTop: 8 },
+  emptyIcon: { color: tc.muted, fontSize: 33, marginBottom: 12 },
+  link: { color: tc.sky, fontSize: 12, fontWeight: '700' as const, marginTop: 12 },
+  overlay: { flex: 1, backgroundColor: 'rgba(4, 8, 18, 0.80)', alignItems: 'center' as const, justifyContent: 'center' as const, padding: 18 },
   modal: {
-    backgroundColor: '#0e1525',
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
+    borderColor: tc.line,
     borderRadius: 18,
-    width: '92%',
+    width: '92%' as const,
     maxWidth: 650,
-    maxHeight: '90%',
+    maxHeight: '90%' as const,
   },
   modalContent: { padding: 24, gap: 16 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  modalTitle: { color: '#f0f6ff', fontSize: 21, fontWeight: '800', marginTop: 6 },
-  close: { width: 34, height: 34, borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
-  closeText: { color: '#f0f6ff', fontSize: 23 },
-  detailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 0, borderTopWidth: 1, borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  detail: { width: '50%', minWidth: 210, padding: 12, borderRightWidth: 1, borderBottomWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  detailLabel: { color: 'rgba(255,255,255,0.40)', fontSize: 10, fontWeight: '700' },
-  detailValue: { color: '#f0f6ff', fontSize: 13, lineHeight: 19, marginTop: 4 },
-  reasonBox: { backgroundColor: 'rgba(248,113,113,0.10)', borderWidth: 1, borderColor: 'rgba(248,113,113,0.25)', borderRadius: 10, padding: 13 },
-  reasonLabel: { color: '#f87171', fontSize: 10, fontWeight: '800' },
-  reasonText: { color: 'rgba(255,255,255,0.70)', fontSize: 12, marginTop: 5, lineHeight: 18 },
-  rejectButton: { alignSelf: 'flex-start', backgroundColor: 'rgba(248,113,113,0.15)', borderWidth: 1, borderColor: 'rgba(248,113,113,0.30)', borderRadius: 9, paddingHorizontal: 14, paddingVertical: 11 },
-  rejectText: { color: '#f87171', fontWeight: '700', fontSize: 12 },
-  rejectModal: { backgroundColor: '#0e1525', borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', borderRadius: 18, width: '92%', maxWidth: 480, padding: 24 },
-  modalDescription: { color: 'rgba(255,255,255,0.45)', fontSize: 12, lineHeight: 19, marginTop: 8 },
-  inputLabel: { color: 'rgba(255,255,255,0.60)', fontSize: 11, fontWeight: '700', marginTop: 18, marginBottom: 6 },
+  modalHeader: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, gap: 12 },
+  modalTitle: { color: tc.text, fontSize: 21, fontWeight: '800' as const, marginTop: 6 },
+  close: { width: 34, height: 34, borderRadius: 9, backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F0F2FA', alignItems: 'center' as const, justifyContent: 'center' as const },
+  closeText: { color: tc.text, fontSize: 23 },
+  detailGrid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 0, borderTopWidth: 1, borderLeftWidth: 1, borderColor: tc.line },
+  detail: { width: '50%' as const, minWidth: 210, padding: 12, borderRightWidth: 1, borderBottomWidth: 1, borderColor: tc.line },
+  detailLabel: { color: tc.muted, fontSize: 10, fontWeight: '700' as const },
+  detailValue: { color: tc.text, fontSize: 13, lineHeight: 19, marginTop: 4 },
+  reasonBox: { backgroundColor: isDark ? 'rgba(248,113,113,0.10)' : 'rgba(248,113,113,0.12)', borderWidth: 1, borderColor: isDark ? 'rgba(248,113,113,0.25)' : 'rgba(248,113,113,0.30)', borderRadius: 10, padding: 13 },
+  reasonLabel: { color: '#f87171', fontSize: 10, fontWeight: '800' as const },
+  reasonText: { color: isDark ? 'rgba(255,255,255,0.70)' : 'rgba(17,25,54,0.75)', fontSize: 12, marginTop: 5, lineHeight: 18 },
+  rejectButton: { alignSelf: 'flex-start' as const, backgroundColor: 'rgba(248,113,113,0.15)', borderWidth: 1, borderColor: isDark ? 'rgba(248,113,113,0.30)' : 'rgba(248,113,113,0.35)', borderRadius: 9, paddingHorizontal: 14, paddingVertical: 11 },
+  rejectText: { color: '#f87171', fontWeight: '700' as const, fontSize: 12 },
+  rejectModal: { backgroundColor: tc.panel, borderWidth: 1, borderColor: tc.line, borderRadius: 18, width: '92%' as const, maxWidth: 480, padding: 24 },
+  modalDescription: { color: tc.muted, fontSize: 12, lineHeight: 19, marginTop: 8 },
+  inputLabel: { color: tc.muted, fontSize: 11, fontWeight: '700' as const, marginTop: 18, marginBottom: 6 },
   input: {
     ...surfaces.input,
     minHeight: 90,
-    textAlignVertical: 'top',
-    color: '#f0f6ff',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderColor: 'rgba(255,255,255,0.10)',
+    textAlignVertical: 'top' as const,
+    color: tc.text,
+    backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F5F7FF',
+    borderColor: tc.line,
   },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 10, marginTop: 16 },
-  cancel: { borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', borderRadius: 9, paddingHorizontal: 15, paddingVertical: 11 },
-  cancelText: { color: 'rgba(255,255,255,0.50)', fontSize: 12, fontWeight: '700' },
+  modalActions: { flexDirection: 'row' as const, justifyContent: 'flex-end' as const, flexWrap: 'wrap' as const, gap: 10, marginTop: 16 },
+  cancel: { borderWidth: 1, borderColor: tc.line, borderRadius: 9, paddingHorizontal: 15, paddingVertical: 11 },
+  cancelText: { color: tc.muted, fontSize: 12, fontWeight: '700' as const },
   confirmReject: { backgroundColor: colors.danger, borderRadius: 9, paddingHorizontal: 15, paddingVertical: 11 },
-  confirmRejectText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  confirmRejectText: { color: '#fff', fontSize: 12, fontWeight: '700' as const },
 });
+
+let stylesDark: any = null;
+let stylesLight: any = null;
+function getThemedStyles(isDark: boolean) {
+  if (isDark) {
+    if (!stylesDark) stylesDark = StyleSheet.create(createStyles(THEME_PALETTES.dark, true));
+    return stylesDark;
+  } else {
+    if (!stylesLight) stylesLight = StyleSheet.create(createStyles(THEME_PALETTES.light, false));
+    return stylesLight;
+  }
+}

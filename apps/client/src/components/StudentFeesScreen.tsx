@@ -1,4 +1,5 @@
 import { colors, surfaces } from '../theme';
+import { useTheme, THEME_PALETTES, ThemeColors } from '../context/ThemeContext';
 import React from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
@@ -60,6 +61,8 @@ function date(value: any) {
 }
 
 export function StudentFeesScreen() {
+  const { isDark } = useTheme();
+  const s = getThemedStyles(isDark);
   const fees = useQuery<any>({ queryKey: ['student-fees-me'], queryFn: async () => (await api.get('/fees/me')).data });
   const [paymentModalVisible, setPaymentModalVisible] = React.useState(false);
   const [amountText, setAmountText] = React.useState('');
@@ -268,7 +271,7 @@ export function StudentFeesScreen() {
             value={amountText}
             onChangeText={(value) => { setAmountText(value.replace(/[^0-9.]/g, '')); setPaymentError(''); }}
             placeholder="Enter amount"
-            placeholderTextColor="rgba(255,255,255,0.25)"
+            placeholderTextColor={isDark ? "rgba(255,255,255,0.25)" : "rgba(17,25,54,0.35)"}
             editable={!paymentStarting}
             style={s.amountInput}
           />
@@ -283,95 +286,108 @@ export function StudentFeesScreen() {
   </View>;
 }
 
-const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.background },
+let stylesDark: any = null;
+let stylesLight: any = null;
+
+function getThemedStyles(isDark: boolean) {
+  if (isDark) {
+    if (!stylesDark) stylesDark = StyleSheet.create(createStyles(THEME_PALETTES.dark, true));
+    return stylesDark;
+  } else {
+    if (!stylesLight) stylesLight = StyleSheet.create(createStyles(THEME_PALETTES.light, false));
+    return stylesLight;
+  }
+}
+
+const createStyles = (tc: ThemeColors, isDark: boolean) => ({
+  page: { flex: 1, backgroundColor: tc.canvas },
   content: { ...surfaces.content, gap: 18 },
   hero: {
     ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderRadius: 16,
     padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderColor: tc.line,
   },
-  eyebrow: { color: colors.blueLight, fontSize: 10, fontWeight: '800', letterSpacing: 1.4 },
-  title: { color: '#f0f6ff', fontSize: 28, fontWeight: '800', marginTop: 8, letterSpacing: -0.3 },
-  description: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 14, lineHeight: 21, marginTop: 8 },
+  eyebrow: { color: isDark ? colors.blueLight : colors.primary, fontSize: 10, fontWeight: '800' as const, letterSpacing: 1.4 },
+  title: { color: tc.text, fontSize: 28, fontWeight: '800' as const, marginTop: 8, letterSpacing: -0.3 },
+  description: { color: tc.muted, fontSize: 14, lineHeight: 21, marginTop: 8 },
   summaryPanel: {
     ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderRadius: 14,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderColor: tc.line,
   },
-  accountHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 },
+  accountHeader: { flexDirection: 'row' as const, alignItems: 'flex-start' as const, justifyContent: 'space-between' as const, flexWrap: 'wrap' as const, gap: 12 },
   accountCopy: { flex: 1, minWidth: 180 },
-  panelTitle: { color: '#f0f6ff', fontSize: 19, fontWeight: '800' },
+  panelTitle: { color: tc.text, fontSize: 19, fontWeight: '800' as const },
   refresh: {
-    backgroundColor: 'rgba(147, 155, 255, 0.15)',
+    backgroundColor: isDark ? 'rgba(147, 155, 255, 0.15)' : 'rgba(99, 102, 241, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(147, 155, 255, 0.30)',
+    borderColor: isDark ? 'rgba(147, 155, 255, 0.30)' : 'rgba(99, 102, 241, 0.30)',
     borderRadius: 9,
     minHeight: 40,
     paddingHorizontal: 13,
-    justifyContent: 'center',
+    justifyContent: 'center' as const,
   },
-  refreshText: { color: colors.blueLight, fontWeight: '700', fontSize: 12 },
-  summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 18 },
+  refreshText: { color: isDark ? colors.blueLight : colors.primary, fontWeight: '700' as const, fontSize: 12 },
+  summaryGrid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 12, marginTop: 18 },
   summaryCard: {
     flex: 1,
     minWidth: 160,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F8FAFC',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tc.line,
     borderRadius: 12,
     padding: 14,
   },
-  summaryLabel: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 12, fontWeight: '700' },
-  summaryValue: { color: '#f0f6ff', fontSize: 21, fontWeight: '800', marginTop: 7 },
+  summaryLabel: { color: tc.muted, fontSize: 12, fontWeight: '700' as const },
+  summaryValue: { color: tc.text, fontSize: 21, fontWeight: '800' as const, marginTop: 7 },
   paid: { color: colors.success },
   remaining: { color: colors.danger },
   credit: { color: colors.warning },
-  payButton: { backgroundColor: colors.primary, borderRadius: 10, minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 18, paddingHorizontal: 18 },
-  payButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
-  paidMessage: { color: colors.success, fontSize: 13, fontWeight: '700', marginTop: 10 },
-  adjustment: { color: 'rgba(255, 255, 255, 0.40)', fontSize: 12, marginTop: 14 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sectionTitle: { color: '#f0f6ff', fontSize: 21, fontWeight: '800' },
+  payButton: { backgroundColor: colors.primary, borderRadius: 10, minHeight: 48, alignItems: 'center' as const, justifyContent: 'center' as const, marginTop: 18, paddingHorizontal: 18 },
+  payButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' as const },
+  paidMessage: { color: colors.success, fontSize: 13, fontWeight: '700' as const, marginTop: 10 },
+  adjustment: { color: tc.muted, fontSize: 12, marginTop: 14 },
+  sectionHeader: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const },
+  sectionTitle: { color: tc.text, fontSize: 21, fontWeight: '800' as const },
   paymentCard: {
     ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderRadius: 14,
     padding: 18,
     gap: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderColor: tc.line,
   },
-  paymentTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 },
+  paymentTop: { flexDirection: 'row' as const, alignItems: 'flex-start' as const, justifyContent: 'space-between' as const, flexWrap: 'wrap' as const, gap: 12 },
   paymentCopy: { flex: 1, minWidth: 180 },
-  receipt: { color: '#f0f6ff', fontSize: 16, fontWeight: '800' },
-  paymentDate: { color: 'rgba(255, 255, 255, 0.40)', fontSize: 12, marginTop: 4 },
+  receipt: { color: tc.text, fontSize: 16, fontWeight: '800' as const },
+  paymentDate: { color: tc.muted, fontSize: 12, marginTop: 4 },
   actionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 8,
-    flexWrap: 'wrap',
+    flexWrap: 'wrap' as const,
   },
   downloadReceiptBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(96, 165, 250, 0.15)',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: isDark ? 'rgba(96, 165, 250, 0.15)' : 'rgba(59, 130, 246, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(96, 165, 250, 0.35)',
+    borderColor: isDark ? 'rgba(96, 165, 250, 0.35)' : 'rgba(59, 130, 246, 0.30)',
     borderRadius: 20,
     paddingHorizontal: 11,
     paddingVertical: 5,
   },
   downloadReceiptText: {
-    color: '#93c5fd',
+    color: isDark ? '#93c5fd' : '#2563eb',
     fontSize: 10.5,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   status: {
     backgroundColor: 'rgba(52, 211, 153, 0.15)',
@@ -381,68 +397,68 @@ const s = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
-  statusText: { color: colors.success, fontSize: 10, fontWeight: '800' },
+  statusText: { color: colors.success, fontSize: 10, fontWeight: '800' as const },
   pendingStatus: {
     backgroundColor: 'rgba(251, 191, 36, 0.15)',
     borderWidth: 1,
     borderColor: 'rgba(251, 191, 36, 0.30)',
   },
   pendingStatusText: { color: colors.warning },
-  paymentDetails: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  amount: { color: '#f0f6ff', fontSize: 22, fontWeight: '800' },
-  method: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 12, fontWeight: '700' },
-  meta: { color: 'rgba(255, 255, 255, 0.40)', fontSize: 12, lineHeight: 18 },
+  paymentDetails: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, gap: 12 },
+  amount: { color: tc.text, fontSize: 22, fontWeight: '800' as const },
+  method: { color: tc.muted, fontSize: 12, fontWeight: '700' as const },
+  meta: { color: tc.muted, fontSize: 12, lineHeight: 18 },
   state: {
     ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderRadius: 14,
     padding: 28,
-    alignItems: 'center',
+    alignItems: 'center' as const,
     gap: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderColor: tc.line,
   },
-  stateTitle: { color: '#f0f6ff', fontSize: 18, fontWeight: '800', textAlign: 'center' },
-  muted: { color: 'rgba(255, 255, 255, 0.40)', fontSize: 13, lineHeight: 20 },
-  error: { color: colors.danger, fontWeight: '700', textAlign: 'center' },
-  retry: { color: colors.blueLight, fontWeight: '800', marginTop: 8 },
-  overlay: { flex: 1, backgroundColor: 'rgba(4, 8, 18, 0.80)', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  stateTitle: { color: tc.text, fontSize: 18, fontWeight: '800' as const, textAlign: 'center' as const },
+  muted: { color: tc.muted, fontSize: 13, lineHeight: 20 },
+  error: { color: colors.danger, fontWeight: '700' as const, textAlign: 'center' as const },
+  retry: { color: isDark ? colors.blueLight : colors.primary, fontWeight: '800' as const, marginTop: 8 },
+  overlay: { flex: 1, backgroundColor: 'rgba(4, 8, 18, 0.70)', alignItems: 'center' as const, justifyContent: 'center' as const, padding: 20 },
   modalCard: {
-    width: '100%',
+    width: '100%' as const,
     maxWidth: 480,
-    backgroundColor: '#0e1525',
+    backgroundColor: tc.panel,
     borderRadius: 16,
     padding: 24,
     gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderColor: tc.line,
   },
-  modalTitle: { color: '#f0f6ff', fontSize: 22, fontWeight: '800' },
-  dueText: { color: '#f0f6ff', fontSize: 14, fontWeight: '800', marginTop: 4 },
+  modalTitle: { color: tc.text, fontSize: 22, fontWeight: '800' as const },
+  dueText: { color: tc.text, fontSize: 14, fontWeight: '800' as const, marginTop: 4 },
   amountInput: {
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: tc.line,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F8FAFC',
     borderRadius: 10,
-    color: '#f0f6ff',
+    color: tc.text,
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '700' as const,
     minHeight: 52,
     paddingHorizontal: 14,
     marginTop: 4,
   },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 8 },
+  modalActions: { flexDirection: 'row' as const, justifyContent: 'flex-end' as const, gap: 10, marginTop: 8 },
   cancelButton: {
     minHeight: 44,
     borderRadius: 9,
-    justifyContent: 'center',
+    justifyContent: 'center' as const,
     paddingHorizontal: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(17, 25, 54, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: tc.line,
   },
-  cancelText: { color: '#f0f6ff', fontWeight: '800' },
-  confirmButton: { minHeight: 44, borderRadius: 9, justifyContent: 'center', paddingHorizontal: 16, backgroundColor: colors.primary },
-  confirmText: { color: '#FFFFFF', fontWeight: '800' },
+  cancelText: { color: tc.text, fontWeight: '800' as const },
+  confirmButton: { minHeight: 44, borderRadius: 9, justifyContent: 'center' as const, paddingHorizontal: 16, backgroundColor: colors.primary },
+  confirmText: { color: '#FFFFFF', fontWeight: '800' as const },
   disabled: { opacity: 0.6 },
 });

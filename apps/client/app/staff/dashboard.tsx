@@ -4,12 +4,13 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/hooks/useAuth';
+import { useTheme, THEME_PALETTES, ThemeColors } from '../../src/context/ThemeContext';
 
 interface TileConfig {
   title: string;
   copy: string;
   path: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: any;
   color: string;
   tint: string;
 }
@@ -56,6 +57,8 @@ function buildTiles(user: any): TileConfig[] {
 }
 
 export default function Screen() {
+  const { isDark } = useTheme();
+  const s = getThemedStyles(isDark);
   const { user } = useAuth();
   const router = useRouter();
   const tiles = buildTiles(user);
@@ -119,81 +122,94 @@ export default function Screen() {
   );
 }
 
-const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.canvas },
+let stylesDark: any = null;
+let stylesLight: any = null;
+
+function getThemedStyles(isDark: boolean) {
+  if (isDark) {
+    if (!stylesDark) stylesDark = StyleSheet.create(createStyles(THEME_PALETTES.dark, true));
+    return stylesDark;
+  } else {
+    if (!stylesLight) stylesLight = StyleSheet.create(createStyles(THEME_PALETTES.light, false));
+    return stylesLight;
+  }
+}
+
+const createStyles = (tc: ThemeColors, isDark: boolean) => ({
+  page: { flex: 1, backgroundColor: tc.canvas },
   content: { ...surfaces.content, gap: 20 },
 
   // ── Orb ──────────────────────────────────────────────────────
   glowOrb: {
-    position: 'absolute',
+    position: 'absolute' as const,
     width: 400,
     height: 400,
     borderRadius: 200,
     top: -100,
     right: -80,
-    backgroundColor: 'rgba(99,102,241,0.10)',
+    backgroundColor: isDark ? 'rgba(99,102,241,0.10)' : 'rgba(99,102,241,0.06)',
   },
 
   // ── Hero ─────────────────────────────────────────────────────
   hero: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: tc.panel,
     borderRadius: radius.xl,
     padding: 26,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-    overflow: 'hidden',
+    borderColor: tc.line,
+    overflow: 'hidden' as const,
     ...shadow.md,
   },
   heroGlow: {
-    position: 'absolute',
+    position: 'absolute' as const,
     width: 300,
     height: 300,
     borderRadius: 150,
     top: -100,
     right: -60,
-    backgroundColor: 'rgba(99,102,241,0.14)',
+    backgroundColor: isDark ? 'rgba(99,102,241,0.14)' : 'rgba(99,102,241,0.08)',
   },
   heroPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 6,
-    backgroundColor: 'rgba(99,102,241,0.15)',
-    alignSelf: 'flex-start',
+    backgroundColor: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.10)',
+    alignSelf: 'flex-start' as const,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: radius.full,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(99,102,241,0.30)',
+    borderColor: isDark ? 'rgba(99,102,241,0.30)' : 'rgba(99,102,241,0.20)',
   },
-  eyebrow: { fontSize: 10, color: colors.blueLight, letterSpacing: 1.5, fontWeight: '800' },
-  heroName: { fontSize: 26, color: '#f0f6ff', fontWeight: '800', letterSpacing: -0.4 },
-  heroId: { fontSize: 13, lineHeight: 20, color: 'rgba(255,255,255,0.45)', marginTop: 8 },
-  heroBadge: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 14 },
+  eyebrow: { fontSize: 10, color: isDark ? colors.blueLight : colors.primary, letterSpacing: 1.5, fontWeight: '800' as const },
+  heroName: { fontSize: 26, color: tc.text, fontWeight: '800' as const, letterSpacing: -0.4 },
+  heroId: { fontSize: 13, lineHeight: 20, color: tc.muted, marginTop: 8 },
+  heroBadge: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 7, marginTop: 14 },
   onlineDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.success },
-  heroBadgeText: { fontSize: 12, color: colors.success, fontWeight: '700' },
+  heroBadgeText: { fontSize: 12, color: colors.success, fontWeight: '700' as const },
 
   // ── Section Head ─────────────────────────────────────────────
   sectionHead: { gap: 4 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#f0f6ff', letterSpacing: -0.2 },
-  sectionSub: { fontSize: 13, color: 'rgba(255,255,255,0.40)' },
+  sectionTitle: { fontSize: 18, fontWeight: '800' as const, color: tc.text, letterSpacing: -0.2 },
+  sectionSub: { fontSize: 13, color: tc.muted },
 
   // ── Grid ─────────────────────────────────────────────────────
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
+  grid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 14 },
 
   card: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: tc.panel,
     flex: 1,
     minWidth: 220,
     padding: 20,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.09)',
-    overflow: 'hidden',
+    borderColor: tc.line,
+    overflow: 'hidden' as const,
     ...shadow.sm,
   },
   cardAccent: {
-    position: 'absolute',
+    position: 'absolute' as const,
     top: 0,
     left: 0,
     right: 0,
@@ -204,13 +220,13 @@ const s = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     marginBottom: 14,
     marginTop: 8,
   },
-  cardTitle: { fontSize: 16, fontWeight: '800', color: '#f0f6ff', letterSpacing: -0.2 },
-  cardCopy: { color: 'rgba(255,255,255,0.40)', fontSize: 12, marginTop: 6, lineHeight: 18 },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 18 },
-  openText: { fontWeight: '800', fontSize: 12 },
+  cardTitle: { fontSize: 16, fontWeight: '800' as const, color: tc.text, letterSpacing: -0.2 },
+  cardCopy: { color: tc.muted, fontSize: 12, marginTop: 6, lineHeight: 18 },
+  cardFooter: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 5, marginTop: 18 },
+  openText: { fontWeight: '800' as const, fontSize: 12 },
 });

@@ -2,8 +2,8 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 
 const DEFAULT_API_URL = Platform.select({
-  android: 'http://10.0.2.2:3000/api',
-  default: 'http://localhost:3000/api',
+  android: 'http://10.0.2.2:4000/api',
+  default: 'http://localhost:4000/api',
 });
 
 const getBaseUrl = () => {

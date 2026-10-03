@@ -1,10 +1,13 @@
 import { colors, surfaces } from '../theme';
+import { useTheme, THEME_PALETTES, ThemeColors } from '../context/ThemeContext';
 import React from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
 type Props = { title:string; eyebrow:string; description:string; endpoint:string; admin?:boolean; actionLabel?:string };
 export function PortalModuleScreen({title,eyebrow,description,endpoint,admin=false}:Props){
+ const { isDark } = useTheme();
+ const s = getThemedStyles(isDark);
  const {data,isLoading,isError,refetch}=useQuery({queryKey:['module',endpoint],queryFn:async()=>(await api.get(endpoint)).data});
  const isSalaryEndpoint = endpoint.includes('/employees/');
  const rows = isSalaryEndpoint ? (Array.isArray(data?.monthlySalaries) ? data.monthlySalaries : []) : Array.isArray(data) ? data : data ? Object.entries(data).filter(([,value])=>Array.isArray(value)).flatMap(([,value])=>value as any[]) : [];
@@ -130,86 +133,99 @@ export function PortalModuleScreen({title,eyebrow,description,endpoint,admin=fal
   );
 }
 
-const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.background },
+let stylesDark: any = null;
+let stylesLight: any = null;
+
+function getThemedStyles(isDark: boolean) {
+  if (isDark) {
+    if (!stylesDark) stylesDark = StyleSheet.create(createStyles(THEME_PALETTES.dark, true));
+    return stylesDark;
+  } else {
+    if (!stylesLight) stylesLight = StyleSheet.create(createStyles(THEME_PALETTES.light, false));
+    return stylesLight;
+  }
+}
+
+const createStyles = (tc: ThemeColors, isDark: boolean) => ({
+  page: { flex: 1, backgroundColor: tc.canvas },
   content: { ...surfaces.content },
   hero: {
     ...surfaces.card,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
     gap: 20,
     marginBottom: 20,
     padding: 24,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
-    flexWrap: 'wrap',
+    borderColor: tc.line,
+    flexWrap: 'wrap' as const,
   },
   heroCopy: { flex: 1 },
   salarySummary: {
     ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderColor: tc.line,
     borderRadius: 14,
   },
-  summaryTitle: { color: '#f0f6ff', fontSize: 17, fontWeight: '800', marginBottom: 12 },
-  summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  summaryTitle: { color: tc.text, fontSize: 17, fontWeight: '800' as const, marginBottom: 12 },
+  summaryGrid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 12 },
   summaryCard: {
     flex: 1,
     minWidth: 180,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F8FAFC',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tc.line,
     borderRadius: 12,
     padding: 14,
   },
-  summaryLabel: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 12, fontWeight: '700' },
-  summaryValue: { color: '#f0f6ff', fontSize: 20, fontWeight: '800', marginTop: 6 },
-  eyebrow: { fontWeight: '800', fontSize: 10, letterSpacing: 1.4, color: colors.blueLight },
-  title: { marginVertical: 6, fontSize: 28, color: '#f0f6ff', fontWeight: '800', letterSpacing: -0.3 },
-  description: { fontSize: 14, maxWidth: 720, lineHeight: 21, color: 'rgba(255, 255, 255, 0.45)' },
+  summaryLabel: { color: tc.muted, fontSize: 12, fontWeight: '700' as const },
+  summaryValue: { color: tc.text, fontSize: 20, fontWeight: '800' as const, marginTop: 6 },
+  eyebrow: { fontWeight: '800' as const, fontSize: 10, letterSpacing: 1.4, color: isDark ? colors.blueLight : colors.primary },
+  title: { marginVertical: 6, fontSize: 28, color: tc.text, fontWeight: '800' as const, letterSpacing: -0.3 },
+  description: { fontSize: 14, maxWidth: 720, lineHeight: 21, color: tc.muted },
   action: {
     paddingHorizontal: 18,
     paddingVertical: 12,
     borderRadius: 12,
-    justifyContent: 'center',
+    justifyContent: 'center' as const,
     backgroundColor: colors.primary,
     minHeight: 44,
   },
-  actionText: { fontWeight: '800', color: '#080c14' },
+  actionText: { fontWeight: '800' as const, color: '#080c14' },
   state: {
     ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     padding: 42,
-    alignItems: 'center',
+    alignItems: 'center' as const,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderColor: tc.line,
     borderRadius: 14,
   },
-  stateTitle: { fontSize: 18, fontWeight: '800', color: '#f0f6ff', marginBottom: 5 },
-  stateText: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 13, marginTop: 9, textAlign: 'center' },
-  emptyIcon: { fontSize: 36, color: colors.blueLight },
-  error: { color: colors.danger, fontWeight: '700' },
-  retry: { color: colors.blueLight, fontWeight: '800', marginTop: 10 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
+  stateTitle: { fontSize: 18, fontWeight: '800' as const, color: tc.text, marginBottom: 5 },
+  stateText: { color: tc.muted, fontSize: 13, marginTop: 9, textAlign: 'center' as const },
+  emptyIcon: { fontSize: 36, color: isDark ? colors.blueLight : colors.primary },
+  error: { color: colors.danger, fontWeight: '700' as const },
+  retry: { color: isDark ? colors.blueLight : colors.primary, fontWeight: '800' as const, marginTop: 10 },
+  grid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 14 },
   card: {
     ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     padding: 18,
     flex: 1,
     minWidth: 0,
     borderWidth: 1,
     borderRadius: 14,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderColor: tc.line,
   },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 },
-  cardTitle: { fontSize: 15, fontWeight: '800', color: '#f0f6ff', flex: 1 },
-  cardBody: { color: 'rgba(255, 255, 255, 0.50)', fontSize: 13, lineHeight: 19, marginTop: 12 },
+  cardTop: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const, flexWrap: 'wrap' as const, gap: 12 },
+  cardTitle: { fontSize: 15, fontWeight: '800' as const, color: tc.text, flex: 1 },
+  cardBody: { color: tc.muted, fontSize: 13, lineHeight: 19, marginTop: 12 },
   badge: {
     backgroundColor: 'rgba(52, 211, 153, 0.15)',
     borderWidth: 1,
@@ -218,5 +234,5 @@ const s = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
-  badgeText: { fontSize: 10, fontWeight: '800', color: colors.success },
+  badgeText: { fontSize: 10, fontWeight: '800' as const, color: colors.success },
 });

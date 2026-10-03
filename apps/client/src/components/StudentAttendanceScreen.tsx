@@ -1,4 +1,5 @@
 import { colors, surfaces } from '../theme';
+import { useTheme, THEME_PALETTES, ThemeColors } from '../context/ThemeContext';
 import React, { useMemo } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
@@ -27,6 +28,8 @@ function displayDate(value?: string) {
 }
 
 function YearCalendar({ startDate, endDate, records }: { startDate: string; endDate: string; records: any[] }) {
+  const { isDark } = useTheme();
+  const styles = getThemedStyles(isDark);
   const recordMap = useMemo(() => new Map(records.map((record) => [displayDate(record.date), statusFor(record.status)])), [records]);
   const months = useMemo(() => {
     const start = new Date(`${startDate.slice(0, 10)}T00:00:00Z`);
@@ -56,7 +59,7 @@ function YearCalendar({ startDate, endDate, records }: { startDate: string; endD
         {month.days.map((day) => {
           const key = dateKey(day);
           const status = recordMap.get(key) || 'NONE';
-          return <View key={key} style={[styles.dayCell, styles[`day${status}`]]}><Text style={[styles.dayText, status !== 'NONE' && styles.coloredDayText]}>{day.getUTCDate()}</Text></View>;
+          return <View key={key} style={[styles.dayCell, (styles as any)[`day${status}`]]}><Text style={[styles.dayText, status !== 'NONE' && styles.coloredDayText]}>{day.getUTCDate()}</Text></View>;
         })}
       </View>
     </View>;
@@ -64,6 +67,8 @@ function YearCalendar({ startDate, endDate, records }: { startDate: string; endD
 }
 
 export function StudentAttendanceScreen({ studentId }: Props) {
+  const { isDark } = useTheme();
+  const styles = getThemedStyles(isDark);
   const attendance = useQuery<any>({ queryKey: ['student-attendance-year', studentId], queryFn: async () => (await api.get(`/attendance/students/${studentId}`)).data, enabled: !!studentId });
   const data = attendance.data;
   const summary = data?.summary || { marked: 0, present: 0, late: 0, absent: 0, percentage: null };
@@ -94,15 +99,32 @@ export function StudentAttendanceScreen({ studentId }: Props) {
 }
 
 function SummaryCard({ label, value, color }: { label: string; value: string | number; color: string }) {
+  const { isDark } = useTheme();
+  const styles = getThemedStyles(isDark);
   return <View style={styles.summaryCard}><Text style={[styles.summaryValue, { color }]}>{value}</Text><Text style={styles.summaryLabel}>{label}</Text></View>;
 }
 
 function Legend({ color, label }: { color: string; label: string }) {
+  const { isDark } = useTheme();
+  const styles = getThemedStyles(isDark);
   return <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: color }]} /><Text style={styles.legendText}>{label}</Text></View>;
 }
 
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.background },
+let stylesDark: any = null;
+let stylesLight: any = null;
+
+function getThemedStyles(isDark: boolean) {
+  if (isDark) {
+    if (!stylesDark) stylesDark = StyleSheet.create(createStyles(THEME_PALETTES.dark, true));
+    return stylesDark;
+  } else {
+    if (!stylesLight) stylesLight = StyleSheet.create(createStyles(THEME_PALETTES.light, false));
+    return stylesLight;
+  }
+}
+
+const createStyles = (tc: ThemeColors, isDark: boolean) => ({
+  page: { flex: 1, backgroundColor: tc.canvas },
   
   content: { ...surfaces.content, gap: 18 },
   
@@ -110,96 +132,96 @@ const styles = StyleSheet.create({
     ...surfaces.card,
     padding: 24,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
-    flexWrap: 'wrap',
+    borderColor: tc.line,
+    flexWrap: 'wrap' as const,
   },
   
-  eyebrow: { fontWeight: '800', fontSize: 10, letterSpacing: 1.4, color: colors.blueLight },
+  eyebrow: { fontWeight: '800' as const, fontSize: 10, letterSpacing: 1.4, color: isDark ? colors.blueLight : colors.primary },
   
-  title: { marginTop: 6, fontSize: 28, color: '#f0f6ff', fontWeight: '800', letterSpacing: -0.3 },
+  title: { marginTop: 6, fontSize: 28, color: tc.text, fontWeight: '800' as const, letterSpacing: -0.3 },
   
-  description: { fontSize: 14, marginTop: 5, lineHeight: 21, color: 'rgba(255, 255, 255, 0.45)' },
+  description: { fontSize: 14, marginTop: 5, lineHeight: 21, color: tc.muted },
   
-  summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  summaryGrid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 12 },
   
   summaryCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderRadius: 16,
     padding: 18,
     minWidth: 170,
     flex: 1,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderColor: tc.line,
   },
   
-  summaryValue: { fontSize: 27, fontWeight: '800' },
+  summaryValue: { fontSize: 27, fontWeight: '800' as const },
   
-  summaryLabel: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 12, fontWeight: '700', marginTop: 5 },
+  summaryLabel: { color: tc.muted, fontSize: 12, fontWeight: '700' as const, marginTop: 5 },
   
   legend: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderRadius: 16,
     padding: 16,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    alignItems: 'center' as const,
     gap: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderColor: tc.line,
   },
   
-  legendTitle: { color: '#f0f6ff', fontWeight: '800', marginRight: 4 },
+  legendTitle: { color: tc.text, fontWeight: '800' as const, marginRight: 4 },
   
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendItem: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6 },
   
-  legendDot: { width: 16, height: 16, borderRadius: 5, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)' },
+  legendDot: { width: 16, height: 16, borderRadius: 5, borderWidth: 1, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(17, 25, 54, 0.15)' },
   
-  legendText: { color: 'rgba(255, 255, 255, 0.55)', fontSize: 12 },
+  legendText: { color: tc.muted, fontSize: 12 },
   
   calendarPanel: {
     ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     padding: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderColor: tc.line,
     borderRadius: 14,
   },
   
-  calendarHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap', gap: 12 },
+  calendarHeader: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'flex-start' as const, marginBottom: 16, flexWrap: 'wrap' as const, gap: 12 },
   
-  panelTitle: { fontSize: 20, fontWeight: '800', color: '#f0f6ff' },
+  panelTitle: { fontSize: 20, fontWeight: '800' as const, color: tc.text },
   
-  marked: { color: colors.blueLight, fontSize: 12, fontWeight: '800' },
+  marked: { color: isDark ? colors.blueLight : colors.primary, fontSize: 12, fontWeight: '800' as const },
   
-  muted: { color: 'rgba(255, 255, 255, 0.40)', marginTop: 6, textAlign: 'center' },
+  muted: { color: tc.muted, marginTop: 6, textAlign: 'center' as const },
   
-  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  calendarGrid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 12 },
   
   monthCard: {
     minWidth: 220,
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#F8FAFC',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tc.line,
     borderRadius: 14,
     padding: 12,
   },
   
-  monthTitle: { color: '#f0f6ff', fontWeight: '800', textAlign: 'center', marginBottom: 10 },
+  monthTitle: { color: tc.text, fontWeight: '800' as const, textAlign: 'center' as const, marginBottom: 10 },
   
-  weekRow: { flexDirection: 'row', marginBottom: 5 },
+  weekRow: { flexDirection: 'row' as const, marginBottom: 5 },
   
-  weekDay: { width: '14.2857%', textAlign: 'center', color: 'rgba(255, 255, 255, 0.40)', fontSize: 10, fontWeight: '800' },
+  weekDay: { width: '14.2857%' as const, textAlign: 'center' as const, color: tc.muted, fontSize: 10, fontWeight: '800' as const },
   
-  daysGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  daysGrid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const },
   
-  emptyDay: { width: '14.2857%', aspectRatio: 1, padding: 2 },
+  emptyDay: { width: '14.2857%' as const, aspectRatio: 1, padding: 2 },
   
-  dayCell: { width: '14.2857%', aspectRatio: 1, padding: 2, alignItems: 'center', justifyContent: 'center', borderRadius: 6, marginBottom: 2 },
+  dayCell: { width: '14.2857%' as const, aspectRatio: 1, padding: 2, alignItems: 'center' as const, justifyContent: 'center' as const, borderRadius: 6, marginBottom: 2 },
   
-  dayNONE: { backgroundColor: 'rgba(255, 255, 255, 0.04)' },
+  dayNONE: { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(17, 25, 54, 0.04)' },
   
   dayPRESENT: { backgroundColor: 'rgba(52, 211, 153, 0.20)', borderWidth: 1, borderColor: 'rgba(52, 211, 153, 0.35)' },
   
@@ -209,23 +231,23 @@ const styles = StyleSheet.create({
   
   dayHALF_DAY: { backgroundColor: 'rgba(251, 191, 36, 0.20)', borderWidth: 1, borderColor: 'rgba(251, 191, 36, 0.35)' },
   
-  dayText: { color: 'rgba(255, 255, 255, 0.35)', fontSize: 11, fontWeight: '700' },
+  dayText: { color: isDark ? 'rgba(255, 255, 255, 0.35)' : 'rgba(17, 25, 54, 0.40)', fontSize: 11, fontWeight: '700' as const },
   
-  coloredDayText: { color: '#f0f6ff', fontWeight: '800' },
+  coloredDayText: { color: isDark ? '#f0f6ff' : '#111936', fontWeight: '800' as const },
   
   state: {
     ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     padding: 42,
-    alignItems: 'center',
+    alignItems: 'center' as const,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderColor: tc.line,
     borderRadius: 14,
   },
   
-  emptyTitle: { color: '#f0f6ff', fontSize: 18, fontWeight: '800' },
+  emptyTitle: { color: tc.text, fontSize: 18, fontWeight: '800' as const },
   
-  error: { color: colors.danger, fontWeight: '700' },
+  error: { color: colors.danger, fontWeight: '700' as const },
   
-  retry: { color: colors.blueLight, fontWeight: '800', marginTop: 10 },
+  retry: { color: isDark ? colors.blueLight : colors.primary, fontWeight: '800' as const, marginTop: 10 },
 });

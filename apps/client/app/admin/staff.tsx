@@ -1,4 +1,5 @@
 import { colors, surfaces, radius, shadow } from '../../src/theme';
+import { useTheme, THEME_PALETTES, ThemeColors } from '../../src/context/ThemeContext';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -18,6 +19,8 @@ const ROLE_COLORS: Record<string, { color: string; tint: string }> = {
 };
 
 function Field({ label, value, onChangeText, placeholder, multiline = false, editable = true }: any) {
+  const { isDark } = useTheme();
+  const s = getThemedStyles(isDark);
   return (
     <View style={s.field}>
       <Text style={s.label}>{label}</Text>
@@ -26,7 +29,7 @@ function Field({ label, value, onChangeText, placeholder, multiline = false, edi
         value={String(value ?? '')}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="rgba(255,255,255,0.20)"
+        placeholderTextColor={isDark ? "rgba(255,255,255,0.20)" : "rgba(17,25,54,0.35)"}
         multiline={multiline}
         style={[s.input, multiline && s.multiline, !editable && s.readonly]}
       />
@@ -35,6 +38,8 @@ function Field({ label, value, onChangeText, placeholder, multiline = false, edi
 }
 
 function Toggle({ label, value, onPress }: any) {
+  const { isDark } = useTheme();
+  const s = getThemedStyles(isDark);
   return (
     <TouchableOpacity accessibilityRole="checkbox" onPress={onPress} style={s.toggle}>
       <View style={[s.check, value && s.checkOn]}>
@@ -46,6 +51,8 @@ function Toggle({ label, value, onPress }: any) {
 }
 
 function Choices({ label, value, values, onChange }: any) {
+  const { isDark } = useTheme();
+  const s = getThemedStyles(isDark);
   return (
     <View style={s.field}>
       <Text style={s.label}>{label}</Text>
@@ -61,6 +68,8 @@ function Choices({ label, value, values, onChange }: any) {
 }
 
 function SubjectChoices({ classes = [], classSubjects = [], subjects = [], value, onChange }: any) {
+  const { isDark, colors: tc } = useTheme();
+  const s = getThemedStyles(isDark);
   const [selectedClassId, setSelectedClassId] = useState<string>('ALL');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -173,7 +182,7 @@ function SubjectChoices({ classes = [], classSubjects = [], subjects = [], value
 
       {/* Step 2: Select Subject (Dropdown Selector) */}
       <View style={{ width: '100%', gap: 6 }}>
-        <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+        <Text style={{ color: tc.muted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 }}>
           Select Subject {selectedClassId !== 'ALL' ? `for ${activeClassName}` : ''}:
         </Text>
         <TouchableOpacity
@@ -191,20 +200,20 @@ function SubjectChoices({ classes = [], classSubjects = [], subjects = [], value
             <Ionicons
               name={chosenSubjectObj ? 'checkmark-circle' : 'book-outline'}
               size={18}
-              color={chosenSubjectObj ? '#38bdf8' : 'rgba(255,255,255,0.4)'}
+              color={chosenSubjectObj ? tc.sky : tc.muted}
             />
-            <Text style={{ color: chosenSubjectObj ? '#ffffff' : 'rgba(255,255,255,0.35)', fontSize: 14, fontWeight: chosenSubjectObj ? '700' : '500' }}>
+            <Text style={{ color: chosenSubjectObj ? tc.text : tc.muted, fontSize: 14, fontWeight: chosenSubjectObj ? '700' : '500' }}>
               {chosenSubjectObj ? `${chosenSubjectObj.name} (${chosenSubjectObj.code})` : 'Choose Subject from dropdown...'}
             </Text>
           </View>
-          <Ionicons name="chevron-down" size={16} color="rgba(255,255,255,0.45)" />
+          <Ionicons name="chevron-down" size={16} color={tc.muted} />
         </TouchableOpacity>
       </View>
 
       {/* Quick Select Pills (Immediate 1-tap options) */}
       {classFilteredSubjects.length > 0 ? (
         <View style={{ width: '100%', gap: 6 }}>
-          <Text style={{ color: 'rgba(255,255,255,0.40)', fontSize: 11, fontWeight: '600' }}>
+          <Text style={{ color: tc.muted, fontSize: 11, fontWeight: '600' }}>
             Quick select from {activeClassName}:
           </Text>
           <View style={s.choices}>
@@ -251,31 +260,31 @@ function SubjectChoices({ classes = [], classSubjects = [], subjects = [], value
           <View style={s.dropdownSheet}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 }}>
               <View>
-                <Text style={{ color: '#f0f6ff', fontSize: 16, fontWeight: '800' }}>Select Primary Subject</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.40)', fontSize: 11, marginTop: 2 }}>
+                <Text style={{ color: tc.text, fontSize: 16, fontWeight: '800' }}>Select Primary Subject</Text>
+                <Text style={{ color: tc.muted, fontSize: 11, marginTop: 2 }}>
                   Showing {modalDisplayedSubjects.length} subjects ({activeClassName})
                 </Text>
               </View>
               <TouchableOpacity accessibilityRole="button" onPress={() => setDropdownOpen(false)} style={s.closeBtn}>
-                <Ionicons name="close" size={18} color="rgba(255,255,255,0.60)" />
+                <Ionicons name="close" size={18} color={tc.muted} />
               </TouchableOpacity>
             </View>
 
             {/* Modal Search Box */}
             <View style={{ paddingHorizontal: 16, paddingBottom: 10 }}>
               <View style={[s.searchInputContainer, { minWidth: 0 }]}>
-                <Ionicons name="search" size={15} color="rgba(255,255,255,0.40)" style={{ marginRight: 8 }} />
+                <Ionicons name="search" size={15} color={tc.muted} style={{ marginRight: 8 }} />
                 <TextInput
                   style={[s.searchInput, { paddingVertical: 8 }]}
                   placeholder="Search subject by name or code..."
-                  placeholderTextColor="rgba(255,255,255,0.30)"
+                  placeholderTextColor={tc.muted}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   autoFocus
                 />
                 {searchQuery ? (
                   <TouchableOpacity onPress={() => setSearchQuery('')}>
-                    <Ionicons name="close-circle" size={16} color="rgba(255,255,255,0.40)" />
+                    <Ionicons name="close-circle" size={16} color={tc.muted} />
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -306,7 +315,7 @@ function SubjectChoices({ classes = [], classSubjects = [], subjects = [], value
             <ScrollView style={{ maxHeight: 320, paddingHorizontal: 16 }} contentContainerStyle={{ paddingBottom: 16, gap: 6 }}>
               {modalDisplayedSubjects.length === 0 ? (
                 <View style={{ paddingVertical: 24, alignItems: 'center' }}>
-                  <Text style={{ color: 'rgba(255,255,255,0.40)', fontSize: 13 }}>No subjects found matching "{searchQuery}"</Text>
+                  <Text style={{ color: tc.muted, fontSize: 13 }}>No subjects found matching "{searchQuery}"</Text>
                 </View>
               ) : (
                 modalDisplayedSubjects.map((sub: any) => {
@@ -352,6 +361,8 @@ function SubjectChoices({ classes = [], classSubjects = [], subjects = [], value
 }
 
 export default function StaffScreen() {
+  const { isDark } = useTheme();
+  const s = getThemedStyles(isDark);
   const client = useQueryClient();
   const [form, setForm] = useState<any>(initial);
   const [open, setOpen] = useState(false);
@@ -900,11 +911,11 @@ export default function StaffScreen() {
         <View style={s.filterCard}>
           <View style={s.searchRow}>
             <View style={s.searchInputContainer}>
-              <Ionicons name="search" size={16} color="rgba(255,255,255,0.40)" style={{ marginRight: 8 }} />
+              <Ionicons name="search" size={16} color={isDark ? "rgba(255,255,255,0.40)" : "rgba(17,25,54,0.45)"} style={{ marginRight: 8 }} />
               <TextInput
                 style={s.searchInput}
                 placeholder="Search by name, phone, employee ID, role, designation, email..."
-                placeholderTextColor="rgba(255,255,255,0.35)"
+                placeholderTextColor={isDark ? "rgba(255,255,255,0.35)" : "rgba(17,25,54,0.40)"}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
@@ -1032,46 +1043,46 @@ export default function StaffScreen() {
   );
 }
 
-const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.canvas },
+const createStyles = (tc: ThemeColors, isDark: boolean) => ({
+  page: { flex: 1, backgroundColor: tc.canvas },
   content: { ...surfaces.content, gap: 14 },
 
-  glowOrb: { position: 'absolute', width: 400, height: 400, borderRadius: 200, top: -120, right: -100, backgroundColor: 'rgba(99,102,241,0.09)' },
+  glowOrb: { position: 'absolute' as const, width: 400, height: 400, borderRadius: 200, top: -120, right: -100, backgroundColor: isDark ? 'rgba(99,102,241,0.09)' : 'rgba(99,102,241,0.04)' },
 
   // ── Hero ─────────────────────────────────────────────────────
-  hero: { ...surfaces.card, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 16, padding: 24, flexWrap: 'wrap', overflow: 'hidden' },
-  heroGlow: { position: 'absolute', width: 250, height: 250, borderRadius: 125, top: -80, right: -50, backgroundColor: 'rgba(99,102,241,0.12)' },
-  eyebrow: { fontSize: 10, color: colors.blueLight, letterSpacing: 1.6, fontWeight: '800' },
-  heroTitle: { fontSize: 26, color: '#f0f6ff', fontWeight: '800', marginTop: 6, letterSpacing: -0.3 },
-  heroSub: { marginTop: 5, lineHeight: 20, color: 'rgba(255,255,255,0.40)', fontSize: 13 },
-  addBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 7, ...shadow.sm },
-  addBtnText: { fontWeight: '800', color: '#ffffff', fontSize: 13 },
+  hero: { ...surfaces.card, flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const, gap: 16, padding: 24, flexWrap: 'wrap' as const, overflow: 'hidden' as const, backgroundColor: tc.panel, borderColor: tc.line },
+  heroGlow: { position: 'absolute' as const, width: 250, height: 250, borderRadius: 125, top: -80, right: -50, backgroundColor: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.05)' },
+  eyebrow: { fontSize: 10, color: tc.sky, letterSpacing: 1.6, fontWeight: '800' as const },
+  heroTitle: { fontSize: 26, color: tc.text, fontWeight: '800' as const, marginTop: 6, letterSpacing: -0.3 },
+  heroSub: { marginTop: 5, lineHeight: 20, color: tc.muted, fontSize: 13 },
+  addBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 7, ...shadow.sm },
+  addBtnText: { fontWeight: '800' as const, color: '#ffffff', fontSize: 13 },
 
   // ── Form Card ────────────────────────────────────────────────
-  formCard: { ...surfaces.card, padding: 20, gap: 10 },
-  formTitle: { fontSize: 20, fontWeight: '800', color: '#f0f6ff', marginBottom: 6 },
+  formCard: { ...surfaces.card, padding: 20, gap: 10, backgroundColor: tc.panel, borderColor: tc.line },
+  formTitle: { fontSize: 20, fontWeight: '800' as const, color: tc.text, marginBottom: 6 },
 
   // ── Fields ───────────────────────────────────────────────────
-  field: { gap: 6, width: '100%', minWidth: 0, flexShrink: 0 },
-  label: { color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
-  input: { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.10)', borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 11, color: '#f0f6ff', fontSize: 14 },
-  readonly: { backgroundColor: 'rgba(255,255,255,0.03)', opacity: 0.6 },
-  multiline: { minHeight: 70, textAlignVertical: 'top' },
+  field: { gap: 6, width: '100%' as const, minWidth: 0, flexShrink: 0 },
+  label: { color: tc.muted, fontSize: 12, fontWeight: '700' as const, letterSpacing: 0.3 },
+  input: { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F5F7FF', borderWidth: 1.5, borderColor: tc.line, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 11, color: tc.text, fontSize: 14 },
+  readonly: { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(17,25,54,0.03)', opacity: 0.6 },
+  multiline: { minHeight: 70, textAlignVertical: 'top' as const },
 
   // ── Choices ──────────────────────────────────────────────────
-  choices: { flexDirection: 'row', gap: 7, flexWrap: 'wrap', width: '100%' },
-  choice: { borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', borderRadius: radius.sm, paddingHorizontal: 11, paddingVertical: 8 },
+  choices: { flexDirection: 'row' as const, gap: 7, flexWrap: 'wrap' as const, width: '100%' as const },
+  choice: { borderWidth: 1, borderColor: tc.line, borderRadius: radius.sm, paddingHorizontal: 11, paddingVertical: 8, backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F0F2FA' },
   choiceOn: { borderColor: colors.primary, backgroundColor: colors.primary },
-  choiceText: { color: 'rgba(255,255,255,0.45)', fontSize: 12 },
-  choiceTextOn: { color: '#fff', fontWeight: '700', fontSize: 12 },
+  choiceText: { color: tc.muted, fontSize: 12 },
+  choiceTextOn: { color: '#fff', fontWeight: '700' as const, fontSize: 12 },
 
   // ── Subject Section ──────────────────────────────────────────
   subjectSection: {
-    width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    width: '100%' as const,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#F5F7FF',
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tc.line,
     padding: 14,
     gap: 12,
     marginVertical: 4,
@@ -1080,124 +1091,124 @@ const s = StyleSheet.create({
   subjectDropdownBtn: {
     minHeight: 46,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: tc.line,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
     borderRadius: radius.md,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    width: '100%' as const,
   },
   subjectDropdownBtnActive: {
-    borderColor: 'rgba(56, 189, 248, 0.40)',
-    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+    borderColor: tc.sky,
+    backgroundColor: isDark ? 'rgba(56, 189, 248, 0.08)' : '#EEF0FF',
   },
   selectedSubjectBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    backgroundColor: isDark ? 'rgba(56, 189, 248, 0.12)' : '#EEF0FF',
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.35)',
+    borderColor: isDark ? 'rgba(56, 189, 248, 0.35)' : tc.line,
     borderRadius: radius.sm,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    width: '100%',
+    width: '100%' as const,
   },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(4, 8, 18, 0.80)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     padding: 18,
   },
   dropdownSheet: {
-    width: '92%',
+    width: '92%' as const,
     maxWidth: 540,
-    backgroundColor: '#0e1525',
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: tc.line,
     borderRadius: radius.lg,
-    overflow: 'hidden',
+    overflow: 'hidden' as const,
   },
   dropdownOption: {
     minHeight: 48,
     borderRadius: radius.md,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.02)' : '#F5F7FF',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: tc.line,
   },
   dropdownOptionSelected: {
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    backgroundColor: isDark ? 'rgba(99, 102, 241, 0.15)' : '#EEF0FF',
     borderColor: colors.primary,
   },
   dropdownOptionText: {
-    color: '#f0f6ff',
+    color: tc.text,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '600' as const,
   },
   dropdownOptionTextSelected: {
-    color: '#ffffff',
-    fontWeight: '800',
+    color: colors.primary,
+    fontWeight: '800' as const,
   },
 
   // ── Toggle ───────────────────────────────────────────────────
-  toggle: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
-  check: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.20)', alignItems: 'center', justifyContent: 'center' },
+  toggle: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10, paddingVertical: 4 },
+  check: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: tc.line, alignItems: 'center' as const, justifyContent: 'center' as const },
   checkOn: { backgroundColor: colors.success, borderColor: colors.success },
-  toggleText: { color: 'rgba(255,255,255,0.65)', fontSize: 13 },
+  toggleText: { color: tc.text, fontSize: 13 },
 
   // ── Buttons ──────────────────────────────────────────────────
-  saveBtn: { borderRadius: radius.md, padding: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, ...shadow.sm },
-  saveBtnText: { fontWeight: '800', color: '#ffffff', fontSize: 14 },
-  secondaryBtn: { alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: radius.sm, padding: 11, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
-  secondaryBtnText: { color: '#f0f6ff', fontWeight: '700', fontSize: 13 },
+  saveBtn: { borderRadius: radius.md, padding: 14, alignItems: 'center' as const, justifyContent: 'center' as const, backgroundColor: colors.primary, ...shadow.sm },
+  saveBtnText: { fontWeight: '800' as const, color: '#ffffff', fontSize: 14 },
+  secondaryBtn: { alignSelf: 'flex-start' as const, backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F0F2FA', borderRadius: radius.sm, padding: 11, borderWidth: 1, borderColor: tc.line },
+  secondaryBtnText: { color: tc.text, fontWeight: '700' as const, fontSize: 13 },
 
   // ── Modal ────────────────────────────────────────────────────
-  overlay: { flex: 1, backgroundColor: 'rgba(4,8,18,0.80)', alignItems: 'center', justifyContent: 'center', padding: 18 },
-  modalShell: { width: '92%', maxWidth: 780, maxHeight: '90%', backgroundColor: '#0e1525', borderRadius: radius.xxl, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
+  overlay: { flex: 1, backgroundColor: 'rgba(4,8,18,0.80)', alignItems: 'center' as const, justifyContent: 'center' as const, padding: 18 },
+  modalShell: { width: '92%' as const, maxWidth: 780, maxHeight: '90%' as const, backgroundColor: tc.panel, borderRadius: radius.xxl, overflow: 'hidden' as const, borderWidth: 1, borderColor: tc.line },
   modalContent: { padding: 0 },
-  detailWrap: { backgroundColor: '#0e1525', padding: 24, gap: 12 },
-  detailHeader: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 8 },
-  detailName: { fontSize: 22, fontWeight: '800', color: '#f0f6ff', marginTop: 4 },
-  detailMeta: { color: 'rgba(255,255,255,0.40)', marginTop: 4, fontSize: 13 },
-  closeBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
+  detailWrap: { backgroundColor: tc.panel, padding: 24, gap: 12 },
+  detailHeader: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, flexWrap: 'wrap' as const, gap: 12, marginBottom: 8 },
+  detailName: { fontSize: 22, fontWeight: '800' as const, color: tc.text, marginTop: 4 },
+  detailMeta: { color: tc.muted, marginTop: 4, fontSize: 13 },
+  closeBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F0F2FA', alignItems: 'center' as const, justifyContent: 'center' as const },
 
   // ── Security Box ─────────────────────────────────────────────
-  securityBox: { backgroundColor: 'rgba(251,191,36,0.08)', borderRadius: radius.lg, padding: 16, gap: 8, borderWidth: 1, borderColor: 'rgba(251,191,36,0.20)' },
-  securityHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  securityTitle: { color: colors.warning, fontWeight: '800', fontSize: 14 },
-  securityText: { color: 'rgba(255,255,255,0.50)', lineHeight: 19, fontSize: 13 },
+  securityBox: { backgroundColor: isDark ? 'rgba(251,191,36,0.08)' : 'rgba(251,191,36,0.15)', borderRadius: radius.lg, padding: 16, gap: 8, borderWidth: 1, borderColor: isDark ? 'rgba(251,191,36,0.20)' : 'rgba(251,191,36,0.35)' },
+  securityHead: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8 },
+  securityTitle: { color: colors.warning, fontWeight: '800' as const, fontSize: 14 },
+  securityText: { color: isDark ? 'rgba(255,255,255,0.50)' : 'rgba(17,25,54,0.70)', lineHeight: 19, fontSize: 13 },
 
   // ── Danger Zone ──────────────────────────────────────────────
-  dangerZone: { backgroundColor: 'rgba(248,113,113,0.08)', borderRadius: radius.lg, padding: 16, gap: 8, borderWidth: 1, borderColor: 'rgba(248,113,113,0.20)', marginTop: 8 },
-  dangerHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dangerTitle: { color: colors.danger, fontWeight: '800', fontSize: 14 },
-  dangerText: { color: 'rgba(255,255,255,0.50)', fontSize: 13, lineHeight: 19 },
-  dangerBtn: { backgroundColor: colors.danger, borderRadius: radius.md, padding: 12, alignItems: 'center' },
-  dangerBtnText: { color: '#fff', fontWeight: '800', fontSize: 13 },
+  dangerZone: { backgroundColor: isDark ? 'rgba(248,113,113,0.08)' : 'rgba(248,113,113,0.12)', borderRadius: radius.lg, padding: 16, gap: 8, borderWidth: 1, borderColor: isDark ? 'rgba(248,113,113,0.20)' : 'rgba(248,113,113,0.30)', marginTop: 8 },
+  dangerHead: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8 },
+  dangerTitle: { color: colors.danger, fontWeight: '800' as const, fontSize: 14 },
+  dangerText: { color: isDark ? 'rgba(255,255,255,0.50)' : 'rgba(17,25,54,0.70)', fontSize: 13, lineHeight: 19 },
+  dangerBtn: { backgroundColor: colors.danger, borderRadius: radius.md, padding: 12, alignItems: 'center' as const },
+  dangerBtnText: { color: '#fff', fontWeight: '800' as const, fontSize: 13 },
 
   // ── Employee Cards ────────────────────────────────────────────
-  employeeCard: { ...surfaces.card, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, gap: 14 },
-  employeeCardActive: { borderColor: colors.glowBorder },
-  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 2 },
-  avatarInitial: { fontWeight: '900', fontSize: 17 },
-  empName: { color: '#f0f6ff', fontSize: 15, fontWeight: '700' },
-  empMeta: { color: 'rgba(255,255,255,0.40)', marginTop: 3, fontSize: 12 },
+  employeeCard: { ...surfaces.card, flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const, padding: 16, gap: 14, backgroundColor: tc.panel, borderColor: tc.line },
+  employeeCardActive: { borderColor: colors.primary },
+  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center' as const, justifyContent: 'center' as const, borderWidth: 2 },
+  avatarInitial: { fontWeight: '900' as const, fontSize: 17 },
+  empName: { color: tc.text, fontSize: 15, fontWeight: '700' as const },
+  empMeta: { color: tc.muted, marginTop: 3, fontSize: 12 },
   roleBadge: { borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 5 },
-  roleBadgeText: { fontWeight: '800', fontSize: 11 },
+  roleBadgeText: { fontWeight: '800' as const, fontSize: 11 },
 
   // ── Empty / Error ─────────────────────────────────────────────
-  emptyState: { alignItems: 'center', paddingVertical: 36, gap: 8 },
-  emptyTitle: { color: '#f0f6ff', fontSize: 15, fontWeight: '700' },
-  emptyText: { color: 'rgba(255,255,255,0.35)', fontSize: 13 },
+  emptyState: { alignItems: 'center' as const, paddingVertical: 36, gap: 8 },
+  emptyTitle: { color: tc.text, fontSize: 15, fontWeight: '700' as const },
+  emptyText: { color: tc.muted, fontSize: 13 },
   errorText: { color: colors.danger, padding: 16 },
 
   // ── Filter Card & Search ──────────────────────────────────────
@@ -1205,58 +1216,60 @@ const s = StyleSheet.create({
     ...surfaces.card,
     padding: 16,
     gap: 12,
+    backgroundColor: tc.panel,
+    borderColor: tc.line,
   },
   searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 10,
-    flexWrap: 'wrap',
+    flexWrap: 'wrap' as const,
   },
   searchInputContainer: {
     flex: 1,
     minWidth: 260,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F5F7FF',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.10)',
+    borderColor: tc.line,
     borderRadius: radius.md,
     paddingHorizontal: 12,
   },
   searchInput: {
     flex: 1,
-    color: '#f0f6ff',
+    color: tc.text,
     paddingVertical: 10,
     fontSize: 14,
   },
   resetButton: {
-    backgroundColor: 'rgba(248,113,113,0.12)',
+    backgroundColor: isDark ? 'rgba(248,113,113,0.12)' : 'rgba(248,113,113,0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(248,113,113,0.25)',
+    borderColor: isDark ? 'rgba(248,113,113,0.25)' : 'rgba(248,113,113,0.35)',
     borderRadius: radius.sm,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
   },
   resetButtonText: {
-    color: '#fca5a5',
-    fontWeight: '700',
+    color: colors.danger,
+    fontWeight: '700' as const,
     fontSize: 12,
   },
   filterGroup: {
     gap: 6,
   },
   filterLabel: {
-    color: 'rgba(255,255,255,0.45)',
+    color: tc.muted,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '700' as const,
     letterSpacing: 0.4,
-    textTransform: 'uppercase',
+    textTransform: 'uppercase' as const,
   },
   filterChipsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 8,
     paddingVertical: 2,
   },
@@ -1265,56 +1278,58 @@ const s = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: tc.line,
+    backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F0F2FA',
   },
   filterChipActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
   filterChipText: {
-    color: 'rgba(255,255,255,0.55)',
+    color: tc.muted,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '600' as const,
   },
   filterChipTextActive: {
     color: '#ffffff',
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   filterSummaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
     paddingTop: 4,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.05)',
+    borderTopColor: tc.line,
   },
   filterSummaryText: {
-    color: 'rgba(255,255,255,0.40)',
+    color: tc.muted,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '600' as const,
   },
   subMeta: {
-    color: 'rgba(255,255,255,0.45)',
+    color: tc.muted,
     fontSize: 12,
     marginTop: 3,
   },
   emptyFilterBox: {
     ...surfaces.card,
     padding: 32,
-    alignItems: 'center',
+    alignItems: 'center' as const,
     gap: 8,
+    backgroundColor: tc.panel,
+    borderColor: tc.line,
   },
   emptyFilterTitle: {
-    color: '#f0f6ff',
+    color: tc.text,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '700' as const,
   },
   emptyFilterSub: {
-    color: 'rgba(255,255,255,0.40)',
+    color: tc.muted,
     fontSize: 13,
-    textAlign: 'center',
+    textAlign: 'center' as const,
   },
   emptyFilterReset: {
     marginTop: 8,
@@ -1325,7 +1340,19 @@ const s = StyleSheet.create({
   },
   emptyFilterResetText: {
     color: '#ffffff',
-    fontWeight: '700',
+    fontWeight: '700' as const,
     fontSize: 12,
   },
 });
+
+let stylesDark: any = null;
+let stylesLight: any = null;
+function getThemedStyles(isDark: boolean) {
+  if (isDark) {
+    if (!stylesDark) stylesDark = StyleSheet.create(createStyles(THEME_PALETTES.dark, true));
+    return stylesDark;
+  } else {
+    if (!stylesLight) stylesLight = StyleSheet.create(createStyles(THEME_PALETTES.light, false));
+    return stylesLight;
+  }
+}

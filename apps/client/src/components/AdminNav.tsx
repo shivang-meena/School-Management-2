@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../context/ThemeContext';
 import { colors, radius, shadow } from '../theme';
 import type { UserProfile } from '@erp/contracts';
 
@@ -117,16 +118,18 @@ export function AdminNav({
     role === 'staff'   ? 'Faculty & Staff Portal' :
                          'Student & Parent Portal';
 
+  const { isDark, colors: themeColors } = useTheme();
+
   return (
-    <View style={s.sidebar}>
+    <View style={[s.sidebar, { backgroundColor: themeColors.sidebar, borderRightColor: themeColors.line }]}>
       {/* ── Brand ── */}
       <View style={s.brand}>
         <View style={s.brandBadge}>
           <Ionicons name="school" size={22} color="#ffffff" />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={s.brandName}>Arihant Public</Text>
-          <Text style={s.brandCaption}>SCHOOL ERP</Text>
+          <Text style={[s.brandName, { color: themeColors.text }]}>Arihant Public</Text>
+          <Text style={[s.brandCaption, { color: themeColors.sky }]}>SCHOOL ERP</Text>
         </View>
         {onClose ? (
           <Pressable
@@ -135,22 +138,30 @@ export function AdminNav({
             onPress={onClose}
             style={s.closeBtn}
           >
-            <Ionicons name="close" size={20} color="rgba(255,255,255,0.6)" />
+            <Ionicons name="close" size={20} color={themeColors.muted} />
           </Pressable>
         ) : null}
       </View>
 
       {/* ── Portal Pill ── */}
-      <View style={s.portalPill}>
+      <View
+        style={[
+          s.portalPill,
+          {
+            backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(17,25,54,0.05)',
+            borderColor: isDark ? 'rgba(255,255,255,0.08)' : themeColors.line,
+          },
+        ]}
+      >
         <View style={s.portalDot} />
-        <Text style={s.portalText}>{roleLabel}</Text>
+        <Text style={[s.portalText, { color: isDark ? '#c4b5fd' : themeColors.text }]}>{roleLabel}</Text>
       </View>
 
       {/* ── Navigation ── */}
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.nav}>
         {Object.entries(groups).map(([group, items]) => (
           <View key={group}>
-            <Text style={s.groupLabel}>{group}</Text>
+            <Text style={[s.groupLabel, { color: themeColors.muted }]}>{group}</Text>
             {items.map(link => {
               const active = page === link.href.split('/').pop();
               return (
@@ -162,16 +173,35 @@ export function AdminNav({
                     router.navigate(link.href as any);
                     onNavigate?.();
                   }}
-                  style={({ pressed }) => [s.link, active && s.linkActive, pressed && s.linkPressed]}
+                  style={({ pressed }) => [
+                    s.link,
+                    active && [s.linkActive, { backgroundColor: isDark ? colors.primary : '#8E9BFF' }],
+                    pressed && s.linkPressed,
+                  ]}
                 >
-                  <View style={[s.iconWrap, active && s.iconWrapActive]}>
+                  <View
+                    style={[
+                      s.iconWrap,
+                      active
+                        ? s.iconWrapActive
+                        : { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(17,25,54,0.05)' },
+                    ]}
+                  >
                     <Ionicons
                       name={link.icon}
                       size={16}
-                      color={active ? '#ffffff' : 'rgba(255,255,255,0.45)'}
+                      color={active ? '#ffffff' : isDark ? 'rgba(255,255,255,0.50)' : themeColors.muted}
                     />
                   </View>
-                  <Text style={[s.linkLabel, active && s.linkLabelActive]}>{link.label}</Text>
+                  <Text
+                    style={[
+                      s.linkLabel,
+                      { color: active ? '#ffffff' : themeColors.text },
+                      active && s.linkLabelActive,
+                    ]}
+                  >
+                    {link.label}
+                  </Text>
                   {active ? <View style={s.activeDot} /> : null}
                 </Pressable>
               );
@@ -181,16 +211,15 @@ export function AdminNav({
       </ScrollView>
 
       {/* ── Footer Profile ── */}
-      <View style={s.footer}>
+      <View style={[s.footer, { borderTopColor: themeColors.line }]}>
         <View style={s.profileRow}>
           <View style={s.avatar}>
             <Text style={s.avatarInitial}>{name.charAt(0).toUpperCase()}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text numberOfLines={1} style={s.userName}>{name}</Text>
-            <Text style={s.userRole}>
-              {role === 'admin' ? 'School Administrator' : role === 'staff' ? 'Faculty Member' : 'Student'}
-            </Text>
+            <Text numberOfLines={1} style={[s.userName, { color: themeColors.text }]}>{name}</Text>
+            <Text style={[s.userRole, { color: themeColors.muted }]}>
+              {role === 'admin' ? 'School Administrator' : role === 'staff' ? 'Faculty Member' : 'Student'}\n            </Text>
           </View>
         </View>
 
@@ -203,8 +232,8 @@ export function AdminNav({
           }}
           style={s.signOutBtn}
         >
-          <Ionicons name="log-out-outline" size={15} color="rgba(255,255,255,0.40)" style={{ marginRight: 6 }} />
-          <Text style={s.signOutText}>Sign out</Text>
+          <Ionicons name="log-out-outline" size={15} color={themeColors.muted} style={{ marginRight: 6 }} />
+          <Text style={[s.signOutText, { color: themeColors.muted }]}>Sign out</Text>
         </Pressable>
       </View>
     </View>

@@ -1,4 +1,5 @@
 import { colors, surfaces } from '../theme';
+import { useTheme, THEME_PALETTES, ThemeColors } from '../context/ThemeContext';
 import React, { useMemo } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
@@ -13,6 +14,8 @@ function displayDate(value?: string) { return value ? value.slice(0, 10) : ''; }
 function statusFor(value: string): CalendarStatus { if (value === 'PRESENT') return 'PRESENT'; if (value === 'LATE') return 'LATE'; if (value === 'ABSENT' || value === 'LEAVE' || value === 'PAID_LEAVE' || value === 'UNPAID_LEAVE') return 'ABSENT'; if (value === 'HALF_DAY') return 'HALF_DAY'; return 'NONE'; }
 
 function YearCalendar({ startDate, endDate, records }: { startDate: string; endDate: string; records: any[] }) {
+  const { isDark } = useTheme();
+  const styles = getThemedStyles(isDark);
   const recordMap = useMemo(() => new Map(records.map((record) => [displayDate(record.date), statusFor(record.status)])), [records]);
   const months = useMemo(() => {
     const start = new Date(`${startDate.slice(0, 10)}T00:00:00Z`), end = new Date(`${endDate.slice(0, 10)}T00:00:00Z`);
@@ -29,10 +32,20 @@ function YearCalendar({ startDate, endDate, records }: { startDate: string; endD
   return <View style={styles.calendarGrid}>{months.map((month) => { const firstDay = month.days[0]?.getUTCDay() || 0; return <View style={styles.monthCard} key={`${month.year}-${month.month}`}><Text style={styles.monthTitle}>{monthNames[month.month]} {month.year}</Text><View style={styles.weekRow}>{weekDays.map((day, index) => <Text style={styles.weekDay} key={`${day}-${index}`}>{day}</Text>)}</View><View style={styles.daysGrid}>{Array.from({ length: firstDay }).map((_, index) => <View style={styles.emptyDay} key={`empty-${index}`} />)}{month.days.map((day) => { const status = recordMap.get(dateKey(day)) || 'NONE'; return <View key={dateKey(day)} style={[styles.dayCell, styles[`day${status}`]]}><Text style={[styles.dayText, status !== 'NONE' && styles.coloredDayText]}>{day.getUTCDate()}</Text></View>; })}</View></View>; })}</View>;
 }
 
-function SummaryCard({ label, value, color }: { label: string; value: string | number; color: string }) { return <View style={styles.summaryCard}><Text style={[styles.summaryValue, { color }]}>{value}</Text><Text style={styles.summaryLabel}>{label}</Text></View>; }
-function Legend({ color, label }: { color: string; label: string }) { return <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: color }]} /><Text style={styles.legendText}>{label}</Text></View>; }
+function SummaryCard({ label, value, color }: { label: string; value: string | number; color: string }) {
+  const { isDark } = useTheme();
+  const styles = getThemedStyles(isDark);
+  return <View style={styles.summaryCard}><Text style={[styles.summaryValue, { color }]}>{value}</Text><Text style={styles.summaryLabel}>{label}</Text></View>;
+}
+function Legend({ color, label }: { color: string; label: string }) {
+  const { isDark } = useTheme();
+  const styles = getThemedStyles(isDark);
+  return <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: color }]} /><Text style={styles.legendText}>{label}</Text></View>;
+}
 
 export function EmployeeAttendanceScreen({ employeeId }: Props) {
+  const { isDark, colors: tc } = useTheme();
+  const styles = getThemedStyles(isDark);
   const attendance = useQuery<any>({ queryKey: ['employee-attendance-year', employeeId], queryFn: async () => (await api.get(`/attendance/employees/${employeeId}`)).data, enabled: !!employeeId });
   const data = attendance.data;
   const summary = data?.summary || { marked: 0, present: 0, late: 0, absent: 0, percentage: null };
@@ -99,108 +112,123 @@ export function EmployeeAttendanceScreen({ employeeId }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.background },
-  content: { ...surfaces.content, gap: 18 },
-  hero: {
-    ...surfaces.card,
-    padding: 24,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
-    flexWrap: 'wrap',
-  },
-  eyebrow: { fontWeight: '800', fontSize: 10, letterSpacing: 1.4, color: colors.blueLight },
-  title: { marginTop: 6, fontSize: 28, color: '#f0f6ff', fontWeight: '800', letterSpacing: -0.3 },
-  description: { fontSize: 14, marginTop: 5, lineHeight: 21, color: 'rgba(255, 255, 255, 0.45)' },
-  summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  summaryCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
-    padding: 18,
-    minWidth: 170,
-    flex: 1,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
-  },
-  summaryValue: { fontSize: 27, fontWeight: '800' },
-  summaryLabel: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 12, fontWeight: '700', marginTop: 5 },
-  legend: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
-  },
-  legendTitle: { color: '#f0f6ff', fontWeight: '800', marginRight: 4 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendDot: { width: 16, height: 16, borderRadius: 5, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.15)' },
-  legendText: { color: 'rgba(255, 255, 255, 0.55)', fontSize: 12 },
-  calendarPanel: {
-    ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    padding: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
-    borderRadius: 14,
-  },
-  calendarHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  panelTitle: { fontSize: 20, fontWeight: '800', color: '#f0f6ff' },
-  marked: { color: colors.blueLight, fontSize: 12, fontWeight: '800' },
-  muted: { color: 'rgba(255, 255, 255, 0.40)', marginTop: 6, textAlign: 'center' },
-  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  monthCard: {
-    minWidth: 220,
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 14,
-    padding: 12,
-  },
-  monthTitle: { color: '#f0f6ff', fontWeight: '800', textAlign: 'center', marginBottom: 10 },
-  weekRow: { flexDirection: 'row', marginBottom: 5 },
-  weekDay: { width: '14.2857%', textAlign: 'center', color: 'rgba(255, 255, 255, 0.40)', fontSize: 10, fontWeight: '800' },
-  daysGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  emptyDay: { width: '14.2857%', aspectRatio: 1, padding: 2 },
-  dayCell: {
-    width: '14.2857%',
-    aspectRatio: 1,
-    padding: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 6,
-    marginBottom: 2,
-  },
-  dayNONE: { backgroundColor: 'rgba(255, 255, 255, 0.04)' },
-  dayPRESENT: { backgroundColor: 'rgba(52, 211, 153, 0.20)', borderWidth: 1, borderColor: 'rgba(52, 211, 153, 0.35)' },
-  dayABSENT: { backgroundColor: 'rgba(248, 113, 113, 0.20)', borderWidth: 1, borderColor: 'rgba(248, 113, 113, 0.35)' },
-  dayLATE: { backgroundColor: 'rgba(251, 191, 36, 0.20)', borderWidth: 1, borderColor: 'rgba(251, 191, 36, 0.35)' },
-  dayHALF_DAY: { backgroundColor: 'rgba(251, 191, 36, 0.20)', borderWidth: 1, borderColor: 'rgba(251, 191, 36, 0.35)' },
-  dayText: { color: 'rgba(255, 255, 255, 0.35)', fontSize: 11, fontWeight: '700' },
-  coloredDayText: { color: '#f0f6ff', fontWeight: '800' },
-  state: {
-    ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    padding: 42,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
-    borderRadius: 14,
-  },
-  emptyTitle: { color: '#f0f6ff', fontSize: 18, fontWeight: '800' },
-  error: { color: colors.danger, fontWeight: '700' },
-  retry: { color: colors.blueLight, fontWeight: '800', marginTop: 10 },
-});
+let stylesDark: any = null;
+let stylesLight: any = null;
+
+function getThemedStyles(isDark: boolean) {
+  if (isDark) {
+    if (!stylesDark) stylesDark = StyleSheet.create(createStyles(THEME_PALETTES.dark, true) as any);
+    return stylesDark;
+  } else {
+    if (!stylesLight) stylesLight = StyleSheet.create(createStyles(THEME_PALETTES.light, false) as any);
+    return stylesLight;
+  }
+}
+
+function createStyles(tc: ThemeColors, isDark: boolean) {
+  return {
+    page: { flex: 1, backgroundColor: tc.canvas },
+    content: { ...surfaces.content, gap: 18 },
+    hero: {
+      ...surfaces.card,
+      padding: 24,
+      borderRadius: 16,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : tc.panel,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : tc.line,
+      flexWrap: 'wrap' as const,
+    },
+    eyebrow: { fontWeight: '800' as const, fontSize: 10, letterSpacing: 1.4, color: tc.primary },
+    title: { marginTop: 6, fontSize: 28, color: tc.text, fontWeight: '800' as const, letterSpacing: -0.3 },
+    description: { fontSize: 14, marginTop: 5, lineHeight: 21, color: tc.muted },
+    summaryGrid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 12 },
+    summaryCard: {
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : tc.panel,
+      borderRadius: 16,
+      padding: 18,
+      minWidth: 170,
+      flex: 1,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.09)' : tc.line,
+    },
+    summaryValue: { fontSize: 27, fontWeight: '800' as const },
+    summaryLabel: { color: tc.muted, fontSize: 12, fontWeight: '700' as const, marginTop: 5 },
+    legend: {
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : tc.panel,
+      borderRadius: 16,
+      padding: 16,
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      alignItems: 'center' as const,
+      gap: 16,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.09)' : tc.line,
+    },
+    legendTitle: { color: tc.text, fontWeight: '800' as const, marginRight: 4 },
+    legendItem: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6 },
+    legendDot: { width: 16, height: 16, borderRadius: 5, borderWidth: 1, borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : tc.line },
+    legendText: { color: tc.muted, fontSize: 12 },
+    calendarPanel: {
+      ...surfaces.card,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : tc.panel,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.09)' : tc.line,
+      borderRadius: 14,
+    },
+    calendarHeader: {
+      flexDirection: 'row' as const,
+      justifyContent: 'space-between' as const,
+      alignItems: 'flex-start' as const,
+      marginBottom: 16,
+      flexWrap: 'wrap' as const,
+      gap: 12,
+    },
+    panelTitle: { fontSize: 20, fontWeight: '800' as const, color: tc.text },
+    marked: { color: tc.primary, fontSize: 12, fontWeight: '800' as const },
+    muted: { color: tc.muted, marginTop: 6, textAlign: 'center' as const },
+    calendarGrid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 12 },
+    monthCard: {
+      minWidth: 220,
+      flex: 1,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : tc.line,
+      borderRadius: 14,
+      padding: 12,
+    },
+    monthTitle: { color: tc.text, fontWeight: '800' as const, textAlign: 'center' as const, marginBottom: 10 },
+    weekRow: { flexDirection: 'row' as const, marginBottom: 5 },
+    weekDay: { width: '14.2857%', textAlign: 'center' as const, color: tc.muted, fontSize: 10, fontWeight: '800' as const },
+    daysGrid: { flexDirection: 'row' as const, flexWrap: 'wrap' as const },
+    emptyDay: { width: '14.2857%', aspectRatio: 1, padding: 2 },
+    dayCell: {
+      width: '14.2857%',
+      aspectRatio: 1,
+      padding: 2,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      borderRadius: 6,
+      marginBottom: 2,
+    },
+    dayNONE: { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)' },
+    dayPRESENT: { backgroundColor: 'rgba(52, 211, 153, 0.20)', borderWidth: 1, borderColor: 'rgba(52, 211, 153, 0.35)' },
+    dayABSENT: { backgroundColor: 'rgba(248, 113, 113, 0.20)', borderWidth: 1, borderColor: 'rgba(248, 113, 113, 0.35)' },
+    dayLATE: { backgroundColor: 'rgba(251, 191, 36, 0.20)', borderWidth: 1, borderColor: 'rgba(251, 191, 36, 0.35)' },
+    dayHALF_DAY: { backgroundColor: 'rgba(251, 191, 36, 0.20)', borderWidth: 1, borderColor: 'rgba(251, 191, 36, 0.35)' },
+    dayText: { color: isDark ? 'rgba(255, 255, 255, 0.35)' : 'rgba(17, 25, 54, 0.40)', fontSize: 11, fontWeight: '700' as const },
+    coloredDayText: { color: isDark ? '#f0f6ff' : '#080c14', fontWeight: '800' as const },
+    state: {
+      ...surfaces.card,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : tc.panel,
+      padding: 42,
+      alignItems: 'center' as const,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.09)' : tc.line,
+      borderRadius: 14,
+    },
+    emptyTitle: { color: tc.text, fontSize: 18, fontWeight: '800' as const },
+    error: { color: colors.danger, fontWeight: '700' as const },
+    retry: { color: tc.primary, fontWeight: '800' as const, marginTop: 10 },
+  };
+}

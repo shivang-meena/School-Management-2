@@ -1,4 +1,5 @@
 import { colors, surfaces } from '../../src/theme';
+import { useTheme, THEME_PALETTES, ThemeColors } from '../../src/context/ThemeContext';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -10,16 +11,69 @@ function dateOnly(value: any) { return value ? String(value).slice(0, 10) : ''; 
 function message(error: any) { const value = error?.response?.data?.message; return Array.isArray(value) ? value.join('\n') : value || 'Please check the details and try again.'; }
 
 function Field({ label, value, onChangeText, placeholder, multiline = false, editable = true }: any) {
-  return <View style={styles.field}><Text style={styles.label}>{label}</Text><TextInput editable={editable} value={String(value ?? '')} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="rgba(255,255,255,0.25)" multiline={multiline} style={[styles.input, multiline && styles.multiline, !editable && styles.readonly]} /></View>;
+  const { isDark } = useTheme();
+  const styles = getThemedStyles(isDark);
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <TextInput
+        editable={editable}
+        value={String(value ?? '')}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(17,25,54,0.35)'}
+        multiline={multiline}
+        style={[styles.input, multiline && styles.multiline, !editable && styles.readonly]}
+      />
+    </View>
+  );
 }
 function Choices({ label, value, values, onChange }: any) {
-  return <View style={styles.field}><Text style={styles.label}>{label}</Text><View style={styles.choices}>{values.map((item: string) => <TouchableOpacity accessibilityRole="button" key={item} onPress={() => onChange(item)} style={[styles.choice, value === item && styles.choiceActive]}><Text style={value === item ? styles.choiceTextActive : styles.choiceText}>{item}</Text></TouchableOpacity>)}</View></View>;
+  const { isDark } = useTheme();
+  const styles = getThemedStyles(isDark);
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={styles.choices}>
+        {values.map((item: string) => (
+          <TouchableOpacity
+            accessibilityRole="button"
+            key={item}
+            onPress={() => onChange(item)}
+            style={[styles.choice, value === item && styles.choiceActive]}
+          >
+            <Text style={value === item ? styles.choiceTextActive : styles.choiceText}>{item}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
 }
 function SelectCards({ label, value, items, onChange, getLabel }: any) {
-  return <View style={styles.field}><Text style={styles.label}>{label}</Text><View style={styles.choices}>{items.map((item: any) => <TouchableOpacity accessibilityRole="button" key={item.id} onPress={() => onChange(item.id)} style={[styles.choice, value === item.id && styles.choiceActive]}><Text style={value === item.id ? styles.choiceTextActive : styles.choiceText}>{getLabel(item)}</Text></TouchableOpacity>)}</View></View>;
+  const { isDark } = useTheme();
+  const styles = getThemedStyles(isDark);
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={styles.choices}>
+        {items.map((item: any) => (
+          <TouchableOpacity
+            accessibilityRole="button"
+            key={item.id}
+            onPress={() => onChange(item.id)}
+            style={[styles.choice, value === item.id && styles.choiceActive]}
+          >
+            <Text style={value === item.id ? styles.choiceTextActive : styles.choiceText}>{getLabel(item)}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
 }
 
 export default function StudentsScreen() {
+  const { isDark } = useTheme();
+  const styles = getThemedStyles(isDark);
   const client = useQueryClient();
   const [form, setForm] = useState<any>(initial);
   const [edit, setEdit] = useState<any>({});
@@ -459,7 +513,7 @@ export default function StudentsScreen() {
           <TextInput
             style={styles.searchInput}
             placeholder="Search by name, phone / mobile, ID, roll no, guardian..."
-            placeholderTextColor="rgba(255, 255, 255, 0.35)"
+            placeholderTextColor={isDark ? 'rgba(255, 255, 255, 0.35)' : 'rgba(17, 25, 54, 0.40)'}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -598,167 +652,167 @@ export default function StudentsScreen() {
   </ScrollView></View>;
 }
 
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.background },
+const createStyles = (tc: ThemeColors, isDark: boolean) => ({
+  page: { flex: 1, backgroundColor: tc.canvas },
   content: { ...surfaces.content, gap: 16 },
   hero: {
     ...surfaces.card,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
     gap: 16,
     padding: 24,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
-    flexWrap: 'wrap',
+    borderColor: tc.line,
+    flexWrap: 'wrap' as const,
   },
   heroCopy: { flex: 1, minWidth: 0, flexShrink: 1 },
-  eyebrow: { fontWeight: '800', fontSize: 10, letterSpacing: 1.4, color: colors.blueLight },
-  title: { marginTop: 6, fontSize: 28, color: '#f0f6ff', fontWeight: '800', letterSpacing: -0.3 },
-  sub: { marginTop: 4, lineHeight: 21, color: 'rgba(255, 255, 255, 0.45)' },
-  primary: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, justifyContent: 'center', backgroundColor: colors.primary, minHeight: 44 },
-  primaryText: { fontWeight: '800', color: '#FFFFFF' },
+  eyebrow: { fontWeight: '800' as const, fontSize: 10, letterSpacing: 1.4, color: tc.sky },
+  title: { marginTop: 6, fontSize: 28, color: tc.text, fontWeight: '800' as const, letterSpacing: -0.3 },
+  sub: { marginTop: 4, lineHeight: 21, color: tc.muted },
+  primary: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, justifyContent: 'center' as const, backgroundColor: colors.primary, minHeight: 44 },
+  primaryText: { fontWeight: '800' as const, color: '#FFFFFF' },
   form: {
     ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderColor: tc.line,
     padding: 20,
     gap: 10,
     borderRadius: 14,
   },
-  overlay: { flex: 1, backgroundColor: 'rgba(4, 8, 18, 0.80)', alignItems: 'center', justifyContent: 'center', padding: 18 },
+  overlay: { flex: 1, backgroundColor: 'rgba(4, 8, 18, 0.80)', alignItems: 'center' as const, justifyContent: 'center' as const, padding: 18 },
   modalShell: {
-    width: '92%',
+    width: '92%' as const,
     maxWidth: 780,
-    maxHeight: '90%',
-    backgroundColor: '#0e1525',
+    maxHeight: '90%' as const,
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderColor: tc.line,
     borderRadius: 20,
-    overflow: 'hidden',
+    overflow: 'hidden' as const,
   },
   modalContent: { padding: 0 },
-  detailPanel: { backgroundColor: '#0e1525', padding: 22, gap: 11 },
-  detailHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 },
-  formTitle: { fontSize: 22, marginBottom: 4, fontWeight: '800', color: '#f0f6ff', letterSpacing: -0.2 },
+  detailPanel: { backgroundColor: tc.panel, padding: 22, gap: 11 },
+  detailHeader: { flexDirection: 'row' as const, alignItems: 'flex-start' as const, justifyContent: 'space-between' as const, flexWrap: 'wrap' as const, gap: 12 },
+  formTitle: { fontSize: 22, marginBottom: 4, fontWeight: '800' as const, color: tc.text, letterSpacing: -0.2 },
   field: { gap: 5, minWidth: 0, flexShrink: 0 },
-  label: { color: 'rgba(255, 255, 255, 0.55)', fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
+  label: { color: tc.muted, fontSize: 12, fontWeight: '700' as const, letterSpacing: 0.3 },
   input: {
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderColor: tc.line,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 11,
-    color: '#f0f6ff',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    color: tc.text,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F5F7FF',
     fontSize: 14,
   },
-  readonly: { backgroundColor: 'rgba(255, 255, 255, 0.02)', color: 'rgba(255, 255, 255, 0.40)', borderColor: 'rgba(255, 255, 255, 0.06)' },
-  multiline: { minHeight: 70, textAlignVertical: 'top' },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  readonly: { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(17,25,54,0.04)', color: tc.muted, borderColor: tc.line },
+  multiline: { minHeight: 70, textAlignVertical: 'top' as const },
+  row: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 12 },
   half: { flex: 1 },
-  choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+  choices: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 8, marginBottom: 4 },
   choice: {
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: tc.line,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F0F2FA',
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 9,
   },
   choiceActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  choiceText: { color: 'rgba(255, 255, 255, 0.50)', fontSize: 12, fontWeight: '600' },
-  choiceTextActive: { color: '#fff', fontWeight: '800', fontSize: 12 },
-  setup: { color: 'rgba(255, 255, 255, 0.40)', fontSize: 12, marginTop: 4 },
-  save: { borderRadius: 11, padding: 14, alignItems: 'center', marginTop: 4, justifyContent: 'center', backgroundColor: colors.primary, minHeight: 44 },
-  saveText: { fontWeight: '800', color: '#FFFFFF' },
+  choiceText: { color: tc.muted, fontSize: 12, fontWeight: '600' as const },
+  choiceTextActive: { color: '#fff', fontWeight: '800' as const, fontSize: 12 },
+  setup: { color: tc.muted, fontSize: 12, marginTop: 4 },
+  save: { borderRadius: 11, padding: 14, alignItems: 'center' as const, marginTop: 4, justifyContent: 'center' as const, backgroundColor: colors.primary, minHeight: 44 },
+  saveText: { fontWeight: '800' as const, color: '#FFFFFF' },
   secondary: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    alignSelf: 'flex-start' as const,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F0F2FA',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: tc.line,
     borderRadius: 9,
     paddingHorizontal: 13,
     paddingVertical: 10,
     marginTop: 5,
   },
-  secondaryText: { color: '#f0f6ff', fontWeight: '800' },
+  secondaryText: { color: tc.text, fontWeight: '800' as const },
   close: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F0F2FA',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: tc.line,
     borderRadius: 9,
     paddingHorizontal: 13,
     paddingVertical: 9,
   },
-  closeText: { color: '#f0f6ff', fontWeight: '700' },
+  closeText: { color: tc.text, fontWeight: '700' as const },
   security: {
-    backgroundColor: 'rgba(251, 191, 36, 0.08)',
+    backgroundColor: isDark ? 'rgba(251, 191, 36, 0.08)' : 'rgba(251, 191, 36, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(251, 191, 36, 0.20)',
+    borderColor: isDark ? 'rgba(251, 191, 36, 0.20)' : 'rgba(251, 191, 36, 0.35)',
     borderRadius: 12,
     padding: 14,
     gap: 5,
   },
-  securityTitle: { color: colors.warning, fontWeight: '800' },
-  securityText: { color: 'rgba(255, 255, 255, 0.55)', lineHeight: 19 },
+  securityTitle: { color: colors.warning, fontWeight: '800' as const },
+  securityText: { color: isDark ? 'rgba(255, 255, 255, 0.55)' : 'rgba(17, 25, 54, 0.70)', lineHeight: 19 },
   card: {
     ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     padding: 18,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
     minWidth: 0,
     borderWidth: 1,
     borderRadius: 14,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderColor: tc.line,
   },
   cardSelected: { borderColor: colors.primary, borderWidth: 2 },
-  cardTitle: { color: '#f0f6ff', fontSize: 17, fontWeight: '800' },
-  meta: { color: 'rgba(255, 255, 255, 0.40)', marginTop: 5 },
-  tap: { color: colors.blueLight, fontSize: 11, fontWeight: '700', marginTop: 7 },
-  badge: { color: colors.success, fontWeight: '800', fontSize: 11 },
-  empty: { color: 'rgba(255, 255, 255, 0.40)', textAlign: 'center', padding: 30 },
+  cardTitle: { color: tc.text, fontSize: 17, fontWeight: '800' as const },
+  meta: { color: tc.muted, marginTop: 5 },
+  tap: { color: tc.sky, fontSize: 11, fontWeight: '700' as const, marginTop: 7 },
+  badge: { color: colors.success, fontWeight: '800' as const, fontSize: 11 },
+  empty: { color: tc.muted, textAlign: 'center' as const, padding: 30 },
   error: { color: colors.danger },
   dangerZone: {
-    backgroundColor: 'rgba(248, 113, 113, 0.08)',
+    backgroundColor: isDark ? 'rgba(248, 113, 113, 0.08)' : 'rgba(248, 113, 113, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(248, 113, 113, 0.20)',
+    borderColor: isDark ? 'rgba(248, 113, 113, 0.20)' : 'rgba(248, 113, 113, 0.30)',
     borderRadius: 12,
     padding: 14,
     gap: 7,
   },
-  dangerTitle: { color: colors.danger, fontWeight: '800' },
-  dangerText: { color: 'rgba(255, 255, 255, 0.55)' },
-  dangerButton: { backgroundColor: colors.danger, borderRadius: 9, padding: 12, alignItems: 'center' },
-  dangerButtonText: { color: '#fff', fontWeight: '800' },
+  dangerTitle: { color: colors.danger, fontWeight: '800' as const },
+  dangerText: { color: isDark ? 'rgba(255, 255, 255, 0.55)' : 'rgba(17, 25, 54, 0.70)' },
+  dangerButton: { backgroundColor: colors.danger, borderRadius: 9, padding: 12, alignItems: 'center' as const },
+  dangerButtonText: { color: '#fff', fontWeight: '800' as const },
   filterCard: {
     ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tc.line,
     borderRadius: 14,
     padding: 16,
     gap: 12,
   },
   searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 10,
-    flexWrap: 'wrap',
+    flexWrap: 'wrap' as const,
   },
   searchInputContainer: {
     flex: 1,
     minWidth: 260,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F5F7FF',
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: tc.line,
     borderRadius: 10,
     paddingHorizontal: 12,
   },
@@ -768,28 +822,28 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: '#f0f6ff',
+    color: tc.text,
     paddingVertical: 10,
     fontSize: 14,
   },
   searchClearIcon: {
-    color: 'rgba(255, 255, 255, 0.40)',
+    color: tc.muted,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '700' as const,
     padding: 4,
   },
   resetButton: {
-    backgroundColor: 'rgba(248, 113, 113, 0.12)',
+    backgroundColor: isDark ? 'rgba(248, 113, 113, 0.12)' : 'rgba(248, 113, 113, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(248, 113, 113, 0.30)',
+    borderColor: isDark ? 'rgba(248, 113, 113, 0.30)' : 'rgba(248, 113, 113, 0.35)',
     borderRadius: 9,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    justifyContent: 'center',
+    justifyContent: 'center' as const,
   },
   resetButtonText: {
-    color: '#fca5a5',
-    fontWeight: '700',
+    color: colors.danger,
+    fontWeight: '700' as const,
     fontSize: 12,
   },
   filterSelectorsRow: {
@@ -799,15 +853,15 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   filterLabel: {
-    color: 'rgba(255, 255, 255, 0.55)',
+    color: tc.muted,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '700' as const,
     letterSpacing: 0.4,
-    textTransform: 'uppercase',
+    textTransform: 'uppercase' as const,
   },
   filterChipsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 8,
     paddingVertical: 2,
   },
@@ -816,60 +870,60 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderColor: tc.line,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#F0F2FA',
   },
   filterChipActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
   filterChipText: {
-    color: 'rgba(255, 255, 255, 0.60)',
+    color: tc.muted,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '600' as const,
   },
   filterChipTextActive: {
     color: '#ffffff',
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   filterSummaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
     paddingTop: 4,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+    borderTopColor: tc.line,
   },
   filterSummaryText: {
-    color: 'rgba(255, 255, 255, 0.45)',
+    color: tc.muted,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '600' as const,
   },
   subMeta: {
-    color: 'rgba(255, 255, 255, 0.50)',
+    color: tc.muted,
     fontSize: 12,
     marginTop: 3,
   },
   emptyFilterBox: {
     ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.07)',
+    borderColor: tc.line,
     borderRadius: 14,
     padding: 32,
-    alignItems: 'center',
+    alignItems: 'center' as const,
     gap: 8,
   },
   emptyFilterTitle: {
-    color: '#f0f6ff',
+    color: tc.text,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '700' as const,
   },
   emptyFilterSub: {
-    color: 'rgba(255, 255, 255, 0.45)',
+    color: tc.muted,
     fontSize: 13,
-    textAlign: 'center',
+    textAlign: 'center' as const,
   },
   emptyFilterReset: {
     marginTop: 8,
@@ -880,7 +934,19 @@ const styles = StyleSheet.create({
   },
   emptyFilterResetText: {
     color: '#ffffff',
-    fontWeight: '700',
+    fontWeight: '700' as const,
     fontSize: 12,
   },
 });
+
+let stylesDark: any = null;
+let stylesLight: any = null;
+function getThemedStyles(isDark: boolean) {
+  if (isDark) {
+    if (!stylesDark) stylesDark = StyleSheet.create(createStyles(THEME_PALETTES.dark, true));
+    return stylesDark;
+  } else {
+    if (!stylesLight) stylesLight = StyleSheet.create(createStyles(THEME_PALETTES.light, false));
+    return stylesLight;
+  }
+}

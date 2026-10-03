@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, Toucha
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { colors } from '../theme';
+import { useTheme, THEME_PALETTES, ThemeColors } from '../context/ThemeContext';
 
 type Props = {
   years: any[];
@@ -68,6 +69,8 @@ function timeMinutes(val: any): number {
 }
 
 export function DailyTimetableBuilder({ years, classes, employees, onSaved }: Props) {
+  const { isDark } = useTheme();
+  const s = getThemedStyles(isDark);
   const client = useQueryClient();
 
   const [academicYearId, setAcademicYearId] = useState('');
@@ -505,7 +508,7 @@ export function DailyTimetableBuilder({ years, classes, employees, onSaved }: Pr
               value={entryBreakTitle}
               onChangeText={setEntryBreakTitle}
               placeholder="e.g. Lunch Break, Morning Recess"
-              placeholderTextColor="rgba(255,255,255,0.3)"
+              placeholderTextColor={isDark ? "rgba(255,255,255,0.3)" : "rgba(17,25,54,0.35)"}
             />
           </View>
         )}
@@ -519,7 +522,7 @@ export function DailyTimetableBuilder({ years, classes, employees, onSaved }: Pr
               value={entryStartTime}
               onChangeText={setEntryStartTime}
               placeholder="08:00"
-              placeholderTextColor="rgba(255,255,255,0.3)"
+              placeholderTextColor={isDark ? "rgba(255,255,255,0.3)" : "rgba(17,25,54,0.35)"}
             />
           </View>
           <View style={{ flex: 1 }}>
@@ -529,7 +532,7 @@ export function DailyTimetableBuilder({ years, classes, employees, onSaved }: Pr
               value={entryEndTime}
               onChangeText={setEntryEndTime}
               placeholder="08:45"
-              placeholderTextColor="rgba(255,255,255,0.3)"
+              placeholderTextColor={isDark ? "rgba(255,255,255,0.3)" : "rgba(17,25,54,0.35)"}
             />
           </View>
         </View>
@@ -743,23 +746,36 @@ export function DailyTimetableBuilder({ years, classes, employees, onSaved }: Pr
   );
 }
 
-const s = StyleSheet.create({
+let stylesDark: any = null;
+let stylesLight: any = null;
+
+function getThemedStyles(isDark: boolean) {
+  if (isDark) {
+    if (!stylesDark) stylesDark = StyleSheet.create(createStyles(THEME_PALETTES.dark, true));
+    return stylesDark;
+  } else {
+    if (!stylesLight) stylesLight = StyleSheet.create(createStyles(THEME_PALETTES.light, false));
+    return stylesLight;
+  }
+}
+
+const createStyles = (tc: ThemeColors, isDark: boolean) => ({
   shell: { gap: 16 },
   box: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderColor: 'rgba(255, 255, 255, 0.10)',
+    backgroundColor: tc.panel,
+    borderColor: tc.line,
     borderWidth: 1,
     borderRadius: 16,
     padding: 20,
     gap: 10,
   },
-  boxTitle: { color: '#f0f6ff', fontSize: 17, fontWeight: '800' },
-  subText: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 13, marginBottom: 4 },
-  label: { color: 'rgba(255, 255, 255, 0.60)', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  boxTitle: { color: tc.text, fontSize: 17, fontWeight: '800' as const },
+  subText: { color: tc.muted, fontSize: 13, marginBottom: 4 },
+  label: { color: tc.muted, fontSize: 12, fontWeight: '700' as const, textTransform: 'uppercase' as const, letterSpacing: 0.5 },
+  chipsWrap: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 8 },
   chip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#F5F7FF',
+    borderColor: tc.line,
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 13,
@@ -773,110 +789,110 @@ const s = StyleSheet.create({
     backgroundColor: '#f59e0b',
     borderColor: '#f59e0b',
   },
-  chipGoldTextActive: { color: '#071d33', fontWeight: '800', fontSize: 13 },
-  chipText: { color: 'rgba(255, 255, 255, 0.75)', fontSize: 13, fontWeight: '600' },
-  chipTextActive: { color: '#fff', fontSize: 13, fontWeight: '800' },
-  emptyHint: { color: 'rgba(255, 255, 255, 0.35)', fontSize: 12, fontStyle: 'italic', marginVertical: 4 },
+  chipGoldTextActive: { color: '#071d33', fontWeight: '800' as const, fontSize: 13 },
+  chipText: { color: isDark ? 'rgba(255, 255, 255, 0.75)' : tc.text, fontSize: 13, fontWeight: '600' as const },
+  chipTextActive: { color: '#fff', fontSize: 13, fontWeight: '800' as const },
+  emptyHint: { color: tc.muted, fontSize: 12, fontStyle: 'italic' as const, marginVertical: 4 },
   subjectOverview: {
     marginTop: 10,
     padding: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#F8FAFC',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tc.line,
     gap: 6,
   },
-  subjectOverviewTitle: { color: 'rgba(255, 255, 255, 0.70)', fontSize: 12, fontWeight: '700' },
-  subjectBadges: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  subjectOverviewTitle: { color: tc.text, fontSize: 12, fontWeight: '700' as const },
+  subjectBadges: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 6 },
   subjectBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 4,
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
-    borderColor: 'rgba(56, 189, 248, 0.30)',
+    backgroundColor: isDark ? 'rgba(56, 189, 248, 0.12)' : 'rgba(56, 189, 248, 0.10)',
+    borderColor: isDark ? 'rgba(56, 189, 248, 0.30)' : 'rgba(56, 189, 248, 0.35)',
     borderWidth: 1,
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 6,
   },
-  subjectBadgeCode: { color: '#38bdf8', fontWeight: '800', fontSize: 11 },
-  subjectBadgeName: { color: '#ffffff', fontWeight: '600', fontSize: 12 },
-  subjectBadgeStream: { color: '#a78bfa', fontSize: 10, fontWeight: '700' },
-  typeToggle: { flexDirection: 'row', gap: 10, marginVertical: 6 },
+  subjectBadgeCode: { color: isDark ? '#38bdf8' : '#0284c7', fontWeight: '800' as const, fontSize: 11 },
+  subjectBadgeName: { color: tc.text, fontWeight: '600' as const, fontSize: 12 },
+  subjectBadgeStream: { color: isDark ? '#a78bfa' : '#7c3aed', fontSize: 10, fontWeight: '700' as const },
+  typeToggle: { flexDirection: 'row' as const, gap: 10, marginVertical: 6 },
   toggleBtn: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F5F7FF',
+    borderColor: tc.line,
     borderWidth: 1,
     borderRadius: 10,
     paddingVertical: 11,
-    alignItems: 'center',
+    alignItems: 'center' as const,
   },
   toggleBtnActive: {
-    backgroundColor: 'rgba(147, 155, 255, 0.20)',
+    backgroundColor: isDark ? 'rgba(147, 155, 255, 0.20)' : 'rgba(99, 102, 241, 0.15)',
     borderColor: colors.primary,
   },
-  toggleText: { color: 'rgba(255, 255, 255, 0.60)', fontSize: 13, fontWeight: '700' },
-  toggleTextActive: { color: '#fff', fontSize: 13, fontWeight: '800' },
-  timeRow: { flexDirection: 'row', gap: 12, marginTop: 10 },
+  toggleText: { color: tc.muted, fontSize: 13, fontWeight: '700' as const },
+  toggleTextActive: { color: isDark ? '#fff' : colors.primary, fontSize: 13, fontWeight: '800' as const },
+  timeRow: { flexDirection: 'row' as const, gap: 12, marginTop: 10 },
   input: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#F8FAFC',
+    borderColor: tc.line,
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: '#fff',
+    color: tc.text,
     fontSize: 14,
     marginTop: 4,
   },
   addBtn: {
-    backgroundColor: 'rgba(147, 155, 255, 0.18)',
-    borderColor: 'rgba(147, 155, 255, 0.35)',
+    backgroundColor: isDark ? 'rgba(147, 155, 255, 0.18)' : 'rgba(99, 102, 241, 0.12)',
+    borderColor: isDark ? 'rgba(147, 155, 255, 0.35)' : 'rgba(99, 102, 241, 0.30)',
     borderWidth: 1,
     borderRadius: 10,
     paddingVertical: 12,
-    alignItems: 'center',
+    alignItems: 'center' as const,
     marginTop: 10,
   },
-  addBtnText: { color: colors.blueLight, fontWeight: '800', fontSize: 13 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  addBtnText: { color: isDark ? colors.blueLight : colors.primary, fontWeight: '800' as const, fontSize: 13 },
+  headerRow: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const },
   clearBtn: { paddingHorizontal: 10, paddingVertical: 4 },
-  clearBtnText: { color: colors.danger, fontSize: 12, fontWeight: '700' },
+  clearBtnText: { color: colors.danger, fontSize: 12, fontWeight: '700' as const },
   timeline: { gap: 10, marginTop: 10 },
   periodCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F8FAFC',
+    borderColor: tc.line,
     borderWidth: 1,
     borderRadius: 12,
     padding: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
     gap: 12,
   },
   breakCard: {
-    backgroundColor: 'rgba(251, 191, 36, 0.08)',
-    borderColor: 'rgba(251, 191, 36, 0.25)',
+    backgroundColor: isDark ? 'rgba(251, 191, 36, 0.08)' : 'rgba(251, 191, 36, 0.12)',
+    borderColor: isDark ? 'rgba(251, 191, 36, 0.25)' : 'rgba(251, 191, 36, 0.35)',
   },
-  periodCardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  periodCardLeft: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12, flex: 1 },
   badgeNumber: {
-    backgroundColor: 'rgba(147, 155, 255, 0.20)',
+    backgroundColor: isDark ? 'rgba(147, 155, 255, 0.20)' : 'rgba(99, 102, 241, 0.15)',
     borderRadius: 8,
     paddingHorizontal: 9,
     paddingVertical: 5,
   },
-  badgeBreak: { backgroundColor: 'rgba(251, 191, 36, 0.20)' },
-  badgeNumberText: { color: colors.blueLight, fontWeight: '800', fontSize: 12 },
-  badgeBreakText: { color: '#fbbf24', fontWeight: '800', fontSize: 12 },
-  periodTime: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 11, fontWeight: '700' },
-  periodTitle: { color: '#fff', fontSize: 15, fontWeight: '800', marginTop: 2 },
-  periodTeacher: { color: 'rgba(255, 255, 255, 0.55)', fontSize: 12, marginTop: 2 },
+  badgeBreak: { backgroundColor: isDark ? 'rgba(251, 191, 36, 0.20)' : 'rgba(251, 191, 36, 0.25)' },
+  badgeNumberText: { color: isDark ? colors.blueLight : colors.primary, fontWeight: '800' as const, fontSize: 12 },
+  badgeBreakText: { color: isDark ? '#fbbf24' : '#b45309', fontWeight: '800' as const, fontSize: 12 },
+  periodTime: { color: tc.muted, fontSize: 11, fontWeight: '700' as const },
+  periodTitle: { color: tc.text, fontSize: 15, fontWeight: '800' as const, marginTop: 2 },
+  periodTeacher: { color: tc.muted, fontSize: 12, marginTop: 2 },
   removeBtn: { paddingHorizontal: 8, paddingVertical: 4 },
-  removeBtnText: { color: colors.danger, fontSize: 12, fontWeight: '700' },
-  emptyState: { padding: 24, alignItems: 'center', gap: 6 },
-  emptyStateTitle: { color: 'rgba(255, 255, 255, 0.40)', fontWeight: '700', fontSize: 14 },
-  emptyStateText: { color: 'rgba(255, 255, 255, 0.25)', fontSize: 12, textAlign: 'center' },
+  removeBtnText: { color: colors.danger, fontSize: 12, fontWeight: '700' as const },
+  emptyState: { padding: 24, alignItems: 'center' as const, gap: 6 },
+  emptyStateTitle: { color: tc.muted, fontWeight: '700' as const, fontSize: 14 },
+  emptyStateText: { color: tc.muted, fontSize: 12, textAlign: 'center' as const },
   error: {
     color: colors.danger,
     backgroundColor: 'rgba(248, 113, 113, 0.12)',
@@ -884,7 +900,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     padding: 12,
-    fontWeight: '700',
+    fontWeight: '700' as const,
     fontSize: 13,
     lineHeight: 18,
     marginTop: 8,
@@ -896,7 +912,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     padding: 12,
-    fontWeight: '700',
+    fontWeight: '700' as const,
     fontSize: 13,
     lineHeight: 18,
     marginTop: 8,
@@ -905,40 +921,40 @@ const s = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 12,
     minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     marginTop: 12,
     paddingHorizontal: 16,
   },
   btnDisabled: { opacity: 0.5 },
-  saveBtnText: { color: '#071d33', fontWeight: '800', fontSize: 14 },
-  refreshText: { color: colors.blueLight, fontWeight: '700', fontSize: 13 },
+  saveBtnText: { color: '#071d33', fontWeight: '800' as const, fontSize: 14 },
+  refreshText: { color: isDark ? colors.blueLight : colors.primary, fontWeight: '700' as const, fontSize: 13 },
   savedDayGroup: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#F8FAFC',
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: tc.line,
     gap: 8,
   },
-  savedDayHeading: { color: '#f0f6ff', fontSize: 13, fontWeight: '800', borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.06)', paddingBottom: 6 },
+  savedDayHeading: { color: tc.text, fontSize: 13, fontWeight: '800' as const, borderBottomWidth: 1, borderBottomColor: tc.line, paddingBottom: 6 },
   savedRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.04)',
+    borderBottomColor: tc.line,
   },
-  savedRowTime: { color: 'rgba(255, 255, 255, 0.40)', fontSize: 11, fontWeight: '700' },
-  savedRowTitle: { color: '#fff', fontSize: 13, fontWeight: '700', marginTop: 2 },
-  savedRowTeacher: { color: 'rgba(255, 255, 255, 0.50)', fontSize: 11, marginTop: 1 },
+  savedRowTime: { color: tc.muted, fontSize: 11, fontWeight: '700' as const },
+  savedRowTitle: { color: tc.text, fontSize: 13, fontWeight: '700' as const, marginTop: 2 },
+  savedRowTeacher: { color: tc.muted, fontSize: 11, marginTop: 1 },
   deleteSavedBtn: { paddingHorizontal: 8, paddingVertical: 4 },
-  deleteSavedBtnText: { color: colors.danger, fontSize: 11, fontWeight: '700' },
-  savedFilterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8, marginBottom: 8 },
+  deleteSavedBtnText: { color: colors.danger, fontSize: 11, fontWeight: '700' as const },
+  savedFilterRow: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 6, marginTop: 8, marginBottom: 8 },
   savedFilterBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F5F7FF',
+    borderColor: tc.line,
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 11,
@@ -956,14 +972,14 @@ const s = StyleSheet.create({
     backgroundColor: '#dc2626',
     borderColor: '#dc2626',
   },
-  savedFilterText: { color: 'rgba(255, 255, 255, 0.65)', fontSize: 12, fontWeight: '700' },
-  savedFilterTextActive: { color: '#071d33', fontSize: 12, fontWeight: '800' },
+  savedFilterText: { color: tc.muted, fontSize: 12, fontWeight: '700' as const },
+  savedFilterTextActive: { color: '#071d33', fontSize: 12, fontWeight: '800' as const },
   savedDayHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomColor: tc.line,
     paddingBottom: 6,
   },
   sundayBadge: {
@@ -973,6 +989,6 @@ const s = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
 });

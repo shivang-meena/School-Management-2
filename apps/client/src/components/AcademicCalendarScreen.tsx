@@ -1,4 +1,5 @@
 import { colors, surfaces } from '../theme';
+import { useTheme, THEME_PALETTES, ThemeColors } from '../context/ThemeContext';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
@@ -56,6 +57,8 @@ const defaultEventConfig: EventConfig = {
 };
 
 export function AcademicCalendarScreen({ role }: { role: 'student' | 'employee' }) {
+  const { isDark, colors: tc } = useTheme();
+  const s = getThemedStyles(isDark);
   const now = new Date();
   const [month, setMonth] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -454,362 +457,378 @@ export function AcademicCalendarScreen({ role }: { role: 'student' | 'employee' 
   );
 }
 
-const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.background },
-  content: { ...surfaces.content, paddingBottom: 36 },
+let stylesDark: any = null;
+let stylesLight: any = null;
 
-  hero: {
-    ...surfaces.card,
-    marginBottom: 16,
-    padding: 22,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 14,
-  },
-  heroText: { flex: 1, minWidth: 260 },
-  eyebrow: { fontWeight: '800', fontSize: 10, letterSpacing: 1.4, color: colors.blueLight },
-  title: { marginTop: 6, fontSize: 26, color: '#f0f6ff', fontWeight: '800', letterSpacing: -0.3 },
-  subtitle: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 13, marginTop: 5 },
+function getThemedStyles(isDark: boolean) {
+  if (isDark) {
+    if (!stylesDark) stylesDark = StyleSheet.create(createStyles(THEME_PALETTES.dark, true) as any);
+    return stylesDark;
+  } else {
+    if (!stylesLight) stylesLight = StyleSheet.create(createStyles(THEME_PALETTES.light, false) as any);
+    return stylesLight;
+  }
+}
 
-  heroBadges: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
-  statPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  statPillHoliday: {
-    backgroundColor: 'rgba(244, 63, 94, 0.12)',
-    borderColor: 'rgba(244, 63, 94, 0.3)',
-  },
-  statPillSunday: {
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
-    borderColor: 'rgba(245, 158, 11, 0.3)',
-  },
-  statDot: { width: 7, height: 7, borderRadius: 3.5 },
-  statText: { fontSize: 12, fontWeight: '800' },
+function createStyles(tc: ThemeColors, isDark: boolean) {
+  return {
+    page: { flex: 1, backgroundColor: tc.canvas },
+    content: { ...surfaces.content, paddingBottom: 36 },
 
-  calendarCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
+    hero: {
+      ...surfaces.card,
+      marginBottom: 16,
+      padding: 22,
+      borderRadius: 16,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : tc.panel,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.10)' : tc.line,
+      flexDirection: 'row' as const,
+      justifyContent: 'space-between' as const,
+      alignItems: 'center' as const,
+      flexWrap: 'wrap' as const,
+      gap: 14,
+    },
+    heroText: { flex: 1, minWidth: 260 },
+    eyebrow: { fontWeight: '800' as const, fontSize: 10, letterSpacing: 1.4, color: tc.primary },
+    title: { marginTop: 6, fontSize: 26, color: tc.text, fontWeight: '800' as const, letterSpacing: -0.3 },
+    subtitle: { color: tc.muted, fontSize: 13, marginTop: 5 },
 
-  monthBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  monthTitleGroup: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  calendarIcon: { fontSize: 22 },
-  monthTitle: { fontSize: 22, fontWeight: '800', color: '#f8fafc', letterSpacing: -0.2 },
-  yearHighlight: { color: colors.blueLight, fontWeight: '800' },
+    heroBadges: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10, flexWrap: 'wrap' as const },
+    statPill: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 7,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 20,
+      borderWidth: 1,
+    },
+    statPillHoliday: {
+      backgroundColor: isDark ? 'rgba(244, 63, 94, 0.12)' : 'rgba(244, 63, 94, 0.10)',
+      borderColor: isDark ? 'rgba(244, 63, 94, 0.3)' : 'rgba(244, 63, 94, 0.25)',
+    },
+    statPillSunday: {
+      backgroundColor: isDark ? 'rgba(245, 158, 11, 0.12)' : 'rgba(245, 158, 11, 0.10)',
+      borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : 'rgba(245, 158, 11, 0.25)',
+    },
+    statDot: { width: 7, height: 7, borderRadius: 3.5 },
+    statText: { fontSize: 12, fontWeight: '800' as const },
 
-  navGroup: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  todayBtn: {
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.3)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  todayText: { color: '#38bdf8', fontSize: 12, fontWeight: '800' },
+    calendarCard: {
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : tc.panel,
+      borderRadius: 20,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : tc.line,
+    },
 
-  arrowControls: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  arrowBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  arrowText: { color: '#f8fafc', fontSize: 20, fontWeight: '700', marginTop: -2 },
+    monthBar: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      marginBottom: 14,
+      flexWrap: 'wrap' as const,
+      gap: 12,
+    },
+    monthTitleGroup: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10 },
+    calendarIcon: { fontSize: 22 },
+    monthTitle: { fontSize: 22, fontWeight: '800' as const, color: tc.text, letterSpacing: -0.2 },
+    yearHighlight: { color: tc.primary, fontWeight: '800' as const },
 
-  legendStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 18,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.025)',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    marginBottom: 14,
-    flexWrap: 'wrap',
-  },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendDot: { width: 8, height: 8, borderRadius: 4 },
-  legendLabel: { fontSize: 11.5, fontWeight: '700', color: 'rgba(255, 255, 255, 0.65)' },
+    navGroup: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8 },
+    todayBtn: {
+      backgroundColor: isDark ? 'rgba(56, 189, 248, 0.12)' : 'rgba(56, 189, 248, 0.15)',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(56, 189, 248, 0.3)' : 'rgba(56, 189, 248, 0.4)',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+    },
+    todayText: { color: isDark ? '#38bdf8' : '#0284c7', fontSize: 12, fontWeight: '800' as const },
 
-  weekHeader: {
-    flexDirection: 'row',
-    marginBottom: 6,
-    paddingVertical: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-  },
-  weekDayCell: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  weekDaySunday: {},
-  weekDayText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: 'rgba(255, 255, 255, 0.55)',
-    letterSpacing: 0.5,
-  },
-  weekDaySundayText: { color: '#f87171' },
+    arrowControls: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6 },
+    arrowBtn: {
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : tc.line,
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+    },
+    arrowText: { color: tc.text, fontSize: 20, fontWeight: '700' as const, marginTop: -2 },
 
-  gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 4,
-  },
-  dateCell: {
-    width: '13.4%',
-    minHeight: 88,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.07)',
-    borderRadius: 12,
-    padding: 7,
-    marginHorizontal: '0.44%',
-    marginVertical: 3,
-    justifyContent: 'flex-start',
-  },
-  blankCell: {
-    width: '13.4%',
-    minHeight: 88,
-    marginHorizontal: '0.44%',
-    marginVertical: 3,
-    opacity: 0,
-  },
-  sundayCell: {
-    backgroundColor: 'rgba(251, 191, 36, 0.025)',
-    borderColor: 'rgba(251, 191, 36, 0.12)',
-  },
-  todayCell: {
-    borderColor: '#38bdf8',
-    borderWidth: 1.5,
-    backgroundColor: 'rgba(56, 189, 248, 0.07)',
-  },
-  selectedCell: {
-    borderColor: '#818cf8',
-    borderWidth: 2,
-    backgroundColor: 'rgba(129, 140, 248, 0.12)',
-  },
+    legendStrip: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 18,
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.025)' : 'rgba(0,0,0,0.03)',
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : tc.line,
+      marginBottom: 14,
+      flexWrap: 'wrap' as const,
+    },
+    legendItem: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6 },
+    legendDot: { width: 8, height: 8, borderRadius: 4 },
+    legendLabel: { fontSize: 11.5, fontWeight: '700' as const, color: tc.muted },
 
-  dateNumberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  dateCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  todayCircle: {
-    backgroundColor: '#38bdf8',
-  },
-  selectedCircle: {
-    backgroundColor: '#818cf8',
-  },
-  dateText: {
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: '#f1f5f9',
-  },
-  todayDateText: {
-    color: '#071d33',
-    fontWeight: '800',
-  },
-  sundayDateText: {
-    color: '#fb7185',
-  },
-  selectedDateText: {
-    color: '#ffffff',
-    fontWeight: '800',
-  },
+    weekHeader: {
+      flexDirection: 'row' as const,
+      marginBottom: 6,
+      paddingVertical: 10,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : tc.line,
+    },
+    weekDayCell: { flex: 1, alignItems: 'center' as const, justifyContent: 'center' as const },
+    weekDaySunday: {},
+    weekDayText: {
+      fontSize: 12,
+      fontWeight: '800' as const,
+      color: tc.muted,
+      letterSpacing: 0.5,
+    },
+    weekDaySundayText: { color: isDark ? '#f87171' : '#dc2626' },
 
-  todayTag: {
-    backgroundColor: 'rgba(56, 189, 248, 0.2)',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  todayTagText: {
-    color: '#38bdf8',
-    fontSize: 9,
-    fontWeight: '800',
-  },
+    gridContainer: {
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      marginTop: 4,
+    },
+    dateCell: {
+      width: '13.4%',
+      minHeight: 88,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0,0,0,0.02)',
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.07)' : tc.line,
+      borderRadius: 12,
+      padding: 7,
+      marginHorizontal: '0.44%',
+      marginVertical: 3,
+      justifyContent: 'flex-start' as const,
+    },
+    blankCell: {
+      width: '13.4%',
+      minHeight: 88,
+      marginHorizontal: '0.44%',
+      marginVertical: 3,
+      opacity: 0,
+    },
+    sundayCell: {
+      backgroundColor: isDark ? 'rgba(251, 191, 36, 0.025)' : 'rgba(251, 191, 36, 0.05)',
+      borderColor: isDark ? 'rgba(251, 191, 36, 0.12)' : 'rgba(251, 191, 36, 0.25)',
+    },
+    todayCell: {
+      borderColor: isDark ? '#38bdf8' : '#0284c7',
+      borderWidth: 1.5,
+      backgroundColor: isDark ? 'rgba(56, 189, 248, 0.07)' : 'rgba(56, 189, 248, 0.1)',
+    },
+    selectedCell: {
+      borderColor: tc.primary,
+      borderWidth: 2,
+      backgroundColor: isDark ? 'rgba(129, 140, 248, 0.12)' : 'rgba(129, 140, 248, 0.1)',
+    },
 
-  cellEventBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderRadius: 7,
-    borderWidth: 1,
-    paddingHorizontal: 5,
-    paddingVertical: 3,
-    marginTop: 4,
-  },
-  cellEventIcon: { fontSize: 9.5 },
-  cellEventTitle: {
-    fontSize: 9.5,
-    fontWeight: '700',
-    flex: 1,
-    lineHeight: 12,
-  },
+    dateNumberRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      marginBottom: 4,
+    },
+    dateCircle: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+    },
+    todayCircle: {
+      backgroundColor: isDark ? '#38bdf8' : '#0284c7',
+    },
+    selectedCircle: {
+      backgroundColor: tc.primary,
+    },
+    dateText: {
+      fontSize: 12.5,
+      fontWeight: '700' as const,
+      color: tc.text,
+    },
+    todayDateText: {
+      color: '#ffffff',
+      fontWeight: '800' as const,
+    },
+    sundayDateText: {
+      color: isDark ? '#fb7185' : '#dc2626',
+    },
+    selectedDateText: {
+      color: '#ffffff',
+      fontWeight: '800' as const,
+    },
 
-  detailsSection: {
-    marginTop: 22,
-    paddingTop: 18,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  detailsHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  detailsHeading: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#f8fafc',
-  },
-  detailsSub: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.45)',
-    marginTop: 2,
-  },
-  clearFilterBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-  },
-  clearFilterText: {
-    color: '#f0f6ff',
-    fontSize: 11.5,
-    fontWeight: '700',
-  },
+    todayTag: {
+      backgroundColor: isDark ? 'rgba(56, 189, 248, 0.2)' : 'rgba(56, 189, 248, 0.25)',
+      paddingHorizontal: 5,
+      paddingVertical: 1,
+      borderRadius: 4,
+    },
+    todayTagText: {
+      color: isDark ? '#38bdf8' : '#0284c7',
+      fontSize: 9,
+      fontWeight: '800' as const,
+    },
 
-  eventsList: {
-    gap: 10,
-  },
-  eventCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.035)',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 12,
-    gap: 12,
-  },
-  eventCardSelected: {
-    backgroundColor: 'rgba(129, 140, 248, 0.1)',
-  },
-  eventDateBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  eventDateNum: {
-    fontSize: 18,
-    fontWeight: '800',
-    lineHeight: 22,
-  },
-  eventDateDay: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
-  eventInfo: { flex: 1 },
-  eventTitleText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#f8fafc',
-  },
-  eventDateFull: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.45)',
-    marginTop: 2,
-  },
-  categoryPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  categoryIcon: { fontSize: 10 },
-  categoryLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
+    cellEventBadge: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 4,
+      borderRadius: 7,
+      borderWidth: 1,
+      paddingHorizontal: 5,
+      paddingVertical: 3,
+      marginTop: 4,
+    },
+    cellEventIcon: { fontSize: 9.5 },
+    cellEventTitle: {
+      fontSize: 9.5,
+      fontWeight: '700' as const,
+      flex: 1,
+      lineHeight: 12,
+    },
 
-  emptyEventsBox: {
-    alignItems: 'center',
-    padding: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-  },
-  emptyIcon: { fontSize: 28, marginBottom: 6 },
-  emptyTitle: { color: '#f8fafc', fontSize: 15, fontWeight: '700' },
+    detailsSection: {
+      marginTop: 22,
+      paddingTop: 18,
+      borderTopWidth: 1,
+      borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : tc.line,
+    },
+    detailsHeaderRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      marginBottom: 12,
+      flexWrap: 'wrap' as const,
+      gap: 10,
+    },
+    detailsHeading: {
+      fontSize: 16,
+      fontWeight: '800' as const,
+      color: tc.text,
+    },
+    detailsSub: {
+      fontSize: 12,
+      color: tc.muted,
+      marginTop: 2,
+    },
+    clearFilterBtn: {
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
+      paddingHorizontal: 11,
+      paddingVertical: 5,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.12)' : tc.line,
+    },
+    clearFilterText: {
+      color: tc.text,
+      fontSize: 11.5,
+      fontWeight: '700' as const,
+    },
 
-  state: {
-    ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
-    padding: 30,
-    alignItems: 'center',
-    borderRadius: 14,
-  },
-  muted: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 13, marginTop: 8 },
-  error: { color: colors.danger, fontWeight: '700' },
-  retryBtn: {
-    marginTop: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  retryText: { color: '#38bdf8', fontWeight: '700', fontSize: 12 },
-});
+    eventsList: {
+      gap: 10,
+    },
+    eventCard: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.035)' : tc.panel,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : tc.line,
+      borderRadius: 14,
+      padding: 12,
+      gap: 12,
+    },
+    eventCardSelected: {
+      backgroundColor: isDark ? 'rgba(129, 140, 248, 0.1)' : 'rgba(129, 140, 248, 0.12)',
+    },
+    eventDateBox: {
+      width: 48,
+      height: 48,
+      borderRadius: 10,
+      borderWidth: 1,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+    },
+    eventDateNum: {
+      fontSize: 18,
+      fontWeight: '800' as const,
+      lineHeight: 22,
+    },
+    eventDateDay: {
+      fontSize: 9.5,
+      fontWeight: '800' as const,
+      textTransform: 'uppercase' as const,
+    },
+    eventInfo: { flex: 1 },
+    eventTitleText: {
+      fontSize: 14,
+      fontWeight: '700' as const,
+      color: tc.text,
+    },
+    eventDateFull: {
+      fontSize: 12,
+      color: tc.muted,
+      marginTop: 2,
+    },
+    categoryPill: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 5,
+      borderWidth: 1,
+      borderRadius: 20,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+    },
+    categoryIcon: { fontSize: 10 },
+    categoryLabel: {
+      fontSize: 10,
+      fontWeight: '800' as const,
+      letterSpacing: 0.5,
+    },
+
+    emptyEventsBox: {
+      alignItems: 'center' as const,
+      padding: 24,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)',
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : tc.line,
+    },
+    emptyIcon: { fontSize: 28, marginBottom: 6 },
+    emptyTitle: { color: tc.text, fontSize: 15, fontWeight: '700' as const },
+
+    state: {
+      ...surfaces.card,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : tc.panel,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255, 255, 255, 0.09)' : tc.line,
+      padding: 30,
+      alignItems: 'center' as const,
+      borderRadius: 14,
+    },
+    muted: { color: tc.muted, fontSize: 13, marginTop: 8 },
+    error: { color: colors.danger, fontWeight: '700' as const },
+    retryBtn: {
+      marginTop: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+    },
+    retryText: { color: tc.primary, fontWeight: '700' as const, fontSize: 12 },
+  };
+}

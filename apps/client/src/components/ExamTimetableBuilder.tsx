@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Platform, StyleSheet, Text, TextInput, Toucha
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { colors, surfaces } from '../theme';
+import { useTheme, THEME_PALETTES, ThemeColors } from '../context/ThemeContext';
 
 type Props = {
   years: any[];
@@ -56,14 +57,20 @@ function durationLabel(startTime: string, endTime: string) {
 }
 
 function ChoiceField({ label, value, items, onChange, getLabel }: any) {
+  const { isDark } = useTheme();
+  const s = getThemedStyles(isDark);
   return <View style={s.field}><Text style={s.label}>{label}</Text><View style={s.choices}>{items.map((item: any) => <TouchableOpacity accessibilityRole="button" key={item.id} style={[s.choice, value === item.id && s.choiceOn]} onPress={() => onChange(item.id)}><Text style={value === item.id ? s.choiceTextOn : s.choiceText}>{getLabel(item)}</Text></TouchableOpacity>)}</View></View>;
 }
 
 function InputField({ label, value, onChangeText, placeholder }: any) {
-  return <View style={s.field}><Text style={s.label}>{label}</Text><TextInput style={s.input} value={String(value ?? '')} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="rgba(255,255,255,0.25)" /></View>;
+  const { isDark } = useTheme();
+  const s = getThemedStyles(isDark);
+  return <View style={s.field}><Text style={s.label}>{label}</Text><TextInput style={s.input} value={String(value ?? '')} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor={isDark ? "rgba(255,255,255,0.25)" : "rgba(17,25,54,0.35)"} /></View>;
 }
 
 export function ExamTimetableBuilder({ years, classes, teacherAssignments, classSubjects = [], subjects = [], onSaved }: Props) {
+  const { isDark } = useTheme();
+  const s = getThemedStyles(isDark);
   const client = useQueryClient();
   const [academicYearId, setAcademicYearId] = useState('');
   const [classId, setClassId] = useState('');
@@ -289,62 +296,75 @@ export function ExamTimetableBuilder({ years, classes, teacherAssignments, class
   </View>;
 }
 
-const s = StyleSheet.create({
+let stylesDark: any = null;
+let stylesLight: any = null;
+
+function getThemedStyles(isDark: boolean) {
+  if (isDark) {
+    if (!stylesDark) stylesDark = StyleSheet.create(createStyles(THEME_PALETTES.dark, true));
+    return stylesDark;
+  } else {
+    if (!stylesLight) stylesLight = StyleSheet.create(createStyles(THEME_PALETTES.light, false));
+    return stylesLight;
+  }
+}
+
+const createStyles = (tc: ThemeColors, isDark: boolean) => ({
   wrapper: { gap: 18 },
   scopePanel: {
-    backgroundColor: 'rgba(99, 102, 241, 0.06)',
-    borderColor: 'rgba(99, 102, 241, 0.20)',
+    backgroundColor: isDark ? 'rgba(99, 102, 241, 0.06)' : 'rgba(99, 102, 241, 0.08)',
+    borderColor: isDark ? 'rgba(99, 102, 241, 0.20)' : 'rgba(99, 102, 241, 0.25)',
     borderWidth: 1,
     borderRadius: 18,
     padding: 20,
     ...surfaces.card,
   },
   panel: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderColor: tc.line,
     borderRadius: 18,
     padding: 20,
     ...surfaces.card,
   },
   existingPanel: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderColor: tc.line,
     borderRadius: 18,
     padding: 20,
     ...surfaces.card,
   },
-  eyebrow: { color: colors.blueLight, fontSize: 10, fontWeight: '800', letterSpacing: 1.5 },
-  panelTitle: { color: '#f0f6ff', fontSize: 19, fontWeight: '800', marginTop: 5 },
-  help: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 13, lineHeight: 20, marginTop: 6 },
-  label: { color: 'rgba(255, 255, 255, 0.60)', fontSize: 13, fontWeight: '700', marginBottom: 7 },
+  eyebrow: { color: isDark ? colors.blueLight : colors.primary, fontSize: 10, fontWeight: '800' as const, letterSpacing: 1.5 },
+  panelTitle: { color: tc.text, fontSize: 19, fontWeight: '800' as const, marginTop: 5 },
+  help: { color: tc.muted, fontSize: 13, lineHeight: 20, marginTop: 6 },
+  label: { color: tc.text, fontSize: 13, fontWeight: '700' as const, marginBottom: 7 },
   field: { marginTop: 16 },
-  choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  choices: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 8 },
   choice: {
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: tc.line,
     borderRadius: 10,
     paddingHorizontal: 13,
     paddingVertical: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F5F7FF',
   },
   choiceOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  choiceText: { color: 'rgba(255, 255, 255, 0.50)', fontSize: 13, fontWeight: '600' },
-  choiceTextOn: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  choiceText: { color: tc.muted, fontSize: 13, fontWeight: '600' as const },
+  choiceTextOn: { color: '#fff', fontSize: 13, fontWeight: '800' as const },
   input: {
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderColor: tc.line,
     borderRadius: 10,
     paddingHorizontal: 13,
     paddingVertical: 12,
-    color: '#f0f6ff',
+    color: tc.text,
     fontSize: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F8FAFC',
   },
-  row: { flexDirection: 'row', gap: 12 },
+  row: { flexDirection: 'row' as const, gap: 12 },
   half: { flex: 1, minWidth: 0 },
-  scopeText: { color: colors.blueLight, fontWeight: '800', fontSize: 13, marginTop: 16 },
+  scopeText: { color: isDark ? colors.blueLight : colors.primary, fontWeight: '800' as const, fontSize: 13, marginTop: 16 },
   warning: {
     color: colors.warning,
     backgroundColor: 'rgba(251, 191, 36, 0.10)',
@@ -356,52 +376,52 @@ const s = StyleSheet.create({
     lineHeight: 19,
   },
   subjectProgress: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F5F7FF',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tc.line,
     borderRadius: 12,
     padding: 13,
     marginTop: 18,
   },
-  progressTitle: { color: '#f0f6ff', fontWeight: '800' },
-  progressValue: { color: colors.blueLight, fontWeight: '800' },
-  subjectList: { color: 'rgba(255, 255, 255, 0.40)', fontSize: 12, lineHeight: 19, marginTop: 10 },
+  progressTitle: { color: tc.text, fontWeight: '800' as const },
+  progressValue: { color: isDark ? colors.blueLight : colors.primary, fontWeight: '800' as const },
+  subjectList: { color: tc.muted, fontSize: 12, lineHeight: 19, marginTop: 10 },
   entryBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F8FAFC',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tc.line,
     borderRadius: 14,
     padding: 15,
     marginTop: 16,
   },
-  entryTitle: { color: '#f0f6ff', fontWeight: '800', fontSize: 15 },
-  duration: { color: colors.blueLight, fontSize: 12, fontWeight: '700', marginTop: 10 },
+  entryTitle: { color: tc.text, fontWeight: '800' as const, fontSize: 15 },
+  duration: { color: isDark ? colors.blueLight : colors.primary, fontSize: 12, fontWeight: '700' as const, marginTop: 10 },
   secondaryButton: {
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    backgroundColor: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.30)',
+    borderColor: isDark ? 'rgba(99, 102, 241, 0.30)' : 'rgba(99, 102, 241, 0.35)',
     borderRadius: 10,
     paddingVertical: 12,
-    alignItems: 'center',
+    alignItems: 'center' as const,
     marginTop: 16,
   },
-  secondaryText: { color: colors.blueLight, fontWeight: '800' },
+  secondaryText: { color: isDark ? colors.blueLight : colors.primary, fontWeight: '800' as const },
   entryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
     gap: 12,
     paddingVertical: 13,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomColor: tc.line,
   },
   entryCopy: { flex: 1, minWidth: 0 },
-  entrySubject: { color: '#f0f6ff', fontWeight: '800', fontSize: 14 },
-  entryMeta: { color: 'rgba(255, 255, 255, 0.40)', fontSize: 12, marginTop: 4, lineHeight: 18 },
-  remove: { color: colors.danger, fontWeight: '800', fontSize: 12 },
+  entrySubject: { color: tc.text, fontWeight: '800' as const, fontSize: 14 },
+  entryMeta: { color: tc.muted, fontSize: 12, marginTop: 4, lineHeight: 18 },
+  remove: { color: colors.danger, fontWeight: '800' as const, fontSize: 12 },
   error: {
     color: colors.danger,
     backgroundColor: 'rgba(248, 113, 113, 0.12)',
@@ -416,26 +436,26 @@ const s = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 11,
     minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     paddingHorizontal: 16,
     marginTop: 18,
   },
   disabled: { opacity: 0.65 },
-  saveText: { color: '#fff', fontWeight: '800', fontSize: 14 },
-  listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-  refresh: { color: colors.blueLight, fontWeight: '800' },
+  saveText: { color: '#fff', fontWeight: '800' as const, fontSize: 14 },
+  listHeader: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const, gap: 12 },
+  refresh: { color: isDark ? colors.blueLight : colors.primary, fontWeight: '800' as const },
   savedCard: {
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: tc.line,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F8FAFC',
     borderRadius: 14,
     padding: 15,
     marginTop: 14,
   },
-  savedHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
-  savedTitle: { color: '#f0f6ff', fontWeight: '800', fontSize: 15 },
-  savedMeta: { color: 'rgba(255, 255, 255, 0.40)', fontSize: 12, marginTop: 4, lineHeight: 18 },
+  savedHeader: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, gap: 10 },
+  savedTitle: { color: tc.text, fontWeight: '800' as const, fontSize: 15 },
+  savedMeta: { color: tc.muted, fontSize: 12, marginTop: 4, lineHeight: 18 },
   badge: {
     color: colors.success,
     backgroundColor: 'rgba(52, 211, 153, 0.15)',
@@ -445,11 +465,11 @@ const s = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 20,
     fontSize: 10,
-    fontWeight: '800',
-    overflow: 'hidden',
+    fontWeight: '800' as const,
+    overflow: 'hidden' as const,
   },
-  savedEntry: { borderTopWidth: 1, borderTopColor: 'rgba(255, 255, 255, 0.06)', paddingTop: 10, marginTop: 10 },
-  savedSubject: { color: '#f0f6ff', fontWeight: '700', fontSize: 13 },
+  savedEntry: { borderTopWidth: 1, borderTopColor: tc.line, paddingTop: 10, marginTop: 10 },
+  savedSubject: { color: tc.text, fontWeight: '700' as const, fontSize: 13 },
   deleteBtn: {
     backgroundColor: 'rgba(248, 113, 113, 0.12)',
     borderWidth: 1,
@@ -457,13 +477,13 @@ const s = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
   deleteBtnText: {
-    color: '#fca5a5',
-    fontWeight: '800',
+    color: isDark ? '#fca5a5' : '#dc2626',
+    fontWeight: '800' as const,
     fontSize: 11,
   },
 });

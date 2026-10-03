@@ -15,6 +15,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { colors, radius, shadow } from '../theme';
+import { useTheme, THEME_PALETTES, ThemeColors } from '../context/ThemeContext';
 import { downloadSalarySlipPdf, SalarySlipPdfData } from '../utils/salarySlipPdf';
 
 const MONTH_NAMES = [
@@ -56,6 +57,8 @@ function formatDate(val: any): string {
 }
 
 export function PayrollManager() {
+  const { isDark, colors: tc } = useTheme();
+  const s = getThemedStyles(isDark);
   const { user } = useAuth();
   const isAccountant = user?.subRole === 'ACCOUNTANT';
   const queryClient = useQueryClient();
@@ -398,7 +401,7 @@ export function PayrollManager() {
             <Text style={s.statLabel}>PENDING DUES / ADVANCE</Text>
             <Ionicons name="alert-circle-outline" size={18} color={summary.totalPendingDues > 0 ? colors.warning : '#a78bfa'} />
           </View>
-          <Text style={[s.statValue, { color: summary.totalPendingDues > 0 ? colors.warning : colors.ink }]}>
+          <Text style={[s.statValue, { color: summary.totalPendingDues > 0 ? colors.warning : tc.text }]}>
             {formatRupees(summary.totalPendingDues)}
           </Text>
           <Text style={s.statMeta}>
@@ -411,17 +414,17 @@ export function PayrollManager() {
       <View style={s.filterContainer}>
         {/* Search */}
         <View style={s.searchBox}>
-          <Ionicons name="search-outline" size={18} color={colors.muted} />
+          <Ionicons name="search-outline" size={18} color={tc.muted} />
           <TextInput
             style={s.searchInput}
             placeholder="Search by Employee Name or ID (EMP...)"
-            placeholderTextColor={colors.muted}
+            placeholderTextColor={tc.muted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery ? (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={16} color={colors.muted} />
+              <Ionicons name="close-circle" size={16} color={tc.muted} />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -676,7 +679,7 @@ export function PayrollManager() {
                 </Text>
               </View>
               <TouchableOpacity onPress={closeModal} style={s.modalCloseBtn}>
-                <Ionicons name="close" size={20} color={colors.ink} />
+                <Ionicons name="close" size={20} color={tc.text} />
               </TouchableOpacity>
             </View>
 
@@ -767,7 +770,7 @@ export function PayrollManager() {
                   style={s.formInput}
                   keyboardType="numeric"
                   placeholder="e.g. 15000"
-                  placeholderTextColor={colors.muted}
+                  placeholderTextColor={tc.muted}
                   value={paymentAmount}
                   onChangeText={setPaymentAmount}
                 />
@@ -781,7 +784,7 @@ export function PayrollManager() {
                 <TextInput
                   style={s.formInput}
                   placeholder="YYYY-MM-DD"
-                  placeholderTextColor={colors.muted}
+                  placeholderTextColor={tc.muted}
                   value={paymentDate}
                   onChangeText={setPaymentDate}
                 />
@@ -809,7 +812,7 @@ export function PayrollManager() {
                 <TextInput
                   style={s.formInput}
                   placeholder="e.g. UPI-92817293, CHEQUE-44021 (Optional)"
-                  placeholderTextColor={colors.muted}
+                  placeholderTextColor={tc.muted}
                   value={paymentReference}
                   onChangeText={setPaymentReference}
                 />
@@ -821,7 +824,7 @@ export function PayrollManager() {
                   style={[s.formInput, { height: 60 }]}
                   multiline
                   placeholder="Optional remarks or disbursement notes"
-                  placeholderTextColor={colors.muted}
+                  placeholderTextColor={tc.muted}
                   value={paymentRemarks}
                   onChangeText={setPaymentRemarks}
                 />
@@ -870,7 +873,7 @@ export function PayrollManager() {
                 </Text>
               </View>
               <TouchableOpacity onPress={closeModal} style={s.modalCloseBtn}>
-                <Ionicons name="close" size={20} color={colors.ink} />
+                <Ionicons name="close" size={20} color={tc.text} />
               </TouchableOpacity>
             </View>
 
@@ -1046,7 +1049,7 @@ export function PayrollManager() {
                 </Text>
               </View>
               <TouchableOpacity onPress={closeModal} style={s.modalCloseBtn}>
-                <Ionicons name="close" size={20} color={colors.ink} />
+                <Ionicons name="close" size={20} color={tc.text} />
               </TouchableOpacity>
             </View>
 
@@ -1148,7 +1151,7 @@ export function PayrollManager() {
                 </Text>
               </View>
               <TouchableOpacity onPress={closeModal} style={s.modalCloseBtn}>
-                <Ionicons name="close" size={20} color={colors.ink} />
+                <Ionicons name="close" size={20} color={tc.text} />
               </TouchableOpacity>
             </View>
 
@@ -1159,7 +1162,7 @@ export function PayrollManager() {
                   style={s.formInput}
                   keyboardType="numeric"
                   placeholder="e.g. 18000"
-                  placeholderTextColor={colors.muted}
+                  placeholderTextColor={tc.muted}
                   value={revisionAmount}
                   onChangeText={setRevisionAmount}
                 />
@@ -1170,7 +1173,7 @@ export function PayrollManager() {
                 <TextInput
                   style={s.formInput}
                   placeholder="YYYY-MM-DD"
-                  placeholderTextColor={colors.muted}
+                  placeholderTextColor={tc.muted}
                   value={revisionDate}
                   onChangeText={setRevisionDate}
                 />
@@ -1182,7 +1185,7 @@ export function PayrollManager() {
                   style={[s.formInput, { height: 60 }]}
                   multiline
                   placeholder="e.g. Annual revision, Promotion, Performance increment"
-                  placeholderTextColor={colors.muted}
+                  placeholderTextColor={tc.muted}
                   value={revisionReason}
                   onChangeText={setRevisionReason}
                 />
@@ -1214,119 +1217,133 @@ export function PayrollManager() {
   );
 }
 
-const s = StyleSheet.create({
+let stylesDark: any = null;
+let stylesLight: any = null;
+
+function getThemedStyles(isDark: boolean) {
+  if (isDark) {
+    if (!stylesDark) stylesDark = StyleSheet.create(createStyles(THEME_PALETTES.dark, true));
+    return stylesDark;
+  } else {
+    if (!stylesLight) stylesLight = StyleSheet.create(createStyles(THEME_PALETTES.light, false));
+    return stylesLight;
+  }
+}
+
+function createStyles(tc: ThemeColors, isDark: boolean) {
+  return {
   container: {
     flex: 1,
     padding: 16,
     gap: 16,
   },
   topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    flexWrap: 'wrap',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'flex-start' as const,
+    flexWrap: 'wrap' as const,
     gap: 12,
   },
   eyebrow: {
     fontSize: 11,
-    fontWeight: '800',
-    color: colors.primary,
+    fontWeight: '800' as const,
+    color: tc.primary,
     letterSpacing: 1,
     marginBottom: 4,
   },
   headingTitle: {
     fontSize: 22,
-    fontWeight: '800',
-    color: colors.ink,
+    fontWeight: '800' as const,
+    color: tc.text,
   },
   subheading: {
     fontSize: 13,
-    color: colors.muted,
+    color: tc.muted,
     marginTop: 2,
     maxWidth: 620,
   },
   monthSelectorCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : tc.card,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tc.border,
     padding: 4,
     gap: 6,
   },
   monthNavBtn: {
     padding: 8,
     borderRadius: radius.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
   },
   monthDisplay: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 8,
     paddingHorizontal: 10,
   },
   monthYearText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: colors.ink,
+    fontWeight: '700' as const,
+    color: tc.text,
   },
 
   // KPI Stats Grid
   statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
     gap: 12,
   },
   statCard: {
     flex: 1,
     minWidth: 180,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : tc.card,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tc.border,
     borderLeftWidth: 4,
     padding: 14,
     gap: 4,
   },
   statHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
   },
   statLabel: {
     fontSize: 10.5,
-    fontWeight: '800',
-    color: colors.muted,
+    fontWeight: '800' as const,
+    color: tc.muted,
     letterSpacing: 0.5,
   },
   statValue: {
     fontSize: 20,
-    fontWeight: '800',
-    color: colors.ink,
+    fontWeight: '800' as const,
+    color: tc.text,
     marginTop: 2,
   },
   statMeta: {
     fontSize: 11.5,
-    color: colors.muted,
+    color: tc.muted,
   },
 
   // Filters & Search
   filterContainer: {
     gap: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : tc.card,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tc.border,
     padding: 12,
   },
   searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.03)',
     borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tc.border,
     paddingHorizontal: 12,
     height: 40,
     gap: 8,
@@ -1334,10 +1351,10 @@ const s = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 13,
-    color: colors.ink,
+    color: tc.text,
   },
   chipRow: {
-    flexDirection: 'row',
+    flexDirection: 'row' as const,
     gap: 8,
     paddingVertical: 2,
   },
@@ -1345,363 +1362,365 @@ const s = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
     borderWidth: 1,
     borderColor: 'transparent',
   },
   filterChipActive: {
-    backgroundColor: 'rgba(147, 155, 255, 0.16)',
-    borderColor: colors.primary,
+    backgroundColor: isDark ? 'rgba(147, 155, 255, 0.16)' : 'rgba(14, 165, 233, 0.12)',
+    borderColor: tc.primary,
   },
   filterChipText: {
     fontSize: 12,
-    color: colors.muted,
-    fontWeight: '600',
+    color: tc.muted,
+    fontWeight: '600' as const,
   },
   filterChipTextActive: {
-    color: colors.ink,
-    fontWeight: '700',
+    color: tc.text,
+    fontWeight: '700' as const,
   },
   statusFilterRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
     gap: 8,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    borderTopColor: tc.border,
     paddingTop: 8,
   },
   statusChip: {
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: radius.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
   },
   statusChipActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: tc.primary,
   },
   statusChipText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: colors.muted,
+    fontWeight: '700' as const,
+    color: tc.muted,
   },
   statusChipTextActive: {
-    color: '#080c14',
+    color: '#ffffff',
   },
 
   // Loading & Empty
   loadingContainer: {
     padding: 60,
-    alignItems: 'center',
+    alignItems: 'center' as const,
     gap: 12,
   },
   loadingText: {
     fontSize: 13,
-    color: colors.muted,
+    color: tc.muted,
   },
   emptyContainer: {
     padding: 60,
-    alignItems: 'center',
+    alignItems: 'center' as const,
     gap: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.02)' : tc.card,
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: tc.border,
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: colors.ink,
+    fontWeight: '700' as const,
+    color: tc.text,
   },
   emptySubtitle: {
     fontSize: 13,
-    color: colors.muted,
-    textAlign: 'center',
+    color: tc.muted,
+    textAlign: 'center' as const,
     maxWidth: 400,
   },
 
   // Main Table
   tableScroll: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : tc.card,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tc.border,
   },
   table: {
     minWidth: 1150,
   },
   tableHeaderRow: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    flexDirection: 'row' as const,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.03)',
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: tc.border,
     paddingVertical: 10,
     paddingHorizontal: 12,
   },
   th: {
     fontSize: 11,
-    fontWeight: '800',
-    color: colors.muted,
+    fontWeight: '800' as const,
+    color: tc.muted,
     letterSpacing: 0.5,
   },
   tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.04)',
+    borderBottomColor: tc.border,
   },
   tableRowAlt: {
-    backgroundColor: 'rgba(255, 255, 255, 0.015)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.015)' : 'rgba(0, 0, 0, 0.015)',
   },
   td: {
     paddingHorizontal: 4,
   },
   empName: {
     fontSize: 13,
-    fontWeight: '700',
-    color: colors.ink,
+    fontWeight: '700' as const,
+    color: tc.text,
   },
   empMetaRow: {
-    flexDirection: 'row',
+    flexDirection: 'row' as const,
     gap: 6,
     marginTop: 3,
   },
   empIdBadge: {
     fontSize: 10,
-    fontWeight: '700',
-    color: colors.primary,
-    backgroundColor: 'rgba(147, 155, 255, 0.12)',
+    fontWeight: '700' as const,
+    color: tc.primary,
+    backgroundColor: isDark ? 'rgba(147, 155, 255, 0.12)' : 'rgba(14, 165, 233, 0.12)',
     paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: 4,
   },
   empRoleBadge: {
     fontSize: 10,
-    color: colors.muted,
+    color: tc.muted,
   },
   cellMoney: {
     fontSize: 13,
-    fontWeight: '600',
-    color: colors.ink,
+    fontWeight: '600' as const,
+    color: tc.text,
   },
   cellMoneyBold: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   cellSubMeta: {
     fontSize: 10,
-    color: colors.muted,
+    color: tc.muted,
     marginTop: 1,
   },
 
   // Attendance Pills
   attPillPresent: {
-    backgroundColor: 'rgba(52, 211, 153, 0.12)',
+    backgroundColor: isDark ? 'rgba(52, 211, 153, 0.12)' : 'rgba(16, 185, 129, 0.12)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(52, 211, 153, 0.25)',
+    borderColor: isDark ? 'rgba(52, 211, 153, 0.25)' : 'rgba(16, 185, 129, 0.25)',
   },
   attPillPresentText: {
     fontSize: 10.5,
-    fontWeight: '700',
-    color: colors.success,
+    fontWeight: '700' as const,
+    color: isDark ? colors.success : '#059669',
   },
   attPillAbsent: {
-    backgroundColor: 'rgba(248, 113, 113, 0.12)',
+    backgroundColor: isDark ? 'rgba(248, 113, 113, 0.12)' : 'rgba(239, 68, 68, 0.12)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(248, 113, 113, 0.25)',
+    borderColor: isDark ? 'rgba(248, 113, 113, 0.25)' : 'rgba(239, 68, 68, 0.25)',
   },
   attPillAbsentText: {
     fontSize: 10.5,
-    fontWeight: '700',
-    color: colors.danger,
+    fontWeight: '700' as const,
+    color: isDark ? colors.danger : '#dc2626',
   },
   attPillHalfDay: {
-    backgroundColor: 'rgba(251, 191, 36, 0.12)',
+    backgroundColor: isDark ? 'rgba(251, 191, 36, 0.12)' : 'rgba(245, 158, 11, 0.12)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(251, 191, 36, 0.25)',
+    borderColor: isDark ? 'rgba(251, 191, 36, 0.25)' : 'rgba(245, 158, 11, 0.25)',
   },
   attPillHalfDayText: {
     fontSize: 10.5,
-    fontWeight: '700',
-    color: colors.warning,
+    fontWeight: '700' as const,
+    color: isDark ? colors.warning : '#d97706',
   },
   attPillLate: {
-    backgroundColor: 'rgba(167, 139, 250, 0.15)',
+    backgroundColor: isDark ? 'rgba(167, 139, 250, 0.15)' : 'rgba(124, 58, 237, 0.12)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(167, 139, 250, 0.3)',
+    borderColor: isDark ? 'rgba(167, 139, 250, 0.3)' : 'rgba(124, 58, 237, 0.25)',
   },
   attPillLateText: {
     fontSize: 10.5,
-    fontWeight: '700',
-    color: '#c4b5fd',
+    fontWeight: '700' as const,
+    color: isDark ? '#c4b5fd' : '#7c3aed',
   },
 
   // Status Badges
   badgeSuccess: {
-    backgroundColor: 'rgba(52, 211, 153, 0.15)',
+    backgroundColor: isDark ? 'rgba(52, 211, 153, 0.15)' : 'rgba(16, 185, 129, 0.12)',
     paddingVertical: 3,
     paddingHorizontal: 8,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: colors.success,
+    borderColor: isDark ? colors.success : '#059669',
   },
   badgeSuccessText: {
     fontSize: 10.5,
-    fontWeight: '800',
-    color: colors.success,
+    fontWeight: '800' as const,
+    color: isDark ? colors.success : '#059669',
   },
   badgeWarning: {
-    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+    backgroundColor: isDark ? 'rgba(251, 191, 36, 0.15)' : 'rgba(245, 158, 11, 0.12)',
     paddingVertical: 3,
     paddingHorizontal: 8,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: colors.warning,
+    borderColor: isDark ? colors.warning : '#d97706',
   },
   badgeWarningText: {
     fontSize: 10.5,
-    fontWeight: '800',
-    color: colors.warning,
+    fontWeight: '800' as const,
+    color: isDark ? colors.warning : '#d97706',
   },
   badgeDanger: {
-    backgroundColor: 'rgba(248, 113, 113, 0.15)',
+    backgroundColor: isDark ? 'rgba(248, 113, 113, 0.15)' : 'rgba(239, 68, 68, 0.12)',
     paddingVertical: 3,
     paddingHorizontal: 8,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: colors.danger,
+    borderColor: isDark ? colors.danger : '#dc2626',
   },
   badgeDangerText: {
     fontSize: 10.5,
-    fontWeight: '800',
-    color: colors.danger,
+    fontWeight: '800' as const,
+    color: isDark ? colors.danger : '#dc2626',
   },
   badgePurple: {
-    backgroundColor: 'rgba(167, 139, 250, 0.18)',
+    backgroundColor: isDark ? 'rgba(167, 139, 250, 0.18)' : 'rgba(124, 58, 237, 0.12)',
     paddingVertical: 3,
     paddingHorizontal: 8,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: '#a78bfa',
+    borderColor: isDark ? '#a78bfa' : '#7c3aed',
   },
   badgePurpleText: {
     fontSize: 10.5,
-    fontWeight: '800',
-    color: '#c4b5fd',
+    fontWeight: '800' as const,
+    color: isDark ? '#c4b5fd' : '#7c3aed',
   },
 
   // Row Action Buttons
   actionBtnPay: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 4,
-    backgroundColor: colors.primary,
+    backgroundColor: tc.primary,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: radius.sm,
   },
   actionBtnPayText: {
     fontSize: 11,
-    fontWeight: '800',
-    color: '#080c14',
+    fontWeight: '800' as const,
+    color: '#ffffff',
   },
   actionBtnSlip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tc.border,
     paddingHorizontal: 9,
     paddingVertical: 5,
     borderRadius: radius.sm,
   },
   actionBtnSlipText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: colors.ink,
+    fontWeight: '600' as const,
+    color: tc.text,
   },
   actionBtnHistory: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tc.border,
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: radius.sm,
   },
   actionBtnHistoryText: {
     fontSize: 11,
-    color: colors.ink,
+    color: tc.text,
   },
   actionBtnRevise: {
     padding: 6,
     borderRadius: radius.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tc.border,
   },
 
   // Modal Common Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
     padding: 16,
   },
   modalBox: {
-    width: '100%',
+    width: '100%' as const,
     maxWidth: 540,
-    maxHeight: '90%',
-    backgroundColor: '#0c121e',
+    maxHeight: '90%' as const,
+    backgroundColor: tc.card,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.glowBorderSm,
-    overflow: 'hidden',
+    borderColor: tc.border,
+    overflow: 'hidden' as const,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'flex-start' as const,
     padding: 18,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: tc.border,
   },
   modalEyebrow: {
     fontSize: 10.5,
-    fontWeight: '800',
-    color: colors.primary,
+    fontWeight: '800' as const,
+    color: tc.primary,
     letterSpacing: 1,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '800',
-    color: colors.ink,
+    fontWeight: '800' as const,
+    color: tc.text,
     marginTop: 2,
   },
   modalSubtitle: {
     fontSize: 12,
-    color: colors.muted,
+    color: tc.muted,
     marginTop: 2,
   },
   modalCloseBtn: {
     padding: 6,
     borderRadius: radius.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)',
   },
   modalContent: {
     padding: 18,
@@ -1710,49 +1729,49 @@ const s = StyleSheet.create({
 
   // Financial Breakdown in Pay Modal
   breakdownCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tc.border,
     padding: 14,
     gap: 6,
   },
   breakdownTitle: {
     fontSize: 12,
-    fontWeight: '800',
-    color: colors.primary,
+    fontWeight: '800' as const,
+    color: tc.primary,
     letterSpacing: 0.5,
     marginBottom: 4,
   },
   breakdownRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
   },
   breakdownLabel: {
     fontSize: 12,
-    color: colors.muted,
+    color: tc.muted,
   },
   breakdownValue: {
     fontSize: 12,
-    fontWeight: '600',
-    color: colors.ink,
+    fontWeight: '600' as const,
+    color: tc.text,
   },
   breakdownHighlight: {
-    backgroundColor: 'rgba(147, 155, 255, 0.12)',
+    backgroundColor: isDark ? 'rgba(147, 155, 255, 0.12)' : 'rgba(14, 165, 233, 0.12)',
     padding: 8,
     borderRadius: radius.sm,
     marginTop: 4,
   },
   breakdownHighlightLabel: {
     fontSize: 12.5,
-    fontWeight: '800',
-    color: colors.primary,
+    fontWeight: '800' as const,
+    color: tc.primary,
   },
   breakdownHighlightValue: {
     fontSize: 15,
-    fontWeight: '800',
-    color: colors.ink,
+    fontWeight: '800' as const,
+    color: tc.text,
   },
 
   // Form Fields
@@ -1761,83 +1780,83 @@ const s = StyleSheet.create({
   },
   formLabel: {
     fontSize: 12,
-    fontWeight: '700',
-    color: colors.ink,
+    fontWeight: '700' as const,
+    color: tc.text,
   },
   formInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tc.border,
     borderRadius: radius.sm,
     paddingHorizontal: 12,
     paddingVertical: 9,
     fontSize: 13,
-    color: colors.ink,
+    color: tc.text,
   },
   fieldHelp: {
     fontSize: 11,
-    color: colors.muted,
+    color: tc.muted,
   },
   methodChoiceRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
     gap: 6,
   },
   methodChip: {
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: radius.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tc.border,
   },
   methodChipActive: {
-    backgroundColor: 'rgba(147, 155, 255, 0.18)',
-    borderColor: colors.primary,
+    backgroundColor: isDark ? 'rgba(147, 155, 255, 0.18)' : 'rgba(14, 165, 233, 0.15)',
+    borderColor: tc.primary,
   },
   methodChipText: {
     fontSize: 11.5,
-    color: colors.muted,
-    fontWeight: '600',
+    color: tc.muted,
+    fontWeight: '600' as const,
   },
   methodChipTextActive: {
-    color: colors.ink,
-    fontWeight: '700',
+    color: tc.text,
+    fontWeight: '700' as const,
   },
   errorBanner: {
-    backgroundColor: 'rgba(248, 113, 113, 0.15)',
+    backgroundColor: isDark ? 'rgba(248, 113, 113, 0.15)' : 'rgba(239, 68, 68, 0.12)',
     borderWidth: 1,
-    borderColor: colors.danger,
+    borderColor: tc.danger,
     borderRadius: radius.sm,
     padding: 10,
     fontSize: 12,
-    color: colors.danger,
-    fontWeight: '600',
+    color: tc.danger,
+    fontWeight: '600' as const,
   },
   successBanner: {
-    backgroundColor: 'rgba(52, 211, 153, 0.15)',
+    backgroundColor: isDark ? 'rgba(52, 211, 153, 0.15)' : 'rgba(16, 185, 129, 0.12)',
     borderWidth: 1,
-    borderColor: colors.success,
+    borderColor: tc.success,
     borderRadius: radius.sm,
     padding: 10,
     fontSize: 12,
-    color: colors.success,
-    fontWeight: '700',
+    color: tc.success,
+    fontWeight: '700' as const,
   },
   btnSubmit: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
     gap: 6,
-    backgroundColor: colors.primary,
+    backgroundColor: tc.primary,
     borderRadius: radius.sm,
     paddingVertical: 12,
     marginTop: 6,
   },
   btnSubmitText: {
     fontSize: 13,
-    fontWeight: '800',
-    color: '#080c14',
+    fontWeight: '800' as const,
+    color: '#ffffff',
   },
   btnDisabled: {
     opacity: 0.6,
@@ -1845,283 +1864,283 @@ const s = StyleSheet.create({
 
   // Slip Modal
   slipPreviewCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tc.border,
     padding: 16,
     gap: 12,
   },
   slipHeaderBlock: {
-    alignItems: 'center',
+    alignItems: 'center' as const,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: tc.border,
     paddingBottom: 10,
     gap: 2,
   },
   slipSchoolTitle: {
     fontSize: 16,
-    fontWeight: '800',
-    color: colors.ink,
+    fontWeight: '800' as const,
+    color: tc.text,
     letterSpacing: 0.5,
   },
   slipSubTitle: {
     fontSize: 11,
-    color: colors.muted,
+    color: tc.muted,
   },
   slipPeriodTitle: {
     fontSize: 12,
-    fontWeight: '700',
-    color: colors.warning,
+    fontWeight: '700' as const,
+    color: tc.warning,
     marginTop: 2,
   },
   slipMetaGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
     gap: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)',
     padding: 10,
     borderRadius: radius.sm,
   },
   slipMetaItem: {
     fontSize: 11.5,
-    color: colors.ink,
+    color: tc.text,
     minWidth: 180,
   },
   bold: {
-    fontWeight: '700',
-    color: colors.muted,
+    fontWeight: '700' as const,
+    color: tc.muted,
   },
   slipAttBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)',
     padding: 10,
     borderRadius: radius.sm,
     borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
+    borderLeftColor: tc.primary,
     gap: 2,
   },
   slipAttTitle: {
     fontSize: 10,
-    fontWeight: '800',
-    color: colors.primary,
+    fontWeight: '800' as const,
+    color: tc.primary,
   },
   slipAttText: {
     fontSize: 11.5,
-    color: colors.ink,
+    color: tc.text,
   },
   slipTableBlock: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tc.border,
     borderRadius: radius.sm,
-    overflow: 'hidden',
+    overflow: 'hidden' as const,
   },
   slipTableHead: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    flexDirection: 'row' as const,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
     paddingVertical: 7,
     paddingHorizontal: 10,
   },
   slipTh: {
     fontSize: 10.5,
-    fontWeight: '800',
-    color: colors.muted,
+    fontWeight: '800' as const,
+    color: tc.muted,
   },
   slipTableRow: {
-    flexDirection: 'row',
+    flexDirection: 'row' as const,
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.04)',
+    borderTopColor: tc.border,
   },
   slipTd: {
     fontSize: 11.5,
-    color: colors.ink,
+    color: tc.text,
   },
   slipTdBold: {
     fontSize: 12,
-    fontWeight: '800',
-    color: colors.ink,
+    fontWeight: '800' as const,
+    color: tc.text,
   },
   slipSettlement: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
     borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tc.border,
     padding: 10,
     gap: 4,
   },
   slipSettlementRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
     paddingHorizontal: 4,
   },
   slipSettlementLabel: {
     fontSize: 12,
-    color: colors.muted,
+    color: tc.muted,
   },
   slipSettlementVal: {
     fontSize: 12,
-    fontWeight: '600',
-    color: colors.ink,
+    fontWeight: '600' as const,
+    color: tc.text,
   },
   slipActionRow: {
-    flexDirection: 'row',
+    flexDirection: 'row' as const,
     gap: 10,
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-end' as const,
     marginTop: 6,
   },
   btnDownloadPdf: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 6,
-    backgroundColor: colors.primary,
+    backgroundColor: tc.primary,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: radius.sm,
   },
   btnDownloadPdfText: {
     fontSize: 12.5,
-    fontWeight: '800',
-    color: '#080c14',
+    fontWeight: '800' as const,
+    color: '#ffffff',
   },
   btnPrintSlip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tc.border,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: radius.sm,
   },
   btnPrintSlipText: {
     fontSize: 12.5,
-    fontWeight: '700',
-    color: colors.ink,
+    fontWeight: '700' as const,
+    color: tc.text,
   },
 
   // History Modal
   auditNoticeBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 8,
-    backgroundColor: 'rgba(147, 155, 255, 0.1)',
+    backgroundColor: isDark ? 'rgba(147, 155, 255, 0.1)' : 'rgba(14, 165, 233, 0.08)',
     borderWidth: 1,
-    borderColor: colors.glowBorderSm,
+    borderColor: tc.border,
     borderRadius: radius.sm,
     padding: 10,
   },
   auditNoticeText: {
     fontSize: 11.5,
-    color: colors.ink,
+    color: tc.text,
     flex: 1,
   },
   emptyNotice: {
-    textAlign: 'center',
+    textAlign: 'center' as const,
     padding: 24,
-    color: colors.muted,
+    color: tc.muted,
     fontSize: 13,
   },
   historyCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : tc.card,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tc.border,
     padding: 14,
     gap: 10,
   },
   historyCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'flex-start' as const,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    borderBottomColor: tc.border,
     paddingBottom: 8,
   },
   historyPeriodTitle: {
     fontSize: 14,
-    fontWeight: '800',
-    color: colors.ink,
+    fontWeight: '800' as const,
+    color: tc.text,
   },
   historyMeta: {
     fontSize: 11,
-    color: colors.muted,
+    color: tc.muted,
     marginTop: 2,
   },
   historyBadgeRow: {
-    alignItems: 'flex-end',
+    alignItems: 'flex-end' as const,
   },
   historyPayableBadge: {
     fontSize: 12,
-    fontWeight: '800',
-    color: colors.primary,
+    fontWeight: '800' as const,
+    color: tc.primary,
   },
   historyTxList: {
     gap: 6,
   },
   historyTxTitle: {
     fontSize: 11,
-    fontWeight: '800',
-    color: colors.muted,
+    fontWeight: '800' as const,
+    color: tc.muted,
     letterSpacing: 0.5,
   },
   noTxText: {
     fontSize: 12,
-    color: colors.muted,
-    fontStyle: 'italic',
+    color: tc.muted,
+    fontStyle: 'italic' as const,
   },
   txItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: tc.border,
     borderRadius: radius.sm,
     padding: 8,
   },
   txLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 8,
   },
   txAmount: {
     fontSize: 13,
-    fontWeight: '700',
-    color: colors.ink,
+    fontWeight: '700' as const,
+    color: tc.text,
   },
   txMeta: {
     fontSize: 11,
-    color: colors.muted,
+    color: tc.muted,
   },
   txRight: {
-    alignItems: 'flex-end',
+    alignItems: 'flex-end' as const,
   },
   txStatusSuccess: {
     fontSize: 10,
-    fontWeight: '800',
-    color: colors.success,
+    fontWeight: '800' as const,
+    color: tc.success,
   },
   txRemarks: {
     fontSize: 10,
-    color: colors.muted,
+    color: tc.muted,
     maxWidth: 150,
   },
   historyCardFooter: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    borderTopColor: tc.border,
     paddingTop: 8,
-    alignItems: 'flex-end',
+    alignItems: 'flex-end' as const,
   },
   historyFooterText: {
     fontSize: 11.5,
-    color: colors.muted,
+    color: tc.muted,
   },
   duesBreakdownBox: {
-    backgroundColor: 'rgba(251, 191, 36, 0.08)',
+    backgroundColor: isDark ? 'rgba(251, 191, 36, 0.08)' : 'rgba(245, 158, 11, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(251, 191, 36, 0.25)',
+    borderColor: isDark ? 'rgba(251, 191, 36, 0.25)' : 'rgba(245, 158, 11, 0.25)',
     borderRadius: radius.sm,
     padding: 10,
     marginTop: 6,
@@ -2129,33 +2148,34 @@ const s = StyleSheet.create({
   },
   duesBreakdownTitle: {
     fontSize: 11,
-    fontWeight: '800',
-    color: colors.warning,
+    fontWeight: '800' as const,
+    color: tc.warning,
     letterSpacing: 0.5,
   },
   dueItemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+    borderTopColor: tc.border,
     paddingTop: 4,
   },
   dueItemMonth: {
     fontSize: 12,
-    fontWeight: '700',
-    color: colors.ink,
+    fontWeight: '700' as const,
+    color: tc.text,
   },
   dueItemNote: {
     fontSize: 10.5,
-    color: colors.muted,
+    color: tc.muted,
   },
   dueItemCalc: {
     fontSize: 10.5,
-    color: colors.muted,
+    color: tc.muted,
   },
   dueItemBalance: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
-});
+  };
+}

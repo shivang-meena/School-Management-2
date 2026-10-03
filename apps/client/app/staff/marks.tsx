@@ -15,6 +15,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../src/hooks/useAuth';
 import { api } from '../../src/services/api';
 import { colors, radius, shadow, surfaces } from '../../src/theme';
+import { useTheme, THEME_PALETTES, ThemeColors } from '../../src/context/ThemeContext';
 
 function displayDate(value: any) {
   if (!value) return '';
@@ -42,14 +43,16 @@ interface StudentRowState {
 }
 
 export default function StaffMarksScreen() {
+  const { isDark, colors: tc } = useTheme();
+  const s = getThemedStyles(isDark);
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const isTeacher = user?.subRole === 'TEACHER' || !user?.subRole;
   if (!isTeacher) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#090d16', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <Text style={{ color: '#94a3b8', fontSize: 16, textAlign: 'center' }}>Marks entry is only available for teaching faculty.</Text>
+      <View style={{ flex: 1, backgroundColor: tc.canvas, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ color: tc.muted, fontSize: 16, textAlign: 'center' }}>Marks entry is only available for teaching faculty.</Text>
       </View>
     );
   }
@@ -874,10 +877,23 @@ export default function StaffMarksScreen() {
   );
 }
 
-const s = StyleSheet.create({
+let stylesDark: any = null;
+let stylesLight: any = null;
+
+function getThemedStyles(isDark: boolean) {
+  if (isDark) {
+    if (!stylesDark) stylesDark = StyleSheet.create(createStyles(THEME_PALETTES.dark, true));
+    return stylesDark;
+  } else {
+    if (!stylesLight) stylesLight = StyleSheet.create(createStyles(THEME_PALETTES.light, false));
+    return stylesLight;
+  }
+}
+
+const createStyles = (tc: ThemeColors, isDark: boolean) => ({
   page: {
     flex: 1,
-    backgroundColor: colors.canvas,
+    backgroundColor: tc.canvas,
   },
   content: {
     padding: 20,
@@ -886,13 +902,13 @@ const s = StyleSheet.create({
   },
   centerBox: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.canvas,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    backgroundColor: tc.canvas,
     gap: 12,
   },
   loadingText: {
-    color: 'rgba(255,255,255,0.6)',
+    color: tc.muted,
     fontSize: 14,
   },
 
@@ -901,61 +917,61 @@ const s = StyleSheet.create({
     marginBottom: 4,
   },
   badgePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    alignSelf: 'flex-start' as const,
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    backgroundColor: isDark ? 'rgba(245, 158, 11, 0.12)' : 'rgba(245, 158, 11, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.25)',
+    borderColor: isDark ? 'rgba(245, 158, 11, 0.25)' : 'rgba(245, 158, 11, 0.35)',
     marginBottom: 8,
   },
   badgeText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '800' as const,
     color: '#fbbf24',
     letterSpacing: 0.6,
   },
   title: {
     fontSize: 24,
-    fontWeight: '800',
-    color: '#ffffff',
+    fontWeight: '800' as const,
+    color: tc.text,
     letterSpacing: -0.4,
   },
   subtitle: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.5)',
+    color: tc.muted,
     marginTop: 4,
     lineHeight: 18,
   },
 
   // Common Card
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tc.line,
     borderRadius: radius.lg,
     padding: 16,
     gap: 12,
   },
   cardLabel: {
     fontSize: 11,
-    fontWeight: '800',
-    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '800' as const,
+    color: tc.muted,
     letterSpacing: 0.6,
   },
 
   // Chips
   chipsRow: {
-    flexDirection: 'row',
+    flexDirection: 'row' as const,
   },
   chip: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F5F7FF',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: tc.line,
     borderRadius: radius.md,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -963,32 +979,32 @@ const s = StyleSheet.create({
     gap: 4,
   },
   chipActive: {
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    backgroundColor: isDark ? 'rgba(245, 158, 11, 0.12)' : 'rgba(245, 158, 11, 0.18)',
     borderColor: 'rgba(245, 158, 11, 0.45)',
   },
   chipTitle: {
     fontSize: 13,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.85)',
+    fontWeight: '700' as const,
+    color: tc.text,
   },
   chipTitleActive: {
-    color: '#fbbf24',
+    color: isDark ? '#fbbf24' : '#b45309',
   },
   chipSub: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.4)',
+    color: tc.muted,
   },
   chipRowTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
     gap: 8,
   },
   examTypeBadge: {
     fontSize: 9,
-    fontWeight: '800',
-    color: '#38bdf8',
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    fontWeight: '800' as const,
+    color: isDark ? '#38bdf8' : '#0284c7',
+    backgroundColor: isDark ? 'rgba(56, 189, 248, 0.15)' : 'rgba(56, 189, 248, 0.12)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -998,16 +1014,16 @@ const s = StyleSheet.create({
   },
   progressText: {
     fontSize: 10,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '600' as const,
+    color: tc.muted,
   },
 
   // Role tag
   roleTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 4,
-    alignSelf: 'flex-start',
+    alignSelf: 'flex-start' as const,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -1021,28 +1037,28 @@ const s = StyleSheet.create({
   },
   roleTagText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '700' as const,
   },
   roleTagTextGold: {
-    color: '#fbbf24',
+    color: isDark ? '#fbbf24' : '#b45309',
   },
   roleTagTextBlue: {
-    color: '#38bdf8',
+    color: isDark ? '#38bdf8' : '#0284c7',
   },
 
   roleInfoBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC',
     borderRadius: radius.sm,
     padding: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: tc.line,
   },
   roleInfoText: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
+    color: tc.text,
     flex: 1,
     lineHeight: 16,
   },
@@ -1050,37 +1066,37 @@ const s = StyleSheet.create({
   emptyNotice: {
     padding: 16,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    alignItems: 'center',
+    backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : '#F8FAFC',
+    alignItems: 'center' as const,
     gap: 6,
   },
   emptyNoticeText: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
-    textAlign: 'center',
+    color: tc.muted,
+    textAlign: 'center' as const,
   },
 
   // Sheet Header
   sheetHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    flexWrap: 'wrap',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'flex-start' as const,
+    flexWrap: 'wrap' as const,
     gap: 8,
   },
   paperTitle: {
     fontSize: 17,
-    fontWeight: '800',
-    color: '#ffffff',
+    fontWeight: '800' as const,
+    color: tc.text,
   },
   paperMeta: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
+    color: tc.muted,
     marginTop: 2,
   },
   lockedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 4,
     backgroundColor: 'rgba(248, 113, 113, 0.15)',
     paddingHorizontal: 8,
@@ -1091,13 +1107,13 @@ const s = StyleSheet.create({
   },
   lockedBadgeText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '700' as const,
     color: '#f87171',
   },
 
   lockedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 8,
     backgroundColor: 'rgba(248, 113, 113, 0.10)',
     borderColor: 'rgba(248, 113, 113, 0.25)',
@@ -1107,68 +1123,68 @@ const s = StyleSheet.create({
   },
   lockedBannerText: {
     fontSize: 12,
-    color: '#fca5a5',
+    color: isDark ? '#fca5a5' : '#dc2626',
     flex: 1,
     lineHeight: 16,
   },
 
   // Stats bar
   statsBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC',
     borderRadius: radius.md,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: tc.line,
   },
   statItem: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'center' as const,
   },
   statValue: {
     fontSize: 16,
-    fontWeight: '800',
-    color: '#ffffff',
+    fontWeight: '800' as const,
+    color: tc.text,
   },
   statLabel: {
     fontSize: 10,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.4)',
+    fontWeight: '600' as const,
+    color: tc.muted,
     marginTop: 2,
   },
   statDivider: {
     width: 1,
     height: 24,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: tc.line,
   },
 
   // Quick action bar
   quickBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
     gap: 10,
-    flexWrap: 'wrap',
+    flexWrap: 'wrap' as const,
   },
   quickBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9',
   },
   quickBtnText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '600' as const,
+    color: tc.text,
   },
   saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     gap: 6,
     backgroundColor: '#fbbf24',
     paddingHorizontal: 18,
@@ -1180,14 +1196,14 @@ const s = StyleSheet.create({
   },
   saveBtnText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '800' as const,
     color: '#080c14',
   },
 
   // Feedbacks
   errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 6,
     backgroundColor: 'rgba(248, 113, 113, 0.12)',
     borderColor: 'rgba(248, 113, 113, 0.25)',
@@ -1201,8 +1217,8 @@ const s = StyleSheet.create({
     flex: 1,
   },
   successBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 6,
     backgroundColor: 'rgba(52, 211, 153, 0.12)',
     borderColor: 'rgba(52, 211, 153, 0.25)',
@@ -1222,24 +1238,24 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
   rowCard: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC',
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: tc.line,
     padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    flexWrap: 'wrap' as const,
     gap: 10,
   },
   rowCardDirty: {
     borderColor: 'rgba(245, 158, 11, 0.4)',
-    backgroundColor: 'rgba(245, 158, 11, 0.04)',
+    backgroundColor: isDark ? 'rgba(245, 158, 11, 0.04)' : 'rgba(245, 158, 11, 0.08)',
   },
   rowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 12,
     minWidth: 180,
     flex: 1,
@@ -1249,47 +1265,47 @@ const s = StyleSheet.create({
     paddingHorizontal: 8,
     height: 34,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: tc.line,
   },
   rollText: {
     fontSize: 12,
-    fontWeight: '800',
-    color: '#ffffff',
-    textAlign: 'center',
+    fontWeight: '800' as const,
+    color: tc.text,
+    textAlign: 'center' as const,
   },
   studentInfo: {
     gap: 2,
   },
   studentName: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#ffffff',
+    fontWeight: '700' as const,
+    color: tc.text,
   },
   studentIdText: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.4)',
+    color: tc.muted,
   },
 
   rowRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 8,
-    flexWrap: 'wrap',
+    flexWrap: 'wrap' as const,
   },
   absentToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: radius.sm,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F1F5F9',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: tc.line,
   },
   absentToggleActive: {
     backgroundColor: 'rgba(248, 113, 113, 0.15)',
@@ -1297,51 +1313,51 @@ const s = StyleSheet.create({
   },
   absentToggleText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '600' as const,
+    color: tc.muted,
   },
   absentToggleTextActive: {
     color: '#f87171',
-    fontWeight: '700',
+    fontWeight: '700' as const,
   },
 
   marksInputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: tc.line,
     borderRadius: radius.sm,
     paddingHorizontal: 8,
   },
   marksInput: {
     width: 50,
     height: 36,
-    color: '#ffffff',
+    color: tc.text,
     fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'center',
+    fontWeight: '700' as const,
+    textAlign: 'center' as const,
   },
   marksInputAbsent: {
     color: '#f87171',
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   maxMarksSub: {
     fontSize: 10,
-    color: 'rgba(255,255,255,0.3)',
+    color: tc.muted,
   },
 
   remarksWrap: {
     width: 140,
   },
   remarksInput: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: tc.line,
     borderRadius: radius.sm,
     height: 36,
     paddingHorizontal: 8,
-    color: '#ffffff',
+    color: tc.text,
     fontSize: 11,
   },
   inputDisabled: {
@@ -1354,13 +1370,13 @@ const s = StyleSheet.create({
 
   // Empty View
   emptyCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tc.line,
     borderRadius: radius.lg,
     padding: 32,
-    alignItems: 'center',
-    textAlign: 'center',
+    alignItems: 'center' as const,
+    textAlign: 'center' as const,
     gap: 12,
     marginVertical: 40,
   },
@@ -1369,28 +1385,28 @@ const s = StyleSheet.create({
     height: 80,
     borderRadius: radius.full,
     backgroundColor: 'rgba(245, 158, 11, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     marginBottom: 8,
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#ffffff',
+    fontWeight: '800' as const,
+    color: tc.text,
   },
   emptyDesc: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.6)',
-    textAlign: 'center',
+    color: tc.muted,
+    textAlign: 'center' as const,
     lineHeight: 18,
     maxWidth: 360,
   },
   emptyNote: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.35)',
-    textAlign: 'center',
+    color: tc.muted,
+    textAlign: 'center' as const,
     lineHeight: 16,
     maxWidth: 360,
-    fontStyle: 'italic',
+    fontStyle: 'italic' as const,
   },
 });

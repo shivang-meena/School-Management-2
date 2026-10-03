@@ -1,4 +1,5 @@
 import { colors, surfaces } from '../../src/theme';
+import { useTheme, THEME_PALETTES, ThemeColors } from '../../src/context/ThemeContext';
 import React, { useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
@@ -27,6 +28,8 @@ function duration(start: any, end: any) {
 }
 
 export default function Screen() {
+  const { isDark } = useTheme();
+  const s = getThemedStyles(isDark);
   const [tab, setTab] = useState<TimetableTab>('DAILY');
   const [selectedDay, setSelectedDay] = useState<number>(0);
 
@@ -228,89 +231,102 @@ export default function Screen() {
   );
 }
 
-const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.background },
+let stylesDark: any = null;
+let stylesLight: any = null;
+
+function getThemedStyles(isDark: boolean) {
+  if (isDark) {
+    if (!stylesDark) stylesDark = StyleSheet.create(createStyles(THEME_PALETTES.dark, true));
+    return stylesDark;
+  } else {
+    if (!stylesLight) stylesLight = StyleSheet.create(createStyles(THEME_PALETTES.light, false));
+    return stylesLight;
+  }
+}
+
+const createStyles = (tc: ThemeColors, isDark: boolean) => ({
+  page: { flex: 1, backgroundColor: tc.canvas },
   content: { ...surfaces.content },
   hero: {
     ...surfaces.card,
     marginBottom: 18,
     padding: 24,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
-    flexWrap: 'wrap',
+    borderColor: tc.line,
+    flexWrap: 'wrap' as const,
   },
-  eyebrow: { fontWeight: '800', fontSize: 10, letterSpacing: 1.4, color: colors.blueLight },
-  title: { marginTop: 8, fontSize: 28, color: '#f0f6ff', fontWeight: '800', letterSpacing: -0.3 },
-  date: { color: '#f0f6ff', fontSize: 18, fontWeight: '700', marginTop: 10 },
-  meta: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 13, marginTop: 6 },
-  tabs: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+  eyebrow: { fontWeight: '800' as const, fontSize: 10, letterSpacing: 1.4, color: isDark ? colors.blueLight : colors.primary },
+  title: { marginTop: 8, fontSize: 28, color: tc.text, fontWeight: '800' as const, letterSpacing: -0.3 },
+  date: { color: tc.text, fontSize: 18, fontWeight: '700' as const, marginTop: 10 },
+  meta: { color: tc.muted, fontSize: 13, marginTop: 6 },
+  tabs: { flexDirection: 'row' as const, gap: 10, marginBottom: 14 },
   tab: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F5F7FF',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderColor: tc.line,
     borderRadius: 12,
     paddingVertical: 13,
-    alignItems: 'center',
+    alignItems: 'center' as const,
   },
   tabActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  tabText: { color: 'rgba(255, 255, 255, 0.50)', fontSize: 13, fontWeight: '700' },
-  tabTextActive: { color: '#FFFFFF', fontWeight: '800' },
-  dayStrip: { flexDirection: 'row', gap: 6, marginBottom: 14 },
+  tabText: { color: tc.muted, fontSize: 13, fontWeight: '700' as const },
+  tabTextActive: { color: '#FFFFFF', fontWeight: '800' as const },
+  dayStrip: { flexDirection: 'row' as const, gap: 6, marginBottom: 14 },
   dayBtn: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F5F7FF',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tc.line,
     borderRadius: 10,
     paddingVertical: 9,
-    alignItems: 'center',
+    alignItems: 'center' as const,
   },
   dayBtnActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
-  dayBtnText: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 12, fontWeight: '700' },
-  dayBtnTextActive: { color: '#FFFFFF', fontWeight: '800' },
+  dayBtnText: { color: tc.muted, fontSize: 12, fontWeight: '700' as const },
+  dayBtnTextActive: { color: '#FFFFFF', fontWeight: '800' as const },
   holidayBanner: {
-    backgroundColor: 'rgba(251, 191, 36, 0.10)',
-    borderColor: 'rgba(251, 191, 36, 0.25)',
+    backgroundColor: isDark ? 'rgba(251, 191, 36, 0.10)' : 'rgba(251, 191, 36, 0.12)',
+    borderColor: isDark ? 'rgba(251, 191, 36, 0.25)' : 'rgba(251, 191, 36, 0.35)',
     borderWidth: 1,
     borderRadius: 14,
     padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 12,
     marginBottom: 14,
   },
   holidayEmoji: { fontSize: 24 },
-  holidayTitle: { color: colors.warning, fontWeight: '800', fontSize: 15 },
-  holidaySubtitle: { color: 'rgba(255, 255, 255, 0.60)', fontSize: 12, marginTop: 2 },
+  holidayTitle: { color: colors.warning, fontWeight: '800' as const, fontSize: 15 },
+  holidaySubtitle: { color: tc.muted, fontSize: 12, marginTop: 2 },
   list: { gap: 10 },
   period: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderRadius: 16,
     padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderColor: tc.line,
   },
   periodBreak: {
-    backgroundColor: 'rgba(251, 191, 36, 0.06)',
-    borderColor: 'rgba(251, 191, 36, 0.20)',
+    backgroundColor: isDark ? 'rgba(251, 191, 36, 0.06)' : 'rgba(251, 191, 36, 0.10)',
+    borderColor: isDark ? 'rgba(251, 191, 36, 0.20)' : 'rgba(251, 191, 36, 0.30)',
   },
   time: { width: 125 },
-  periodNo: { color: colors.blueLight, fontSize: 11, fontWeight: '800' },
+  periodNo: { color: isDark ? colors.blueLight : colors.primary, fontSize: 11, fontWeight: '800' as const },
   periodNoBreak: { color: colors.warning },
-  timeText: { color: 'rgba(255, 255, 255, 0.40)', fontSize: 12, marginTop: 4 },
+  timeText: { color: tc.muted, fontSize: 12, marginTop: 4 },
   subject: { flex: 1 },
-  subjectName: { color: '#f0f6ff', fontSize: 16, fontWeight: '800' },
+  subjectName: { color: tc.text, fontSize: 16, fontWeight: '800' as const },
   subjectNameBreak: { color: colors.warning },
-  teacher: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 13, marginTop: 5 },
+  teacher: { color: tc.muted, fontSize: 13, marginTop: 5 },
   badge: {
     backgroundColor: 'rgba(52, 211, 153, 0.15)',
     borderWidth: 1,
@@ -319,51 +335,51 @@ const s = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  badgeText: { color: colors.success, fontSize: 10, fontWeight: '800' },
+  badgeText: { color: colors.success, fontSize: 10, fontWeight: '800' as const },
   workBadge: {
-    backgroundColor: 'rgba(147, 155, 255, 0.15)',
+    backgroundColor: isDark ? 'rgba(147, 155, 255, 0.15)' : 'rgba(99, 102, 241, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(147, 155, 255, 0.30)',
+    borderColor: isDark ? 'rgba(147, 155, 255, 0.30)' : 'rgba(99, 102, 241, 0.25)',
   },
-  workText: { color: colors.blueLight },
+  workText: { color: isDark ? colors.blueLight : colors.primary },
   breakBadge: {
     backgroundColor: 'rgba(251, 191, 36, 0.15)',
     borderWidth: 1,
     borderColor: 'rgba(251, 191, 36, 0.30)',
   },
-  breakText: { color: colors.warning, fontSize: 10, fontWeight: '800' },
+  breakText: { color: colors.warning, fontSize: 10, fontWeight: '800' as const },
   examList: { gap: 14 },
   examCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderRadius: 16,
     padding: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderColor: tc.line,
   },
-  examTitle: { color: '#f0f6ff', fontSize: 18, fontWeight: '800' },
-  examMeta: { color: 'rgba(255, 255, 255, 0.40)', fontSize: 12, marginTop: 5 },
+  examTitle: { color: tc.text, fontSize: 18, fontWeight: '800' as const },
+  examMeta: { color: tc.muted, fontSize: 12, marginTop: 5 },
   examRow: {
-    flexDirection: 'row',
+    flexDirection: 'row' as const,
     gap: 14,
-    alignItems: 'center',
+    alignItems: 'center' as const,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    borderTopColor: tc.line,
     marginTop: 14,
     paddingTop: 13,
   },
   examDate: { width: 95 },
-  examDateText: { color: colors.blueLight, fontSize: 12, fontWeight: '800' },
-  examDuration: { color: 'rgba(255, 255, 255, 0.40)', fontSize: 11, marginTop: 4 },
+  examDateText: { color: isDark ? colors.blueLight : colors.primary, fontSize: 12, fontWeight: '800' as const },
+  examDuration: { color: tc.muted, fontSize: 11, marginTop: 4 },
   examSubject: { flex: 1 },
   state: {
     ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderColor: tc.line,
     padding: 40,
-    alignItems: 'center',
+    alignItems: 'center' as const,
     borderRadius: 14,
   },
-  stateText: { color: 'rgba(255, 255, 255, 0.40)', fontSize: 13, marginTop: 10, textAlign: 'center' },
-  error: { color: colors.danger, fontWeight: '700' },
+  stateText: { color: tc.muted, fontSize: 13, marginTop: 10, textAlign: 'center' as const },
+  error: { color: colors.danger, fontWeight: '700' as const },
 });

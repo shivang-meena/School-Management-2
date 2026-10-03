@@ -1,4 +1,5 @@
 import { colors, surfaces } from '../theme';
+import { useTheme, THEME_PALETTES, ThemeColors } from '../context/ThemeContext';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -19,13 +20,67 @@ const today = new Date().toISOString().slice(0, 10);
 const currentYear = String(new Date().getFullYear());
 
 function Field({ label, value, onChangeText, placeholder, multiline = false }: any) {
-  return <View style={s.field}><Text style={s.label}>{label}</Text><TextInput style={[s.input, multiline && s.multiline]} value={String(value ?? '')} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="rgba(255,255,255,0.25)" multiline={multiline} /></View>;
+  const { isDark } = useTheme();
+  const s = getThemedStyles(isDark);
+  return (
+    <View style={s.field}>
+      <Text style={s.label}>{label}</Text>
+      <TextInput
+        style={[s.input, multiline && s.multiline]}
+        value={String(value ?? '')}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(17,25,54,0.35)'}
+        multiline={multiline}
+      />
+    </View>
+  );
 }
 function Choices({ label, value, values, onChange }: any) {
-  return <View style={s.field}><Text style={s.label}>{label}</Text><View style={s.choices}>{values.map((item: any) => { const key = typeof item === 'string' ? item : item.value; const text = typeof item === 'string' ? item : item.label; return <TouchableOpacity accessibilityRole="button" key={key} style={[s.choice, value === key && s.choiceOn]} onPress={() => onChange(key)}><Text style={value === key ? s.choiceTextOn : s.choiceText}>{text}</Text></TouchableOpacity>; })}</View></View>;
+  const { isDark } = useTheme();
+  const s = getThemedStyles(isDark);
+  return (
+    <View style={s.field}>
+      <Text style={s.label}>{label}</Text>
+      <View style={s.choices}>
+        {values.map((item: any) => {
+          const key = typeof item === 'string' ? item : item.value;
+          const text = typeof item === 'string' ? item : item.label;
+          return (
+            <TouchableOpacity
+              accessibilityRole="button"
+              key={key}
+              style={[s.choice, value === key && s.choiceOn]}
+              onPress={() => onChange(key)}
+            >
+              <Text style={value === key ? s.choiceTextOn : s.choiceText}>{text}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
 }
 function SelectCards({ label, value, items, onChange, getLabel }: any) {
-  return <View style={s.field}><Text style={s.label}>{label}</Text><View style={s.choices}>{items.map((item: any) => <TouchableOpacity accessibilityRole="button" key={item.id || item.name || 'opt'} style={[s.choice, value === item.id && s.choiceOn]} onPress={() => onChange(item.id)}><Text style={value === item.id ? s.choiceTextOn : s.choiceText}>{getLabel(item)}</Text></TouchableOpacity>)}</View></View>;
+  const { isDark } = useTheme();
+  const s = getThemedStyles(isDark);
+  return (
+    <View style={s.field}>
+      <Text style={s.label}>{label}</Text>
+      <View style={s.choices}>
+        {items.map((item: any) => (
+          <TouchableOpacity
+            accessibilityRole="button"
+            key={item.id || item.name || 'opt'}
+            style={[s.choice, value === item.id && s.choiceOn]}
+            onPress={() => onChange(item.id)}
+          >
+            <Text style={value === item.id ? s.choiceTextOn : s.choiceText}>{getLabel(item)}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
 }
 function errorText(error: any) { const message = error?.response?.data?.message; return Array.isArray(message) ? message.join('\n') : message || 'Please verify the entered details and try again.'; }
 function notify(title: string, message: string) { const browserAlert = (globalThis as any).alert; if (Platform.OS === 'web' && typeof browserAlert === 'function') browserAlert(`${title}\n\n${message}`); else Alert.alert(title, message); }
@@ -58,6 +113,8 @@ function isSeniorSecondary(schoolClass?: { name: string; sortOrder?: number | nu
 }
 
 export function AdminOperationsScreen({ mode, title, eyebrow, description }: Props) {
+  const { isDark } = useTheme();
+  const s = getThemedStyles(isDark);
   const { user } = useAuth();
   const isAccountant = user?.subRole === 'ACCOUNTANT';
   const client = useQueryClient();
@@ -905,19 +962,19 @@ export function AdminOperationsScreen({ mode, title, eyebrow, description }: Pro
         <View style={s.feeFilterPanel}>
           {/* Live Search Bar */}
           <View style={s.feeSearchWrap}>
-            <Ionicons name="search-outline" size={17} color="rgba(255, 255, 255, 0.4)" style={s.feeSearchIcon} />
+            <Ionicons name="search-outline" size={17} color={isDark ? "rgba(255, 255, 255, 0.4)" : "rgba(17, 25, 54, 0.45)"} style={s.feeSearchIcon} />
             <TextInput
               style={s.feeSearchInput}
               value={feeSearchQuery}
               onChangeText={setFeeSearchQuery}
               placeholder="Search student by name, student ID (e.g. STU000001) or roll number..."
-              placeholderTextColor="rgba(255, 255, 255, 0.35)"
+              placeholderTextColor={isDark ? "rgba(255, 255, 255, 0.35)" : "rgba(17, 25, 54, 0.4)"}
               autoCapitalize="none"
               autoCorrect={false}
             />
             {feeSearchQuery ? (
               <TouchableOpacity accessibilityRole="button" onPress={() => setFeeSearchQuery('')} style={s.feeSearchClear}>
-                <Ionicons name="close-circle" size={18} color="rgba(255, 255, 255, 0.55)" />
+                <Ionicons name="close-circle" size={18} color={isDark ? "rgba(255, 255, 255, 0.55)" : "rgba(17, 25, 54, 0.55)"} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -1674,92 +1731,92 @@ export function AdminOperationsScreen({ mode, title, eyebrow, description }: Pro
 
 function CommonSelectors({ years, sections, subjects, employees, values, set }: any) { return <><SelectCards label="Academic year" value={values.yearId} items={years} onChange={(v: string) => set('academicYearId', v)} getLabel={(x: any) => x.name} /><SelectCards label="Section" value={values.sectionId} items={sections} onChange={(v: string) => set('sectionId', v)} getLabel={(x: any) => x.className + ' ' + x.name} />{subjects.length ? <SelectCards label="Subject" value={values.subjectId} items={subjects} onChange={(v: string) => set('subjectId', v)} getLabel={(x: any) => x.name} /> : null}{employees.length ? <SelectCards label="Employee" value={values.employeeId} items={employees} onChange={(v: string) => set('employeeId', v)} getLabel={(x: any) => x.name + ' · ' + (x.primarySubject?.name || x.teachingAssignments?.[0]?.subject?.name || subjects.find((subject: any) => subject.id === x.primarySubjectId)?.name || 'Subject not set')} /> : null}</>; }
 
-const s = StyleSheet.create({ page: { flex: 1, backgroundColor: colors.background },
+const createStyles = (tc: ThemeColors, isDark: boolean) => ({ page: { flex: 1, backgroundColor: tc.canvas },
   
   content: { ...surfaces.content, gap: 16 },
   
   hero: {
     ...surfaces.card,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
     gap: 16,
     padding: 24,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
-    flexWrap: 'wrap',
+    borderColor: tc.line,
+    flexWrap: 'wrap' as const,
   },
   
   heroText: { flex: 1 },
   
-  eyebrow: { fontWeight: '800', fontSize: 10, letterSpacing: 1.4, color: colors.blueLight },
+  eyebrow: { fontWeight: '800' as const, fontSize: 10, letterSpacing: 1.4, color: tc.sky },
   
-  title: { marginTop: 5, fontSize: 28, color: '#f0f6ff', fontWeight: '800', letterSpacing: -0.3 },
+  title: { marginTop: 5, fontSize: 28, color: tc.text, fontWeight: '800' as const, letterSpacing: -0.3 },
   
-  description: { marginTop: 5, maxWidth: 700, lineHeight: 21, color: 'rgba(255, 255, 255, 0.45)' },
+  description: { marginTop: 5, maxWidth: 700, lineHeight: 21, color: tc.muted },
   
-  goldButton: { borderRadius: 11, paddingHorizontal: 16, paddingVertical: 12, justifyContent: 'center', backgroundColor: colors.primary, minHeight: 44 },
+  goldButton: { borderRadius: 11, paddingHorizontal: 16, paddingVertical: 12, justifyContent: 'center' as const, backgroundColor: colors.primary, minHeight: 44 },
   
-  goldText: { fontWeight: '800', color: '#FFFFFF' },
+  goldText: { fontWeight: '800' as const, color: '#FFFFFF' },
   
   tabs: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F0F2FA',
     borderRadius: 16,
     padding: 6,
-    flexDirection: 'row',
+    flexDirection: 'row' as const,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    flexWrap: 'wrap',
+    borderColor: tc.line,
+    flexWrap: 'wrap' as const,
     gap: 12,
   },
   
-  tab: { flex: 1, minHeight: 48, borderRadius: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 10, minWidth: 120 },
+  tab: { flex: 1, minHeight: 48, borderRadius: 11, flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'center' as const, gap: 7, paddingHorizontal: 10, minWidth: 120 },
   
   tabActive: { borderColor: colors.primary, backgroundColor: colors.primary },
   
   tabIcon: { fontSize: 16 },
   
-  tabText: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 13, fontWeight: '700' },
+  tabText: { color: tc.muted, fontSize: 13, fontWeight: '700' as const },
   
-  tabTextActive: { color: '#fff', fontWeight: '800' },
+  tabTextActive: { color: '#fff', fontWeight: '800' as const },
   
   panel: {
     ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderColor: tc.line,
     padding: 20,
     gap: 12,
     borderRadius: 14,
   },
   
-  panelTitle: { fontSize: 21, fontWeight: '800', color: '#f0f6ff', letterSpacing: -0.2 },
+  panelTitle: { fontSize: 21, fontWeight: '800' as const, color: tc.text, letterSpacing: -0.2 },
   
   field: { gap: 6, minWidth: 0, flexShrink: 1 },
   
-  label: { color: 'rgba(255, 255, 255, 0.55)', fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
+  label: { color: tc.muted, fontSize: 12, fontWeight: '700' as const, letterSpacing: 0.3 },
   
   input: {
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    color: '#f0f6ff',
+    borderColor: tc.line,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F5F7FF',
+    color: tc.text,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 11,
     fontSize: 14,
   },
   
-  multiline: { minHeight: 85, textAlignVertical: 'top' },
+  multiline: { minHeight: 85, textAlignVertical: 'top' as const },
   
-  choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  choices: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 7 },
   
   choice: {
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: tc.line,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F0F2FA',
     borderRadius: 9,
     paddingHorizontal: 11,
     paddingVertical: 9,
@@ -1767,177 +1824,177 @@ const s = StyleSheet.create({ page: { flex: 1, backgroundColor: colors.backgroun
   
   choiceOn: { borderColor: colors.primary, backgroundColor: colors.primary },
   
-  choiceText: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 12, fontWeight: '600' },
+  choiceText: { color: tc.muted, fontSize: 12, fontWeight: '600' as const },
   
-  choiceTextOn: { color: '#fff', fontWeight: '800', fontSize: 12 },
+  choiceTextOn: { color: '#fff', fontWeight: '800' as const, fontSize: 12 },
   
-  save: { borderRadius: 11, padding: 14, alignItems: 'center', marginTop: 4, justifyContent: 'center', backgroundColor: colors.primary, minHeight: 44 },
+  save: { borderRadius: 11, padding: 14, alignItems: 'center' as const, marginTop: 4, justifyContent: 'center' as const, backgroundColor: colors.primary, minHeight: 44 },
   
   disabled: { opacity: 0.65 },
   
-  saveText: { fontWeight: '800', color: '#FFFFFF' },
+  saveText: { fontWeight: '800' as const, color: '#FFFFFF' },
   
-  listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 },
+  listHeader: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const, flexWrap: 'wrap' as const, gap: 12 },
   
-  listTitle: { color: '#f0f6ff', fontSize: 20, fontWeight: '800', letterSpacing: -0.2 },
+  listTitle: { color: tc.text, fontSize: 20, fontWeight: '800' as const, letterSpacing: -0.2 },
   
-  refresh: { color: colors.blueLight, fontWeight: '700' },
+  refresh: { color: tc.sky, fontWeight: '700' as const },
   
   grid: { gap: 10 },
   
   sectionHeader: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#EEF0FF',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tc.line,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginTop: 8,
   },
   
-  sectionTitle: { color: '#f0f6ff', fontSize: 15, fontWeight: '800' },
+  sectionTitle: { color: tc.text, fontSize: 15, fontWeight: '800' as const },
   
   card: {
     ...surfaces.card,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     padding: 17,
     gap: 6,
     minWidth: 0,
     borderWidth: 1,
     borderRadius: 14,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderColor: tc.line,
   },
   
   cardSelected: { borderWidth: 2, borderColor: colors.primary },
   
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 },
+  cardTop: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, flexWrap: 'wrap' as const, gap: 12 },
   
-  cardTitle: { color: '#f0f6ff', fontSize: 16, fontWeight: '800', flex: 1 },
+  cardTitle: { color: tc.text, fontSize: 16, fontWeight: '800' as const, flex: 1 },
   
-  badge: { color: colors.success, fontSize: 10, fontWeight: '800' },
+  badge: { color: colors.success, fontSize: 10, fontWeight: '800' as const },
   
-  cardBody: { color: 'rgba(255, 255, 255, 0.45)' },
+  cardBody: { color: tc.muted },
 
-  marksCount: { color: colors.blueLight, fontSize: 13, fontWeight: '800', marginTop: 4 },
+  marksCount: { color: tc.sky, fontSize: 13, fontWeight: '800' as const, marginTop: 4 },
 
-  marksExamCard: { backgroundColor: 'rgba(255, 255, 255, 0.05)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.09)', borderRadius: 12, padding: 14, gap: 6 },
+  marksExamCard: { backgroundColor: tc.panel, borderWidth: 1, borderColor: tc.line, borderRadius: 12, padding: 14, gap: 6 },
 
   marksExamSelected: { borderColor: colors.primary, borderWidth: 2 },
 
-  marksSubjectCard: { backgroundColor: 'rgba(255, 255, 255, 0.05)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.09)', borderRadius: 12, padding: 14, gap: 6, marginTop: 8 },
+  marksSubjectCard: { backgroundColor: tc.panel, borderWidth: 1, borderColor: tc.line, borderRadius: 12, padding: 14, gap: 6, marginTop: 8 },
 
   marksSubjectSelected: { borderColor: colors.primary, borderWidth: 2 },
 
-  marksNotAssigned: { color: colors.danger, fontSize: 11, fontWeight: '800' },
+  marksNotAssigned: { color: colors.danger, fontSize: 11, fontWeight: '800' as const },
 
-  marksEntered: { color: colors.success, fontSize: 11, fontWeight: '800' },
+  marksEntered: { color: colors.success, fontSize: 11, fontWeight: '800' as const },
 
-  marksEditor: { backgroundColor: 'rgba(99, 102, 241, 0.08)', borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.20)', borderRadius: 14, padding: 15, marginTop: 8 },
+  marksEditor: { backgroundColor: isDark ? 'rgba(99, 102, 241, 0.08)' : 'rgba(99, 102, 241, 0.12)', borderWidth: 1, borderColor: isDark ? 'rgba(99, 102, 241, 0.20)' : 'rgba(99, 102, 241, 0.30)', borderRadius: 14, padding: 15, marginTop: 8 },
 
-  meta: { color: 'rgba(255, 255, 255, 0.35)', fontSize: 11 },
+  meta: { color: tc.muted, fontSize: 11 },
   
-  tap: { color: colors.blueLight, fontSize: 11, fontWeight: '700', marginTop: 4 },
+  tap: { color: tc.sky, fontSize: 11, fontWeight: '700' as const, marginTop: 4 },
   
-  cardActions: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  cardActions: { flexDirection: 'row' as const, gap: 8, marginTop: 4 },
   
   smallButton: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    alignSelf: 'flex-start' as const,
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F0F2FA',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: tc.line,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     marginTop: 5,
   },
   
-  smallText: { color: '#f0f6ff', fontWeight: '800', fontSize: 12 },
+  smallText: { color: tc.text, fontWeight: '800' as const, fontSize: 12 },
   
   deleteButton: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(248, 113, 113, 0.12)',
+    alignSelf: 'flex-start' as const,
+    backgroundColor: isDark ? 'rgba(248, 113, 113, 0.12)' : 'rgba(248, 113, 113, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(248, 113, 113, 0.25)',
+    borderColor: isDark ? 'rgba(248, 113, 113, 0.25)' : 'rgba(248, 113, 113, 0.35)',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     marginTop: 5,
   },
   
-  deleteText: { color: colors.danger, fontWeight: '800', fontSize: 12 },
+  deleteText: { color: colors.danger, fontWeight: '800' as const, fontSize: 12 },
   
   empty: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.09)',
+    borderColor: tc.line,
     borderRadius: 15,
     padding: 30,
-    alignItems: 'center',
+    alignItems: 'center' as const,
   },
   
-  emptyTitle: { color: '#f0f6ff', fontWeight: '800' },
+  emptyTitle: { color: tc.text, fontWeight: '800' as const },
   
-  muted: { color: 'rgba(255, 255, 255, 0.40)', marginTop: 5 },
+  muted: { color: tc.muted, marginTop: 5 },
   
-  overlay: { flex: 1, backgroundColor: 'rgba(4, 8, 18, 0.80)', alignItems: 'center', justifyContent: 'center', padding: 18 },
+  overlay: { flex: 1, backgroundColor: 'rgba(4, 8, 18, 0.80)', alignItems: 'center' as const, justifyContent: 'center' as const, padding: 18 },
   
   modalShell: {
-    width: '92%',
+    width: '92%' as const,
     maxWidth: 780,
-    maxHeight: '90%',
-    backgroundColor: '#0e1525',
+    maxHeight: '90%' as const,
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderColor: tc.line,
     borderRadius: 20,
-    overflow: 'hidden',
+    overflow: 'hidden' as const,
   },
   
   modalContent: { padding: 0 },
   
-  detailPanel: { backgroundColor: '#0e1525', padding: 22, gap: 10 },
+  detailPanel: { backgroundColor: tc.panel, padding: 22, gap: 10 },
   
-  detailHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 },
+  detailHeader: { flexDirection: 'row' as const, alignItems: 'flex-start' as const, justifyContent: 'space-between' as const, flexWrap: 'wrap' as const, gap: 12 },
   
   close: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F0F2FA',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: tc.line,
     borderRadius: 9,
     paddingHorizontal: 13,
     paddingVertical: 9,
   },
   
-  closeText: { color: '#f0f6ff', fontWeight: '700' },
+  closeText: { color: tc.text, fontWeight: '700' as const },
   
-  detailHeading: { color: '#f0f6ff', fontSize: 15, fontWeight: '800', marginTop: 5 },
-  detailRow: { color: 'rgba(255, 255, 255, 0.60)', lineHeight: 20 },
-  help: { color: 'rgba(255, 255, 255, 0.45)', fontSize: 13, marginBottom: 12, lineHeight: 19 },
+  detailHeading: { color: tc.text, fontSize: 15, fontWeight: '800' as const, marginTop: 5 },
+  detailRow: { color: isDark ? 'rgba(255, 255, 255, 0.60)' : 'rgba(17, 25, 54, 0.70)', lineHeight: 20 },
+  help: { color: tc.muted, fontSize: 13, marginBottom: 12, lineHeight: 19 },
   error: { color: colors.danger, fontSize: 13, marginTop: 8 },
   paymentHistoryCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tc.line,
     borderRadius: 12,
     padding: 14,
     gap: 8,
     marginTop: 6,
   },
   paymentHistoryHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
+    flexDirection: 'row' as const,
+    alignItems: 'flex-start' as const,
+    justifyContent: 'space-between' as const,
+    flexWrap: 'wrap' as const,
     gap: 10,
   },
   paymentHistoryActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     gap: 8,
-    flexWrap: 'wrap',
+    flexWrap: 'wrap' as const,
   },
   downloadReceiptBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     backgroundColor: 'rgba(96, 165, 250, 0.15)',
     borderWidth: 1,
     borderColor: 'rgba(96, 165, 250, 0.35)',
@@ -1948,7 +2005,7 @@ const s = StyleSheet.create({ page: { flex: 1, backgroundColor: colors.backgroun
   downloadReceiptText: {
     color: '#93c5fd',
     fontSize: 10.5,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   paymentStatusBadge: {
     backgroundColor: 'rgba(52, 211, 153, 0.15)',
@@ -1961,28 +2018,32 @@ const s = StyleSheet.create({ page: { flex: 1, backgroundColor: colors.backgroun
   paymentStatusText: {
     color: colors.success,
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   paymentPendingBadge: {
     backgroundColor: 'rgba(251, 191, 36, 0.15)',
     borderColor: 'rgba(251, 191, 36, 0.30)',
+    borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderWidth: 1,
   },
   paymentPendingText: {
     color: colors.warning,
   },
   paymentAmount: {
-    color: '#f0f6ff',
+    color: tc.text,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   paymentMethod: {
-    color: 'rgba(255, 255, 255, 0.45)',
+    color: tc.muted,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '700' as const,
   },
   downloadListBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     backgroundColor: 'rgba(56, 189, 248, 0.15)',
     borderWidth: 1,
     borderColor: 'rgba(56, 189, 248, 0.35)',
@@ -1993,11 +2054,11 @@ const s = StyleSheet.create({ page: { flex: 1, backgroundColor: colors.backgroun
   downloadListText: {
     color: '#38bdf8',
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   editPaymentBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     backgroundColor: 'rgba(251, 191, 36, 0.15)',
     borderWidth: 1,
     borderColor: 'rgba(251, 191, 36, 0.35)',
@@ -2008,11 +2069,11 @@ const s = StyleSheet.create({ page: { flex: 1, backgroundColor: colors.backgroun
   editPaymentText: {
     color: '#fbbf24',
     fontSize: 10.5,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   reversePaymentBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
     backgroundColor: 'rgba(248, 113, 113, 0.15)',
     borderWidth: 1,
     borderColor: 'rgba(248, 113, 113, 0.35)',
@@ -2023,30 +2084,34 @@ const s = StyleSheet.create({ page: { flex: 1, backgroundColor: colors.backgroun
   reversePaymentText: {
     color: '#f87171',
     fontSize: 10.5,
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   paymentReversedBadge: {
     backgroundColor: 'rgba(239, 68, 68, 0.15)',
     borderColor: 'rgba(239, 68, 68, 0.35)',
+    borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderWidth: 1,
   },
   paymentReversedText: {
     color: '#f87171',
   },
   feeFilterPanel: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: tc.panel,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: tc.line,
     borderRadius: 14,
     padding: 14,
     marginBottom: 16,
     gap: 12,
   },
   feeSearchWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.28)',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.28)' : '#F5F7FF',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: tc.line,
     borderRadius: 10,
     paddingHorizontal: 12,
     height: 44,
@@ -2056,7 +2121,7 @@ const s = StyleSheet.create({ page: { flex: 1, backgroundColor: colors.backgroun
   },
   feeSearchInput: {
     flex: 1,
-    color: '#ffffff',
+    color: tc.text,
     fontSize: 13.5,
     paddingVertical: 0,
   },
@@ -2071,54 +2136,66 @@ const s = StyleSheet.create({ page: { flex: 1, backgroundColor: colors.backgroun
   },
   feeFilterLabel: {
     fontSize: 10,
-    fontWeight: '800',
-    color: 'rgba(255, 255, 255, 0.45)',
+    fontWeight: '800' as const,
+    color: tc.muted,
     letterSpacing: 0.8,
   },
   chipScroll: {
-    flexDirection: 'row',
+    flexDirection: 'row' as const,
     gap: 8,
-    alignItems: 'center',
+    alignItems: 'center' as const,
     paddingVertical: 2,
   },
   filterChip: {
     paddingHorizontal: 13,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#F0F2FA',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.10)',
+    borderColor: tc.line,
   },
   filterChipActive: {
     backgroundColor: 'rgba(251, 191, 36, 0.18)',
     borderColor: '#fbbf24',
   },
   filterChipText: {
-    color: 'rgba(255, 255, 255, 0.65)',
+    color: tc.muted,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '600' as const,
   },
   filterChipTextActive: {
     color: '#fbbf24',
-    fontWeight: '800',
+    fontWeight: '800' as const,
   },
   feeFilterSummary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
     paddingTop: 6,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.06)',
-    flexWrap: 'wrap',
+    borderTopColor: tc.line,
+    flexWrap: 'wrap' as const,
     gap: 8,
   },
   feeFilterSummaryText: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.55)',
+    color: tc.muted,
   },
   feeFilterResetText: {
     fontSize: 12,
     color: '#f87171',
-    fontWeight: '700',
+    fontWeight: '700' as const,
   },
 });
+
+let stylesDark: any = null;
+let stylesLight: any = null;
+function getThemedStyles(isDark: boolean) {
+  if (isDark) {
+    if (!stylesDark) stylesDark = StyleSheet.create(createStyles(THEME_PALETTES.dark, true));
+    return stylesDark;
+  } else {
+    if (!stylesLight) stylesLight = StyleSheet.create(createStyles(THEME_PALETTES.light, false));
+    return stylesLight;
+  }
+}
